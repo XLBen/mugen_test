@@ -119,6 +119,14 @@ func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
 
 
 func _draw_projectile(p: Projectile) -> void:
+	var sprites: SpriteSet = _sprites[p.owner]
+	var fx := "fx_" + sim.projectile_def(p).anim
+	if show_sprites and sprites != null and sprites.has(fx):
+		var center := Vector2(SimConst.px(p.x), -SimConst.px(p.y))
+		draw_set_transform(center, 0.0, Vector2(sprites.scale * p.facing, sprites.scale))
+		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 	var r := _rect(sim.projectile_box(p))
 	var c: Color = FIREBALL_COLORS[p.owner]
 	var center := r.get_center()

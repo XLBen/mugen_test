@@ -1,165 +1,316 @@
 {
- "canvas": [
-  192,
-  160
- ],
- "anchor": [
-  96,
-  152
- ],
- "scale": 2,
- "palettes": 2,
- "anims": {
-  "idle": {
-   "loop": true,
-   "frames": [
-    [
-     "idle_00",
-     8
-    ],
-    [
-     "idle_01",
-     8
-    ],
-    [
-     "idle_02",
-     8
-    ],
-    [
-     "idle_03",
-     8
-    ],
-    [
-     "idle_04",
-     8
-    ],
-    [
-     "idle_05",
-     8
-    ]
-   ]
-  },
-  "walk_f": {
-   "loop": true,
-   "frames": [
-    [
-     "walk_f_00",
-     5
-    ],
-    [
-     "walk_f_01",
-     5
-    ],
-    [
-     "walk_f_02",
-     5
-    ],
-    [
-     "walk_f_03",
-     5
-    ],
-    [
-     "walk_f_04",
-     5
-    ],
-    [
-     "walk_f_05",
-     5
-    ],
-    [
-     "walk_f_06",
-     5
-    ],
-    [
-     "walk_f_07",
-     5
-    ]
-   ]
-  },
-  "walk_b": {
-   "loop": true,
-   "frames": [
-    [
-     "walk_b_00",
-     5
-    ],
-    [
-     "walk_b_01",
-     5
-    ],
-    [
-     "walk_b_02",
-     5
-    ],
-    [
-     "walk_b_03",
-     5
-    ],
-    [
-     "walk_b_04",
-     5
-    ],
-    [
-     "walk_b_05",
-     5
-    ],
-    [
-     "walk_b_06",
-     5
-    ],
-    [
-     "walk_b_07",
-     5
-    ]
-   ]
-  },
-  "crouch": {
-   "loop": false,
-   "frames": [
-    [
-     "crouch_00",
-     3
-    ],
-    [
-     "crouch_01",
-     1
-    ]
-   ]
-  },
-  "prejump": {
-   "loop": false,
-   "frames": [
-    [
-     "prejump_00",
-     1
-    ]
-   ]
-  },
-  "jump": {
-   "loop": false,
-   "frames": [
-    [
-     "jump_00",
-     1
-    ],
-    [
-     "jump_01",
-     1
-    ],
-    [
-     "jump_02",
-     1
-    ]
-   ]
-  },
-  "land": {
-   "loop": false,
-   "frames": [
-    [
-     "land_00",
-     1
-    ]
-   ]
-  }
- }
+	"canvas": [
+		192,
+		160
+	],
+	"anchor": [
+		96,
+		152
+	],
+	"scale": 2,
+	"palettes": 2,
+	"anims": {
+		"idle": {
+			"loop": true,
+			"frames": [
+				["idle_00", 8],
+				["idle_01", 8],
+				["idle_02", 8],
+				["idle_03", 8],
+				["idle_04", 8],
+				["idle_05", 8]
+			]
+		},
+		"walk_f": {
+			"loop": true,
+			"frames": [
+				["walk_f_00", 5],
+				["walk_f_01", 5],
+				["walk_f_02", 5],
+				["walk_f_03", 5],
+				["walk_f_04", 5],
+				["walk_f_05", 5],
+				["walk_f_06", 5],
+				["walk_f_07", 5]
+			]
+		},
+		"walk_b": {
+			"loop": true,
+			"frames": [
+				["walk_b_00", 5],
+				["walk_b_01", 5],
+				["walk_b_02", 5],
+				["walk_b_03", 5],
+				["walk_b_04", 5],
+				["walk_b_05", 5],
+				["walk_b_06", 5],
+				["walk_b_07", 5]
+			]
+		},
+		"crouch": {
+			"loop": false,
+			"frames": [
+				["crouch_00", 3],
+				["crouch_01", 1]
+			]
+		},
+		"prejump": {
+			"loop": false,
+			"frames": [
+				["prejump_00", 1]
+			]
+		},
+		"jump": {
+			"loop": false,
+			"frames": [
+				["jump_00", 1],
+				["jump_01", 1],
+				["jump_02", 1]
+			]
+		},
+		"land": {
+			"loop": false,
+			"frames": [
+				["land_00", 1]
+			]
+		},
+		"throw_hit": {
+			"loop": false,
+			"frames": [
+				["throw_hit_00", 30],
+				["throw_hit_01", 15]
+			]
+		},
+		"5lp": {
+			"loop": false,
+			"frames": [
+				["5lp_00", 1],
+				["5lp_01", 1],
+				["5lp_02", 1]
+			]
+		},
+		"5mp": {
+			"loop": false,
+			"frames": [
+				["5mp_00", 1],
+				["5mp_01", 1],
+				["5mp_02", 1]
+			]
+		},
+		"5hp": {
+			"loop": false,
+			"frames": [
+				["5hp_00", 1],
+				["5hp_01", 1],
+				["5hp_02", 1]
+			]
+		},
+		"5lk": {
+			"loop": false,
+			"frames": [
+				["5lk_00", 1],
+				["5lk_01", 1],
+				["5lk_02", 1]
+			]
+		},
+		"5mk": {
+			"loop": false,
+			"frames": [
+				["5mk_00", 1],
+				["5mk_01", 1],
+				["5mk_02", 1]
+			]
+		},
+		"5hk": {
+			"loop": false,
+			"frames": [
+				["5hk_00", 1],
+				["5hk_01", 1],
+				["5hk_02", 1]
+			]
+		},
+		"2lp": {
+			"loop": false,
+			"frames": [
+				["2lp_00", 1],
+				["2lp_01", 1],
+				["2lp_02", 1]
+			]
+		},
+		"2mp": {
+			"loop": false,
+			"frames": [
+				["2mp_00", 1],
+				["2mp_01", 1],
+				["2mp_02", 1]
+			]
+		},
+		"2hp": {
+			"loop": false,
+			"frames": [
+				["2hp_00", 1],
+				["2hp_01", 1],
+				["2hp_02", 1]
+			]
+		},
+		"2lk": {
+			"loop": false,
+			"frames": [
+				["2lk_00", 1],
+				["2lk_01", 1],
+				["2lk_02", 1]
+			]
+		},
+		"2mk": {
+			"loop": false,
+			"frames": [
+				["2mk_00", 1],
+				["2mk_01", 1],
+				["2mk_02", 1]
+			]
+		},
+		"2hk": {
+			"loop": false,
+			"frames": [
+				["2hk_00", 1],
+				["2hk_01", 1],
+				["2hk_02", 1]
+			]
+		},
+		"j_lp": {
+			"loop": false,
+			"frames": [
+				["j_lp_00", 1],
+				["j_lp_01", 1],
+				["j_lp_02", 1]
+			]
+		},
+		"j_mp": {
+			"loop": false,
+			"frames": [
+				["j_mp_00", 1],
+				["j_mp_01", 1],
+				["j_mp_02", 1]
+			]
+		},
+		"j_hp": {
+			"loop": false,
+			"frames": [
+				["j_hp_00", 1],
+				["j_hp_01", 1],
+				["j_hp_02", 1]
+			]
+		},
+		"j_lk": {
+			"loop": false,
+			"frames": [
+				["j_lk_00", 1],
+				["j_lk_01", 1],
+				["j_lk_02", 1]
+			]
+		},
+		"j_mk": {
+			"loop": false,
+			"frames": [
+				["j_mk_00", 1],
+				["j_mk_01", 1],
+				["j_mk_02", 1]
+			]
+		},
+		"j_hk": {
+			"loop": false,
+			"frames": [
+				["j_hk_00", 1],
+				["j_hk_01", 1],
+				["j_hk_02", 1]
+			]
+		},
+		"fireball": {
+			"loop": false,
+			"frames": [
+				["fireball_00", 1],
+				["fireball_01", 1],
+				["fireball_02", 1]
+			]
+		},
+		"dp": {
+			"loop": false,
+			"frames": [
+				["dp_00", 1],
+				["dp_01", 1],
+				["dp_02", 1]
+			]
+		},
+		"rush": {
+			"loop": false,
+			"frames": [
+				["rush_00", 1],
+				["rush_01", 1],
+				["rush_02", 1]
+			]
+		},
+		"throw": {
+			"loop": false,
+			"frames": [
+				["throw_00", 1],
+				["throw_01", 1],
+				["throw_02", 1]
+			]
+		},
+		"hit_stand": {
+			"loop": false,
+			"frames": [
+				["hit_stand_00", 1]
+			]
+		},
+		"hit_crouch": {
+			"loop": false,
+			"frames": [
+				["hit_crouch_00", 1]
+			]
+		},
+		"block_stand": {
+			"loop": false,
+			"frames": [
+				["block_stand_00", 1]
+			]
+		},
+		"block_crouch": {
+			"loop": false,
+			"frames": [
+				["block_crouch_00", 1]
+			]
+		},
+		"hit_air": {
+			"loop": false,
+			"frames": [
+				["hit_air_00", 1]
+			]
+		},
+		"knockdown": {
+			"loop": false,
+			"frames": [
+				["knockdown_00", 1]
+			]
+		},
+		"wakeup": {
+			"loop": false,
+			"frames": [
+				["wakeup_00", 9],
+				["wakeup_01", 9]
+			]
+		},
+		"fx_fireball": {
+			"loop": true,
+			"anchor": [
+				20,
+				20
+			],
+			"frames": [
+				["fx_fireball_00", 3],
+				["fx_fireball_01", 3],
+				["fx_fireball_02", 3]
+			]
+		}
+	}
 }

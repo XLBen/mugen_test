@@ -87,8 +87,8 @@ def perp(d):
 class Layer:
 	"""一个部件的遮罩。画完后统一着色、描边、合成。"""
 
-	def __init__(self):
-		self.mask = Image.new("L", (CANVAS_W, CANVAS_H), 0)
+	def __init__(self, size=None):
+		self.mask = Image.new("L", size or (CANVAS_W, CANVAS_H), 0)
 		self.draw = ImageDraw.Draw(self.mask)
 
 	def poly(self, pts):
@@ -482,6 +482,38 @@ def render(ch, outfit, pose):
 	return img
 
 
+FX_SIZE = 40
+
+
+def accent(outfit):
+	for key in ("fx", "scarf", "ribbon", "collar"):
+		if key in outfit:
+			return outfit[key]
+	return (120, 180, 255)
+
+
+def render_fireball(outfit, i):
+	"""能量球：拖尾 + 外层光晕 + 赛璐璐核心，三帧循环闪烁。面朝右，锚点在中心。"""
+	c = (FX_SIZE / 2, FX_SIZE / 2)
+	base = accent(outfit)
+	glow = _adjust(base, value=1.35, sat=0.55)
+	img = Image.new("RGBA", (FX_SIZE, FX_SIZE), (0, 0, 0, 0))
+	tail = Layer((FX_SIZE, FX_SIZE))
+	wobble = (0, 1.5, -1.5)[i % 3]
+	tail.poly([(c[0] - 2, c[1] - 7), (c[0] - 18, c[1] - 3 + wobble), (c[0] - 15, c[1] + wobble),
+		(c[0] - 18, c[1] + 4 + wobble), (c[0] - 2, c[1] + 7)])
+	img = Image.alpha_composite(img, shade(tail, ramp(glow), shadow_k=0))
+	halo = Layer((FX_SIZE, FX_SIZE))
+	halo.circle(c, 10 + (i % 2))
+	img = Image.alpha_composite(img, shade(halo, ramp(glow), shadow_k=0))
+	core = Layer((FX_SIZE, FX_SIZE))
+	core.circle((c[0] + 1, c[1]), 7)
+	img = Image.alpha_composite(img, shade(core, ramp(base), shadow_k=2))
+	d = ImageDraw.Draw(img)
+	d.rectangle([c[0] + 2, c[1] - 4, c[0] + 4, c[1] - 2], fill=(255, 255, 255, 255))
+	return img
+
+
 def generate(char_id, out_root=ROOT / "characters"):
 	ch = CHARACTERS[char_id]
 	sprite_dir = out_root / char_id / "sprites"
@@ -498,6 +530,12 @@ def generate(char_id, out_root=ROOT / "characters"):
 				render(ch, outfit, pose).save(pal_dir / f"{name}.png")
 				frames.append([name, duration])
 			anims_meta[anim_name] = {"loop": anim["loop"], "frames": frames}
+		frames = []
+		for i in range(3):
+			name = f"fx_fireball_{i:02d}"
+			render_fireball(outfit, i).save(pal_dir / f"{name}.png")
+			frames.append([name, 3])
+		anims_meta["fx_fireball"] = {"loop": True, "anchor": [FX_SIZE // 2, FX_SIZE // 2], "frames": frames}
 	meta = {
 		"canvas": [CANVAS_W, CANVAS_H],
 		"anchor": list(ANCHOR),
@@ -505,7 +543,11 @@ def generate(char_id, out_root=ROOT / "characters"):
 		"palettes": len(ch["palettes"]),
 		"anims": anims_meta,
 	}
-	(sprite_dir / "anims.json").write_text(json.dumps(meta, indent=1, ensure_ascii=False) + "\n")
+	text = json.dumps(meta, indent="\t", ensure_ascii=False)
+	# 帧列表压成一行，便于阅读 diff
+	import re
+	text = re.sub(r"\[\s+\"([^\"]+)\",\s+(\d+)\s+\]", r'["\1", \2]', text)
+	(sprite_dir / "anims.json").write_text(text + "\n")
 	return sprite_dir
 
 

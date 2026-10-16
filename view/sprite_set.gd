@@ -5,7 +5,7 @@ extends RefCounted
 
 var anchor := Vector2.ZERO
 var scale := 1
-var _anims := {} ## name -> { loop: bool, textures: Array[Texture2D], ends: Array[int] }
+var _anims := {} ## name -> { loop: bool, anchor: Vector2, textures: Array[Texture2D], ends: Array[int] }
 
 
 static func load_from(dir: String, palette: int) -> SpriteSet:
@@ -26,12 +26,20 @@ static func load_from(dir: String, palette: int) -> SpriteSet:
 			textures.append(load(pal_dir.path_join(frame[0] + ".png")))
 			t += int(frame[1])
 			ends.append(t)
-		sprites._anims[anim_name] = {"loop": anim.loop, "textures": textures, "ends": ends}
+		var anchor := sprites.anchor
+		if anim.has("anchor"):
+			anchor = Vector2(anim.anchor[0], anim.anchor[1])
+		sprites._anims[anim_name] = {"loop": anim.loop, "anchor": anchor, "textures": textures, "ends": ends}
 	return sprites
 
 
 func has(anim_name: String) -> bool:
 	return _anims.has(anim_name)
+
+
+## 动画自己的锚点（特效类动画以中心为锚点，角色动画以脚底为锚点）。
+func anchor_of(anim_name: String) -> Vector2:
+	return _anims[anim_name].anchor if _anims.has(anim_name) else anchor
 
 
 ## 动画开始后第 t 帧应显示的贴图；非循环动画停在最后一帧。
