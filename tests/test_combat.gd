@@ -113,10 +113,21 @@ func test_fireball_hits_and_disappears() -> void:
 	check_eq(sim.projectiles.size(), 0, "fireball consumed on hit")
 
 
-func test_fireball_chip_on_block() -> void:
+func test_fireball_chip_only_in_burnout() -> void:
 	var sim := adjacent_sim(300)
 	play(sim, "2,3,6HP", "4x60")
-	check_eq(sim.fighters[1].health, DUMMY.max_health - 150, "fireball chip damage")
+	check_eq(sim.fighters[1].health, DUMMY.max_health, "SF6: specials do not chip outside burnout")
+	sim = adjacent_sim(300)
+	Gauges.gain(sim.fighters[1], Gauges.DRIVE, -60000)
+	play(sim, "2,3,6HP", "4x60")
+	check_eq(sim.fighters[1].health, DUMMY.max_health - 150, "burnout: fireball chips")
+
+
+func test_super_always_chips() -> void:
+	var sim := adjacent_sim()
+	sim.fighters[0].gauges[Gauges.SUPER] = 1000
+	play(sim, "2,3,6,2,3,6LP", "4x80")
+	check_eq(sim.fighters[1].health, DUMMY.max_health - 650, "super chip damage")
 
 
 func test_fireballs_clash() -> void:

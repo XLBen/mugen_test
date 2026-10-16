@@ -8,6 +8,7 @@ const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_GUARD := 26000 ## 近距离防御的触发距离（单位）
 const SPECIAL_METER := 20 ## 出必杀技（无论是否命中）获得的超杀槽
 const FORWARD_DRIVE := 20 ## 前走每帧额外回复的 Drive
+const UPGRADE_WINDOW := 3 ## 同时按宽容：出招后几帧内补按的键可以升级成更高优先级的指令（OD、投）
 
 
 static func states() -> Dictionary:
@@ -20,7 +21,7 @@ static func states() -> Dictionary:
 		"guard_crouch": {"type": "C", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "block_crouch", "kind": "guard"},
 		"dash_f": {"type": "S", "total": 18, "anim": "walk_f",
 			"events": [{"frame": 1, "vx": 950}, {"frame": 11, "vx": 0}]},
-		"dash_b": {"type": "S", "total": 22, "anim": "walk_b",
+		"dash_b": {"type": "S", "total": 22, "anim": "walk_b", "punishable_from": 8,
 			"invuln": [{"frames": [1, 7], "strike": true, "throw": true}],
 			"events": [{"frame": 1, "vx": -850}, {"frame": 13, "vx": 0}]},
 		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump"},
@@ -51,6 +52,9 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 		"ground":
 			_ground(f, sim)
 		"prejump":
+			# 起跳预备中可以出必杀（360 指令投需要经过上方向）
+			if try_commands(f, sim, "ground", true):
+				return
 			if f.state_frame >= f.def.prejump_frames:
 				_launch_jump(f)
 		"air":
@@ -110,21 +114,28 @@ static func _ground(f: Fighter, sim: MatchSim) -> void:
 
 
 ## 按出招表顺序（优先级）检查指令，成立则进入对应状态并消耗按键。
-static func try_commands(f: Fighter, sim: MatchSim, where: String) -> bool:
-	for c in f.moveset.commands:
+## specials_only：只接受必杀 / 超杀（起跳预备中使用）。
+## limit：只检查出招表前 limit 条，且只看多键指令（同时按宽容的升级用）。
+static func try_commands(f: Fighter, sim: MatchSim, where: String, specials_only := false, limit := -1) -> bool:
+	var commands := f.moveset.commands
+	var n := commands.size() if limit < 0 else limit
+	for idx in n:
+		var c := commands[idx]
 		if c.where != where:
 			continue
-		if c.cond == "no_projectile" and sim.has_projectile(f):
+		if limit >= 0 and not (c.all_buttons or c.min_buttons > 1):
 			continue
 		var target: StateDef = f.moveset.states[f.moveset.id(c.state)]
-		if not Gauges.can_afford(f, target.cost):
+		if specials_only and target.kind != "special" and target.kind != "super":
+			continue
+		if not _usable(f, sim, c, target):
 			continue
 		var press := c.check(f, sim.frame)
 		if press < 0:
 			continue
 		if c.buttons != 0:
 			f.consumed = press
-		_enter_move(f, target)
+		_enter_move(f, sim, target, idx)
 		if where == "air":
 			f.air_used = 1
 		else:
@@ -133,26 +144,54 @@ static func try_commands(f: Fighter, sim: MatchSim, where: String) -> bool:
 	return false
 
 
+## 同时按宽容：刚由指令发动的招式，在 UPGRADE_WINDOW 帧内如果补按的键让更高优先级的指令成立
+## （LP 后补 LK = 投；一拳后补第二拳 = OD），就改出那一招，并退还原招式的消耗。
+static func try_upgrade(f: Fighter, sim: MatchSim) -> bool:
+	if f.cmd_index <= 0 or sim.frame > f.upgrade_until:
+		return false
+	var old := f.sd()
+	var where: String = f.moveset.commands[f.cmd_index].where
+	if where == "cancel":
+		return false
+	var x := f.x
+	var vx := f.vx
+	if not try_commands(f, sim, where, false, f.cmd_index):
+		return false
+	for gauge_name: String in old.cost:
+		Gauges.gain(f, Gauges.index(gauge_name), old.cost[gauge_name])
+	f.x = x
+	f.vx = vx if where == "air" else 0
+	return true
+
+
+static func _usable(f: Fighter, sim: MatchSim, c: Command, target: StateDef) -> bool:
+	if c.cond.begins_with("limit:") and sim.has_projectile(f, c.cond.substr(6)):
+		return false
+	if c.cond == "no_projectile" and sim.has_projectile(f):
+		return false
+	return Gauges.can_afford(f, target.cost)
+
+
 ## 取消：当前招式接触对手后，在取消窗口内按出招表找允许的目标招式。
 ## 顿帧期间按下的键也有效（缓冲延长顿帧长度），这样"打中后立刻搓招"总能取消。
 static func try_cancel(f: Fighter, sim: MatchSim) -> bool:
 	var s := f.sd()
 	var air := f.is_airborne()
-	for c in f.moveset.commands:
+	var commands := f.moveset.commands
+	for idx in commands.size():
+		var c := commands[idx]
 		if c.where != "cancel" and c.where != ("air" if air else "ground"):
 			continue
 		var target: StateDef = f.moveset.states[f.moveset.id(c.state)]
 		if not s.cancel_allows(target):
 			continue
-		if c.cond == "no_projectile" and sim.has_projectile(f):
-			continue
-		if not Gauges.can_afford(f, target.cost):
+		if not _usable(f, sim, c, target):
 			continue
 		var press := c.check(f, sim.frame, Command.BUFFER + f.last_hitstop)
 		if press < 0:
 			continue
 		f.consumed = press
-		_enter_move(f, target)
+		_enter_move(f, sim, target, idx)
 		if not air:
 			f.vx = 0
 		return true
@@ -212,11 +251,13 @@ static func _throwing(f: Fighter, sim: MatchSim) -> void:
 
 
 ## 进入招式：扣资源，出必杀技涨超杀槽。
-static func _enter_move(f: Fighter, target: StateDef) -> void:
+static func _enter_move(f: Fighter, sim: MatchSim, target: StateDef, cmd_index: int) -> void:
 	Gauges.spend(f, target.cost)
-	if target.kind == "special" and not target.cost.has("super"):
+	if target.kind == "special" and target.cost.is_empty() and f.sd().kind != "special":
 		Gauges.gain(f, Gauges.SUPER, SPECIAL_METER)
 	f.set_state(target.name)
+	f.cmd_index = cmd_index
+	f.upgrade_until = sim.frame + UPGRADE_WINDOW
 
 
 static func _enter(f: Fighter, state_name: String) -> void:

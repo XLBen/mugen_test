@@ -32,6 +32,7 @@ var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}
 var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
+var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
 
 
 static func build(state_name: String, d: Dictionary) -> StateDef:
@@ -55,8 +56,9 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	for h: Dictionary in d.get("hurtboxes", []):
 		s.hurtboxes.append({"from": h.frames[0] - 1, "to": h.frames[1] - 1, "boxes": _boxes(h.boxes)})
 	for h: Dictionary in d.get("hitboxes", []):
-		var entry := {"from": h.active[0] - 1, "to": h.active[1] - 1,
-			"boxes": _boxes(h.boxes), "hit": HitDef.from_dict(h.hit)}
+		var hd := HitDef.from_dict(h.hit)
+		hd.source = s.kind
+		var entry := {"from": h.active[0] - 1, "to": h.active[1] - 1, "boxes": _boxes(h.boxes), "hit": hd}
 		s.hitboxes.append(entry)
 		s.first_active = entry.from if s.first_active < 0 else mini(s.first_active, entry.from)
 		s.last_active = maxi(s.last_active, entry.to)
@@ -76,6 +78,7 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	if not s.cancel_targets.is_empty():
 		s.cancel_until = d.get("cancel_until", s.last_active + 1 + 3) - 1
 	s.punishable = d.get("punishable", false)
+	s.punishable_from = d.get("punishable_from", 0) - 1
 	s.cost = d.get("cost", {})
 	for v: Dictionary in d.get("invuln", []):
 		s.invuln.append({"from": v.frames[0] - 1, "to": v.frames[1] - 1,

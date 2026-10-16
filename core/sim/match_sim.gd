@@ -186,9 +186,10 @@ func spawn_projectile(owner: Fighter, def_name: String, offset_x: int, offset_y:
 	projectiles.append(p)
 
 
-func has_projectile(owner: Fighter) -> bool:
+## group 为空时任意道具都算；否则只看同组（波动 / 设置物 各自限制同屏数量）。
+func has_projectile(owner: Fighter, group := "") -> bool:
 	for p in projectiles:
-		if p.owner == owner.index:
+		if p.owner == owner.index and (group == "" or projectile_def(p).group == group):
 			return true
 	return false
 

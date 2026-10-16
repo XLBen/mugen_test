@@ -36,6 +36,8 @@ var combo_light := 0 ## 连段由轻攻击起手（额外补正）
 var juggle := 0 ## 浮空追打计数
 var counter_type := 0 ## 最近一次被打的打康类型（Combat.Counter）
 var counter_timer := 0 ## 打康提示剩余显示帧
+var cmd_index := -1 ## 当前招式由出招表第几条指令发动（-1 = 不是指令发动的）
+var upgrade_until := -1 ## 这一帧之前，可以被更高优先级的指令"升级"（同时按宽容）
 var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
 var gauges := PackedInt32Array() ## 资源槽当前值（Gauges.DEFS 顺序）
 var gauge_delay := PackedInt32Array() ## 资源槽回复停顿剩余帧
@@ -98,6 +100,7 @@ func set_state(state_name_: String) -> void:
 	hit_mask = 0
 	push_transfer = 0
 	contact = 0
+	cmd_index = -1
 
 
 func reset_combo() -> void:
@@ -168,7 +171,8 @@ func numpad_at(frame: int) -> int:
 
 const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
-	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer"]
+	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
+	"cmd_index", "upgrade_until"]
 
 
 func save_state() -> Dictionary:

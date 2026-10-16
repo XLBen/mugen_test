@@ -87,7 +87,7 @@ func test_burnout() -> void:
 	play(sim, "5HP", "4", 2)
 	hold(sim, 0, InputBits.RIGHT, 10)
 	check_eq(p2.state_name(), "block_stand", "still blocks in burnout")
-	check_eq(p2.health, DUMMY.max_health - 800 / Combat.BURNOUT_CHIP_DIV, "burnout takes chip from normals")
+	check_eq(p2.health, DUMMY.max_health, "SF6: normals never chip, even in burnout")
 	check_eq(p2.stun, 18 + Combat.BURNOUT_BLOCKSTUN, "burnout adds blockstun")
 	p2.gauges[D] = DRIVE_MAX - 10
 	p2.gauge_delay[D] = 0

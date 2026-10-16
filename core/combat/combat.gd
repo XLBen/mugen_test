@@ -22,7 +22,7 @@ const LIGHT_STARTER_PENALTY := 10
 ## 资源
 const DEFENDER_METER := 10 ## 被打 / 防御时获得的超杀槽
 const BURNOUT_BLOCKSTUN := 4 ## Burnout 中防御硬直增加
-const BURNOUT_CHIP_DIV := 6 ## Burnout 中防御普攻也会被削血：伤害 / 6
+const CHIP_DIV := 4 ## 没有单独指定削血量时，削血 = 伤害 / 4（SF6 约 25%）
 
 
 static func resolve(sim: MatchSim) -> void:
@@ -120,7 +120,7 @@ static func counter_type(dfn: Fighter) -> int:
 	var s := dfn.sd()
 	if s.kind == "hurt" or s.kind == "guard":
 		return Counter.NONE
-	if s.punishable:
+	if s.punishable or (s.punishable_from >= 0 and dfn.state_frame >= s.punishable_from):
 		return Counter.PUNISH
 	match s.phase_at(dfn.state_frame):
 		StateDef.Phase.STARTUP, StateDef.Phase.ACTIVE:
@@ -151,6 +151,17 @@ static func can_block(sim: MatchSim, dfn: Fighter, attacker_x: int, hd: HitDef) 
 	return true
 
 
+## SF6 削血规则：普攻永不削血；必杀技只在防御方 Burnout 时削血；超杀总是削血。削血可以削死。
+static func chip_damage(dfn: Fighter, hd: HitDef) -> int:
+	var chip := hd.chip if hd.chip > 0 else hd.damage / CHIP_DIV
+	match hd.source:
+		"super":
+			return chip
+		"special":
+			return chip if dfn.burnout != 0 else 0
+	return 0
+
+
 ## 连段补正后的伤害（不含打康加成）。min_scale 为该招的补正下限（超杀保底）。
 static func scaled_damage(dfn: Fighter, base: int, min_scale := SCALE_MIN) -> int:
 	var n := dfn.combo_hits + 1
@@ -173,10 +184,7 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 
 	var attacker := melee if melee != null else sim.opponent(dfn)
 	if blocked:
-		var chip := hd.chip
-		if dfn.burnout != 0:
-			chip = maxi(chip, hd.damage / BURNOUT_CHIP_DIV)
-		dfn.health = maxi(dfn.health - chip, sim.health_floor)
+		dfn.health = maxi(dfn.health - chip_damage(dfn, hd), sim.health_floor)
 		dfn.reset_combo()
 		Gauges.gain(attacker, Gauges.SUPER, hd.meter / 2)
 		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)

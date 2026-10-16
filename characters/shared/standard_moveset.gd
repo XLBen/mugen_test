@@ -64,21 +64,8 @@ func _air_normals() -> void:
 	_air("j_lk", "LK", 5, 8, 14, 10, [10, 20, 45, 30], L)
 
 
+## 出招表顺序即优先级（SF6）：OD 必杀 > 超杀 > 普通必杀 > 投 > 普攻。
 func _specials() -> void:
-	# 超必杀 Lv1：236236P，消耗 1 格超杀槽。第 1 帧超杀暂停 40 帧，1~12 帧无敌，伤害保底 30%
-	var super_total := 8 + 6 + 34 - 1
-	states["super1"] = {
-		"type": "S", "kind": "super", "total": super_total, "anim": "super", "cost": {"super": 1000},
-		"invuln": [{"frames": [1, 12]}],
-		"events": [{"frame": 1, "freeze": 40}, {"frame": 6, "vx": 900}, {"frame": 14, "vx": 0}],
-		"friction": 60,
-		"hitboxes": [{"active": [8, 13], "boxes": [[15, 40, 85, 130]],
-			"hit": {"damage": 2600, "chip": 650, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1500,
-				"blockstun": 18, "push": 800, "block_push": 1000, "juggle_limit": 10, "min_scale": 30,
-				"meter": 0, "strength": 2}}],
-	}
-	commands.append({"name": "236236P", "motion": "236236", "buttons": "P", "state": "super1"})
-
 	# EX 升龙：消耗 2 格 Drive，1~12 帧全身无敌，可以追打
 	states["dp_ex"] = {
 		"type": "S", "kind": "special", "air_from": 4, "land": "landing_long", "anim": "dp", "cost": {"drive": 20000},
@@ -97,6 +84,20 @@ func _specials() -> void:
 		"events": [{"frame": 11, "spawn": "fireball_ex", "x": 60, "y": 120}],
 	}
 	commands.append({"name": "236PP", "motion": "236", "buttons": "PP", "state": "fireball_ex", "cond": "no_projectile"})
+
+	# 超必杀 Lv1：236236P，消耗 1 格超杀槽。第 1 帧超杀暂停 40 帧，1~12 帧无敌，伤害保底 30%
+	var super_total := 8 + 6 + 34 - 1
+	states["super1"] = {
+		"type": "S", "kind": "super", "total": super_total, "anim": "super", "cost": {"super": 1000},
+		"invuln": [{"frames": [1, 12]}],
+		"events": [{"frame": 1, "freeze": 40}, {"frame": 6, "vx": 900}, {"frame": 14, "vx": 0}],
+		"friction": 60,
+		"hitboxes": [{"active": [8, 13], "boxes": [[15, 40, 85, 130]],
+			"hit": {"damage": 2600, "chip": 650, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1500,
+				"blockstun": 18, "push": 800, "block_push": 1000, "juggle_limit": 10, "min_scale": 30,
+				"meter": 0, "strength": 2}}],
+	}
+	commands.append({"name": "236236P", "motion": "236236", "buttons": "P", "state": "super1"})
 
 	# 升龙：发生 4，1~6 帧打击/投无敌，起飞后直到落地都可被惩罚
 	states["dp"] = {

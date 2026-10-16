@@ -26,7 +26,9 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 
 	for i in MAX_CHAIN:
 		var s := f.sd()
-		if f.contact != 0 and s.can_cancel(f.state_frame) and CommonStates.try_cancel(f, sim):
+		if CommonStates.try_upgrade(f, sim):
+			pass
+		elif f.contact != 0 and s.can_cancel(f.state_frame) and CommonStates.try_cancel(f, sim):
 			pass
 		elif s.total > 0 and f.state_frame >= s.total:
 			f.set_state(s.next)
