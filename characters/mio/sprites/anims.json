@@ -1,0 +1,165 @@
+{
+ "canvas": [
+  192,
+  160
+ ],
+ "anchor": [
+  96,
+  152
+ ],
+ "scale": 2,
+ "palettes": 2,
+ "anims": {
+  "idle": {
+   "loop": true,
+   "frames": [
+    [
+     "idle_00",
+     8
+    ],
+    [
+     "idle_01",
+     8
+    ],
+    [
+     "idle_02",
+     8
+    ],
+    [
+     "idle_03",
+     8
+    ],
+    [
+     "idle_04",
+     8
+    ],
+    [
+     "idle_05",
+     8
+    ]
+   ]
+  },
+  "walk_f": {
+   "loop": true,
+   "frames": [
+    [
+     "walk_f_00",
+     5
+    ],
+    [
+     "walk_f_01",
+     5
+    ],
+    [
+     "walk_f_02",
+     5
+    ],
+    [
+     "walk_f_03",
+     5
+    ],
+    [
+     "walk_f_04",
+     5
+    ],
+    [
+     "walk_f_05",
+     5
+    ],
+    [
+     "walk_f_06",
+     5
+    ],
+    [
+     "walk_f_07",
+     5
+    ]
+   ]
+  },
+  "walk_b": {
+   "loop": true,
+   "frames": [
+    [
+     "walk_b_00",
+     5
+    ],
+    [
+     "walk_b_01",
+     5
+    ],
+    [
+     "walk_b_02",
+     5
+    ],
+    [
+     "walk_b_03",
+     5
+    ],
+    [
+     "walk_b_04",
+     5
+    ],
+    [
+     "walk_b_05",
+     5
+    ],
+    [
+     "walk_b_06",
+     5
+    ],
+    [
+     "walk_b_07",
+     5
+    ]
+   ]
+  },
+  "crouch": {
+   "loop": false,
+   "frames": [
+    [
+     "crouch_00",
+     3
+    ],
+    [
+     "crouch_01",
+     1
+    ]
+   ]
+  },
+  "prejump": {
+   "loop": false,
+   "frames": [
+    [
+     "prejump_00",
+     1
+    ]
+   ]
+  },
+  "jump": {
+   "loop": false,
+   "frames": [
+    [
+     "jump_00",
+     1
+    ],
+    [
+     "jump_01",
+     1
+    ],
+    [
+     "jump_02",
+     1
+    ]
+   ]
+  },
+  "land": {
+   "loop": false,
+   "frames": [
+    [
+     "land_00",
+     1
+    ]
+   ]
+  }
+ }
+}

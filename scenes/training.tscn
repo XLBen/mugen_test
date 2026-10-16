@@ -17,5 +17,5 @@ script = ExtResource("2_view")
 offset_left = 12.0
 offset_top = 8.0
 offset_right = 1268.0
-offset_bottom = 120.0
+offset_bottom = 140.0
 theme_override_font_sizes/font_size = 14

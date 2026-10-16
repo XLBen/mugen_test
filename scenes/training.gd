@@ -1,15 +1,22 @@
 extends Node2D
 ## 训练场景：固定 60 帧推进仿真，表现层每帧读取状态绘制。
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
+## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
-const DUMMY: FighterDef = preload("res://characters/dummy/dummy.tres")
+const ROSTER: Array[FighterDef] = [
+	preload("res://characters/kagura/kagura.tres"),
+	preload("res://characters/volk/volk.tres"),
+	preload("res://characters/mio/mio.tres"),
+	preload("res://characters/dummy/dummy.tres"),
+]
 
 var sim: MatchSim
 var paused := false
 var step_once := false
 var saved_state: Dictionary = {}
 var last_inputs: Array[int] = [0, 0]
+var picks: Array[int] = [0, 1]
 
 @onready var view: MatchView = $MatchView
 @onready var hud: Label = $HUD/Info
@@ -18,8 +25,9 @@ var last_inputs: Array[int] = [0, 0]
 func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
 	LocalInput.register_actions()
-	sim = MatchSim.new(STAGE, DUMMY, DUMMY)
+	sim = MatchSim.new(STAGE, ROSTER[picks[0]], ROSTER[picks[1]])
 	view.sim = sim
+	view.load_sprites()
 
 
 func _physics_process(_delta: float) -> void:
@@ -52,6 +60,21 @@ func _unhandled_input(event: InputEvent) -> void:
 			step_once = true
 		KEY_F6:
 			sim.reset()
+		KEY_F7:
+			view.show_sprites = not view.show_sprites
+		KEY_F8:
+			_cycle_character(0)
+		KEY_F9:
+			_cycle_character(1)
+
+
+## 换角色后重置对局（角色数据不同，旧状态不再有效）。
+func _cycle_character(player: int) -> void:
+	picks[player] = (picks[player] + 1) % ROSTER.size()
+	sim.fighters[player].def = ROSTER[picks[player]]
+	sim.reset()
+	saved_state = {}
+	view.load_sprites()
 
 
 func _hud_text() -> String:
@@ -64,5 +87,6 @@ func _hud_text() -> String:
 			i + 1, Fighter.state_name(f.state), f.state_frame, SimConst.px(f.x), SimConst.px(f.y),
 			f.vx, f.vy, f.facing, InputBits.to_numpad(InputBits.clean_socd(last_inputs[i]), f.facing)])
 	lines.append("saved state: %s" % ("frame %d" % saved_state.frame if not saved_state.is_empty() else "none"))
-	lines.append("P1 WASD   P2 Arrows   F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset")
+	lines.append("P1 %s (WASD)   P2 %s (Arrows)" % [sim.fighters[0].def.display_name, sim.fighters[1].def.display_name])
+	lines.append("F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset  F7 sprites  F8/F9 change character")
 	return "\n".join(lines)

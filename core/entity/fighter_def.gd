@@ -3,6 +3,8 @@ extends Resource
 ## 角色的静态数据（不会在对战中改变，不进入存档）。所有长度为逻辑单位，时间为帧。
 
 @export var display_name := "Dummy"
+## 精灵目录（含 anims.json），为空则只画白模。只给表现层用，仿真层不读。
+@export_dir var sprite_dir := ""
 
 @export_group("Walk")
 @export var walk_forward_speed := 450

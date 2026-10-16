@@ -3,7 +3,13 @@
 一个用 Godot 4.7 写的可扩展 2D 格斗游戏底座（白模）。参考《街头霸王》《罪恶装备》《拳皇》的共通结构，
 逻辑层确定性、整数运算、可存读档（为回滚联网预留），规则差异做成可替换模块。第一套参考规则是街霸风 6 键。
 
-设计分析见 [docs/fighting-core-analysis.md](docs/fighting-core-analysis.md)。
+设计分析见 [docs/fighting-core-analysis.md](docs/fighting-core-analysis.md)，进度记录见 [docs/progress.md](docs/progress.md)。
+
+## 占位角色
+三个原创角色（Kagura / Volk / Mio）的像素精灵由 `tools/spritegen/` 程序化生成（Python + Pillow），
+每个角色两套配色，可随时重新生成：`python3 tools/spritegen/spritegen.py`
+
+![characters](docs/img/characters.png)
 
 ## 运行
 用 Godot 4.7 打开工程，运行主场景 `scenes/training.tscn`。
@@ -14,7 +20,7 @@
 | LP MP HP | U I O | 小键盘 7 8 9 |
 | LK MK HK | J K L | 小键盘 4 5 6 |
 
-F1 判定框 · F2 存档 · F3 读档 · F4 暂停 · F5 单帧步进 · F6 重置
+F1 判定框 · F2 存档 · F3 读档 · F4 暂停 · F5 单帧步进 · F6 重置 · F7 精灵/白模 · F8/F9 切换角色
 
 ## 测试
 ```bash

@@ -15,8 +15,18 @@ const CAMERA_HEIGHT_PX := 260.0
 
 var sim: MatchSim
 var show_boxes := true
+var show_sprites := true
+var _sprites: Array = [null, null] ## 每名玩家的 SpriteSet（没有精灵时为 null）
 
 @onready var camera: Camera2D = $Camera2D
+
+
+## 角色变更后调用。同角色镜像时 P2 用第二套配色。
+func load_sprites() -> void:
+	for i in 2:
+		var def := sim.fighters[i].def
+		var palette := 1 if i == 1 and def.sprite_dir == sim.fighters[0].def.sprite_dir else 0
+		_sprites[i] = SpriteSet.load_from(def.sprite_dir, palette) if def.sprite_dir != "" else null
 
 
 func _process(_delta: float) -> void:
@@ -32,7 +42,13 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	_draw_stage()
 	for i in sim.fighters.size():
-		_draw_fighter(sim.fighters[i], P_COLORS[i], "P%d" % (i + 1), font)
+		var sprites: SpriteSet = _sprites[i]
+		if show_sprites and sprites != null:
+			_draw_sprite(sim.fighters[i], sprites)
+		else:
+			_draw_fighter(sim.fighters[i], P_COLORS[i], font)
+	for i in sim.fighters.size():
+		_draw_label(sim.fighters[i], P_COLORS[i], "P%d" % (i + 1), font)
 	if show_boxes:
 		for f in sim.fighters:
 			draw_rect(_push_rect(f), PUSHBOX_COLOR, false, 1.0)
@@ -54,7 +70,7 @@ func _draw_stage() -> void:
 	draw_line(Vector2(half, -720), Vector2(half, 200), STAGE_EDGE_COLOR, 3.0)
 
 
-func _draw_fighter(f: Fighter, color: Color, label: String, font: Font) -> void:
+func _draw_fighter(f: Fighter, color: Color, _font: Font) -> void:
 	var body := _push_rect(f)
 	var fill := color
 	fill.a = 0.55
@@ -66,8 +82,42 @@ func _draw_fighter(f: Fighter, color: Color, label: String, font: Font) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(nose_x, nose_y - 10), tip, Vector2(nose_x, nose_y + 10)]), color)
 	# 地面阴影，便于看清空中位置
 	draw_line(Vector2(body.position.x, 2), Vector2(body.end.x, 2), Color(0, 0, 0, 0.6), 4.0)
+
+
+func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
+	var tex := _sprite_frame(f, sprites)
+	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y))
+	draw_set_transform(feet, 0.0, Vector2(sprites.scale * f.facing, sprites.scale))
+	draw_texture(tex, -sprites.anchor)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var shadow_w := SimConst.px(f.def.push_half_width) * 1.4
+	draw_line(Vector2(feet.x - shadow_w, 2), Vector2(feet.x + shadow_w, 2), Color(0, 0, 0, 0.45), 4.0)
+
+
+## 逻辑状态 → 动画帧。显示只依赖逻辑数据，回放/回滚时画面自然一致。
+func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
+	match f.state:
+		Fighter.State.WALK_FORWARD:
+			return sprites.frame_at("walk_f", f.state_frame)
+		Fighter.State.WALK_BACK:
+			return sprites.frame_at("walk_b", f.state_frame)
+		Fighter.State.CROUCH:
+			return sprites.frame_at("crouch", f.state_frame)
+		Fighter.State.PREJUMP:
+			return sprites.frame_at("prejump", f.state_frame)
+		Fighter.State.LANDING:
+			return sprites.frame_at("land", f.state_frame)
+		Fighter.State.AIR:
+			var i := 0 if f.vy > 600 else (2 if f.vy < -600 else 1)
+			return sprites.frame_index("jump", i)
+		_:
+			return sprites.frame_at("idle", sim.frame)
+
+
+func _draw_label(f: Fighter, color: Color, label: String, font: Font) -> void:
+	var top := -SimConst.px(f.y + f.def.stand_height) - 30.0
 	var text := "%s  %s" % [label, Fighter.state_name(f.state)]
-	draw_string(font, Vector2(body.position.x - 20, body.position.y - 8), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, color)
+	draw_string(font, Vector2(SimConst.px(f.x) - 40, top), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, color)
 
 
 func _push_rect(f: Fighter) -> Rect2:
