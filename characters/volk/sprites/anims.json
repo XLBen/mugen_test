@@ -257,6 +257,14 @@
 				["throw_02", 1]
 			]
 		},
+		"super": {
+			"loop": false,
+			"frames": [
+				["super_00", 1],
+				["super_01", 1],
+				["super_02", 1]
+			]
+		},
 		"hit_stand": {
 			"loop": false,
 			"frames": [

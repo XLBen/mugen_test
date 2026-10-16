@@ -6,7 +6,7 @@ extends RefCounted
 ## 判定盒以像素书写：[x 向前, y 向上, 宽, 高]，相对脚底中心、面朝右。
 ##
 ## 连段路线（接触对手后的取消）：
-##   必杀取消：轻/中普攻、5HP、2MK → 必杀技 / 超必杀
+##   必杀取消：轻/中普攻、5HP、2MK → 必杀技 / 超必杀；突进踢 → 超必杀（超杀取消）
 ##   连打：轻攻击之间互相取消（5LP / 2LP / 2LK）
 ##   Target Combo：5MP > HP
 
@@ -65,6 +65,39 @@ func _air_normals() -> void:
 
 
 func _specials() -> void:
+	# 超必杀 Lv1：236236P，消耗 1 格超杀槽。第 1 帧超杀暂停 40 帧，1~12 帧无敌，伤害保底 30%
+	var super_total := 8 + 6 + 34 - 1
+	states["super1"] = {
+		"type": "S", "kind": "super", "total": super_total, "anim": "super", "cost": {"super": 1000},
+		"invuln": [{"frames": [1, 12]}],
+		"events": [{"frame": 1, "freeze": 40}, {"frame": 6, "vx": 900}, {"frame": 14, "vx": 0}],
+		"friction": 60,
+		"hitboxes": [{"active": [8, 13], "boxes": [[15, 40, 85, 130]],
+			"hit": {"damage": 2600, "chip": 650, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1500,
+				"blockstun": 18, "push": 800, "block_push": 1000, "juggle_limit": 10, "min_scale": 30,
+				"meter": 0, "strength": 2}}],
+	}
+	commands.append({"name": "236236P", "motion": "236236", "buttons": "P", "state": "super1"})
+
+	# EX 升龙：消耗 2 格 Drive，1~12 帧全身无敌，可以追打
+	states["dp_ex"] = {
+		"type": "S", "kind": "special", "air_from": 4, "land": "landing_long", "anim": "dp", "cost": {"drive": 20000},
+		"invuln": [{"frames": [1, 12]}],
+		"events": [{"frame": 4, "vx": 300, "vy": 1650}],
+		"hitboxes": [{"active": [4, 16], "boxes": [[10, 100, 55, 120]],
+			"hit": {"damage": 1500, "hitstop": 12, "effect": "launch", "air_vx": 300, "air_vy": 1500, "juggle_limit": 5,
+				"blockstun": 20, "push": 600, "block_push": 800, "strength": 2}}],
+	}
+	commands.append({"name": "623PP", "motion": "623", "buttons": "PP", "state": "dp_ex"})
+
+	# EX 波动：消耗 2 格 Drive，耐久 2（能抵消一发普通波动后继续前进）
+	states["fireball_ex"] = {
+		"type": "S", "kind": "special", "total": 42, "anim": "fireball", "active_hint": [11, 14],
+		"cost": {"drive": 20000},
+		"events": [{"frame": 11, "spawn": "fireball_ex", "x": 60, "y": 120}],
+	}
+	commands.append({"name": "236PP", "motion": "236", "buttons": "PP", "state": "fireball_ex", "cond": "no_projectile"})
+
 	# 升龙：发生 4，1~6 帧打击/投无敌，起飞后直到落地都可被惩罚
 	states["dp"] = {
 		"type": "S", "kind": "special", "air_from": 4, "land": "landing_long", "anim": "dp",
@@ -95,6 +128,7 @@ func _specials() -> void:
 			"hit": {"damage": 1000, "hitstop": 11, "effect": "knockdown", "blockstun": -6 + rush_total - 14,
 				"chip": 120, "push": 700, "block_push": 900, "strength": 2}}],
 		"hurtboxes": [{"frames": [12, rush_total], "boxes": [[15, 60, 60, 40]]}],
+		"cancel": ["super"],
 	}
 	commands.append({"name": "214K", "motion": "214", "buttons": "K", "state": "rush"})
 
@@ -119,6 +153,9 @@ func _projectiles() -> Dictionary:
 		"fireball_l": {"speed": 450, "box": [-20, -20, 40, 40], "hit": hit},
 		"fireball_m": {"speed": 600, "box": [-20, -20, 40, 40], "hit": hit},
 		"fireball_h": {"speed": 800, "box": [-20, -20, 40, 40], "hit": hit},
+		"fireball_ex": {"speed": 750, "box": [-24, -24, 48, 48], "hits": 2,
+			"hit": {"damage": 800, "chip": 200, "hitstun": 24, "blockstun": 20, "hitstop": 9,
+				"push": 650, "block_push": 750, "strength": 1, "meter": 0}},
 	}
 
 

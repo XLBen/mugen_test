@@ -19,6 +19,11 @@ const SCALE_STEP := 10
 const SCALE_MIN := 10
 const LIGHT_STARTER_PENALTY := 10
 
+## 资源
+const DEFENDER_METER := 10 ## 被打 / 防御时获得的超杀槽
+const BURNOUT_BLOCKSTUN := 4 ## Burnout 中防御硬直增加
+const BURNOUT_CHIP_DIV := 6 ## Burnout 中防御普攻也会被削血：伤害 / 6
+
 
 static func resolve(sim: MatchSim) -> void:
 	var fighters := sim.fighters
@@ -146,15 +151,15 @@ static func can_block(sim: MatchSim, dfn: Fighter, attacker_x: int, hd: HitDef) 
 	return true
 
 
-## 连段补正后的伤害（不含打康加成）。
-static func scaled_damage(dfn: Fighter, base: int) -> int:
+## 连段补正后的伤害（不含打康加成）。min_scale 为该招的补正下限（超杀保底）。
+static func scaled_damage(dfn: Fighter, base: int, min_scale := SCALE_MIN) -> int:
 	var n := dfn.combo_hits + 1
 	var scale := 100
 	if n >= 3:
 		scale -= SCALE_STEP * (n - 1)
 	if dfn.combo_light != 0 and n >= 2:
 		scale -= LIGHT_STARTER_PENALTY
-	return base * maxi(scale, SCALE_MIN) / 100
+	return base * maxi(scale, maxi(min_scale, SCALE_MIN)) / 100
 
 
 ## 应用一次命中/防御。melee 为 null 表示飞行道具（发射者不顿帧、不反推）。
@@ -166,25 +171,36 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 	var crouching := dfn.input_at(sim.frame) & InputBits.DOWN != 0
 	var was_juggled := dfn.state_name() == "hit_air"
 
+	var attacker := melee if melee != null else sim.opponent(dfn)
 	if blocked:
-		dfn.health = maxi(dfn.health - hd.chip, 0)
+		var chip := hd.chip
+		if dfn.burnout != 0:
+			chip = maxi(chip, hd.damage / BURNOUT_CHIP_DIV)
+		dfn.health = maxi(dfn.health - chip, sim.health_floor)
 		dfn.reset_combo()
+		Gauges.gain(attacker, Gauges.SUPER, hd.meter / 2)
+		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)
+		Gauges.drain(dfn, Gauges.DRIVE, hd.drive)
 	else:
-		var damage := scaled_damage(dfn, hd.damage)
+		Gauges.gain(attacker, Gauges.SUPER, hd.meter)
+		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)
+		if attacker.burnout == 0:
+			Gauges.gain(attacker, Gauges.DRIVE, hd.drive / 2)
+		var damage := scaled_damage(dfn, hd.damage, hd.min_scale)
 		if counter != Counter.NONE:
 			damage = damage * COUNTER_DAMAGE_PCT / 100
 		if dfn.combo_hits == 0:
 			dfn.combo_light = 1 if hd.strength == 0 else 0
 		dfn.combo_hits += 1
 		dfn.combo_damage += damage
-		dfn.health = maxi(dfn.health - damage, 0)
+		dfn.health = maxi(dfn.health - damage, sim.health_floor)
 		dfn.counter_type = counter
 		if counter != Counter.NONE:
 			dfn.counter_timer = COUNTER_DISPLAY
 
 	if blocked and dfn.health > 0:
 		dfn.set_state("block_crouch" if crouching else "block_stand")
-		dfn.stun = hd.blockstun
+		dfn.stun = hd.blockstun + (BURNOUT_BLOCKSTUN if dfn.burnout != 0 else 0)
 		dfn.vx = hd.block_push * dir
 	else:
 		var effect := hd.effect
@@ -217,7 +233,7 @@ static func apply_throw_release(sim: MatchSim, atk: Fighter, dfn: Fighter, hd: H
 	if dfn.counter_type == Counter.PUNISH:
 		damage = damage * PUNISH_THROW_DAMAGE_PCT / 100
 		dfn.counter_timer = COUNTER_DISPLAY
-	dfn.health = maxi(dfn.health - damage, 0)
+	dfn.health = maxi(dfn.health - damage, sim.health_floor)
 	dfn.combo_hits += 1
 	dfn.combo_damage += damage
 	dfn.set_state("hit_air")

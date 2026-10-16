@@ -37,6 +37,9 @@ var juggle := 0 ## 浮空追打计数
 var counter_type := 0 ## 最近一次被打的打康类型（Combat.Counter）
 var counter_timer := 0 ## 打康提示剩余显示帧
 var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
+var gauges := PackedInt32Array() ## 资源槽当前值（Gauges.DEFS 顺序）
+var gauge_delay := PackedInt32Array() ## 资源槽回复停顿剩余帧
+var burnout := 0 ## Drive 耗尽状态
 
 
 func _init(p_def: FighterDef) -> void:
@@ -48,7 +51,9 @@ func set_def(p_def: FighterDef) -> void:
 	moveset = Moveset.for_def(def)
 
 
-func reset_state() -> void:
+## keep_gauges：回合之间保留标记为跨回合的槽（超杀槽）。
+func reset_state(keep_gauges := false) -> void:
+	Gauges.reset(self, keep_gauges)
 	x = 0
 	y = 0
 	vx = 0
@@ -171,6 +176,9 @@ func save_state() -> Dictionary:
 	for field: String in _FIELDS:
 		s[field] = get(field)
 	s.history = history.duplicate()
+	s.gauges = gauges.duplicate()
+	s.gauge_delay = gauge_delay.duplicate()
+	s.burnout = burnout
 	return s
 
 
@@ -178,6 +186,9 @@ func load_state(s: Dictionary) -> void:
 	for field: String in _FIELDS:
 		set(field, s[field])
 	history = s.history.duplicate()
+	gauges = s.gauges.duplicate()
+	gauge_delay = s.gauge_delay.duplicate()
+	burnout = s.burnout
 
 
 ## 参与状态哈希的整数序列，顺序固定。
@@ -185,6 +196,8 @@ func hash_values() -> Array[int]:
 	var out: Array[int] = []
 	for field: String in _FIELDS:
 		out.append(get(field))
-	for v in history:
-		out.append(v)
+	for arr in [history, gauges, gauge_delay]:
+		for v in arr:
+			out.append(v)
+	out.append(burnout)
 	return out

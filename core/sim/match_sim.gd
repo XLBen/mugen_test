@@ -5,12 +5,32 @@ extends RefCounted
 ##
 ## 每帧顺序：记录输入 → 角色更新（逻辑/事件/物理）→ 道具移动 → 墙与推挤 → 命中结算 → 摄像机
 
+enum Round { INTRO, FIGHT, END, MATCH_OVER }
+
+const ROUND_TIME := 99 * SimConst.FPS
+const INTRO_FRAMES := 70
+const END_FRAMES := 150
+const WINS_NEEDED := 2
+
 var stage: StageDef
 var fighters: Array[Fighter] = []
 var projectiles: Array[Projectile] = []
 
+## 设置（不随对战变化，修改后调用 reset()）
+var versus := false ## true = 回合制对战（开场、计时、KO、三局两胜）；false = 自由模式
+var training := false ## 训练模式：不会 KO、恢复可行动后回满血
+var infinite_meter := false ## 训练模式：资源槽常满
+var health_floor := 0 ## 体力下限（训练模式为 1）
+
+## 可变状态
 var frame := 0
 var camera_x := 0 ## 摄像机中心（逻辑单位），屏幕墙由它推导
+var freeze := 0 ## 超杀暂停剩余帧：期间整个世界静止，只记录输入
+var round_state: int = Round.FIGHT
+var round_frame := 0 ## 当前回合阶段经过的帧
+var round_timer := ROUND_TIME
+var round_number := 1
+var wins: Array[int] = [0, 0]
 
 
 func _init(p_stage: StageDef, p1_def: FighterDef, p2_def: FighterDef) -> void:
@@ -21,16 +41,28 @@ func _init(p_stage: StageDef, p1_def: FighterDef, p2_def: FighterDef) -> void:
 	reset()
 
 
+## 整场重置。versus = true 时从第一回合开场开始。
 func reset() -> void:
 	frame = 0
+	wins = [0, 0]
+	round_number = 1
+	health_floor = 1 if training else 0
+	_reset_round(false)
+
+
+func _reset_round(keep_gauges: bool) -> void:
 	camera_x = 0
+	freeze = 0
 	projectiles = []
 	for f in fighters:
-		f.reset_state()
+		f.reset_state(keep_gauges)
 	fighters[0].x = -stage.start_offset
 	fighters[0].facing = 1
 	fighters[1].x = stage.start_offset
 	fighters[1].facing = -1
+	round_timer = ROUND_TIME
+	round_frame = 0
+	round_state = Round.INTRO if versus else Round.FIGHT
 
 
 func opponent(f: Fighter) -> Fighter:
@@ -40,11 +72,16 @@ func opponent(f: Fighter) -> Fighter:
 ## inputs[i] 是第 i 名玩家本帧的 InputBits（会在此做 SOCD 清理）。
 func step(inputs: Array[int]) -> void:
 	frame += 1
+	var accept_input := round_state == Round.FIGHT
 	for i in 2:
-		fighters[i].record_input(frame, InputBits.clean_socd(inputs[i]))
+		fighters[i].record_input(frame, InputBits.clean_socd(inputs[i]) if accept_input else 0)
+	if freeze > 0:
+		freeze -= 1
+		return
 
 	for f in fighters:
 		StateRunner.update(f, self)
+		Gauges.tick(f)
 	_move_projectiles()
 
 	var wall_left := screen_wall_left()
@@ -61,6 +98,68 @@ func step(inputs: Array[int]) -> void:
 
 	Combat.resolve(self)
 	_update_camera()
+	_update_round()
+
+
+# ---------------------------------------------------------------- 回合
+
+func _update_round() -> void:
+	round_frame += 1
+	if not versus:
+		if training:
+			_training_refill()
+		return
+	match round_state:
+		Round.INTRO:
+			if round_frame >= INTRO_FRAMES:
+				_set_round_state(Round.FIGHT)
+		Round.FIGHT:
+			round_timer -= 1
+			if fighters[0].health <= 0 or fighters[1].health <= 0 or round_timer <= 0:
+				_end_round()
+		Round.END:
+			if round_frame >= END_FRAMES:
+				if wins[0] >= WINS_NEEDED or wins[1] >= WINS_NEEDED:
+					_set_round_state(Round.MATCH_OVER)
+				else:
+					round_number += 1
+					_reset_round(true)
+
+
+## 体力高的一方赢；相同（含双 KO、时间到同血）双方各得一胜。
+func _end_round() -> void:
+	var h0 := fighters[0].health
+	var h1 := fighters[1].health
+	if h0 >= h1:
+		wins[0] += 1
+	if h1 >= h0:
+		wins[1] += 1
+	_set_round_state(Round.END)
+
+
+func _set_round_state(s: int) -> void:
+	round_state = s
+	round_frame = 0
+
+
+## 训练模式：恢复可行动后回满血；可选资源常满。
+func _training_refill() -> void:
+	for f in fighters:
+		if f.sd().ctrl and f.combo_hits == 0:
+			f.health = f.def.max_health
+		if infinite_meter:
+			for i in Gauges.DEFS.size():
+				f.gauges[i] = Gauges.DEFS[i].max
+			f.burnout = 0
+
+
+## 回合内的胜者（-1 = 平局/未结束），给 HUD 用。
+func round_winner() -> int:
+	if round_state != Round.END and round_state != Round.MATCH_OVER:
+		return -1
+	if fighters[0].health == fighters[1].health:
+		return -1
+	return 0 if fighters[0].health > fighters[1].health else 1
 
 
 # ---------------------------------------------------------------- 飞行道具
@@ -135,6 +234,8 @@ func save_state() -> Dictionary:
 	return {
 		"frame": frame,
 		"camera_x": camera_x,
+		"freeze": freeze,
+		"round": [round_state, round_frame, round_timer, round_number, wins[0], wins[1]],
 		"fighters": fighters.map(func(f: Fighter) -> Dictionary: return f.save_state()),
 		"projectiles": projectiles.map(func(p: Projectile) -> Dictionary: return p.save_state()),
 	}
@@ -143,6 +244,12 @@ func save_state() -> Dictionary:
 func load_state(s: Dictionary) -> void:
 	frame = s.frame
 	camera_x = s.camera_x
+	freeze = s.freeze
+	round_state = s.round[0]
+	round_frame = s.round[1]
+	round_timer = s.round[2]
+	round_number = s.round[3]
+	wins = [s.round[4], s.round[5]]
 	for i in fighters.size():
 		fighters[i].load_state(s.fighters[i])
 	var restored: Array[Projectile] = []
@@ -153,7 +260,8 @@ func load_state(s: Dictionary) -> void:
 
 ## 32 位状态哈希，用于确定性校验与（以后的）联网不同步检测。
 func state_hash() -> int:
-	var values: Array[int] = [frame, camera_x, projectiles.size()]
+	var values: Array[int] = [frame, camera_x, projectiles.size(), freeze, round_state, round_frame,
+		round_timer, round_number, wins[0], wins[1]]
 	for f in fighters:
 		values.append_array(f.hash_values())
 	for p in projectiles:

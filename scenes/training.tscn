@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/training.gd" id="1_training"]
 [ext_resource type="Script" path="res://view/match_view.gd" id="2_view"]
+[ext_resource type="Script" path="res://view/hud_view.gd" id="3_hud"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_training")
@@ -13,26 +14,36 @@ script = ExtResource("2_view")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
+[node name="HudView" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_hud")
+
 [node name="Info" type="Label" parent="HUD"]
 offset_left = 12.0
-offset_top = 8.0
+offset_top = 118.0
 offset_right = 1268.0
-offset_bottom = 140.0
+offset_bottom = 340.0
 theme_override_font_sizes/font_size = 14
 
 [node name="ComboP1" type="Label" parent="HUD"]
 offset_left = 40.0
-offset_top = 200.0
+offset_top = 345.0
 offset_right = 440.0
-offset_bottom = 280.0
+offset_bottom = 425.0
 theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
 theme_override_font_sizes/font_size = 26
 
 [node name="ComboP2" type="Label" parent="HUD"]
 offset_left = 840.0
-offset_top = 200.0
+offset_top = 345.0
 offset_right = 1240.0
-offset_bottom = 280.0
+offset_bottom = 425.0
 theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
 theme_override_font_sizes/font_size = 26
 horizontal_alignment = 2

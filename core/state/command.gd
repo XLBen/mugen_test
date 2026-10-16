@@ -15,6 +15,7 @@ var name := ""
 var motion: Motion
 var buttons := 0 ## 按键位掩码；0 表示纯方向指令（冲刺）
 var all_buttons := false ## true：buttons 必须同时按住（投技）
+var min_buttons := 1 ## 至少同时按住几个（"PP" = 任意两个拳，EX 必杀）
 var where := "ground" ## ground / air / cancel（只能从取消窗口里出，如 Target Combo 后续）
 var stance := "any" ## any / stand / crouch（地面普攻按是否按下区分）
 var state := "" ## 目标状态名
@@ -27,9 +28,14 @@ static func build(d: Dictionary) -> Command:
 	c.state = d.state
 	if d.has("motion"):
 		c.motion = Motion.preset(d.motion)
-	for b: String in d.get("buttons", "").split("+", false):
-		c.buttons |= BUTTON_NAMES[b]
-	c.all_buttons = d.get("buttons", "").contains("+")
+	var spec: String = d.get("buttons", "")
+	if spec == "PP" or spec == "KK":
+		c.buttons = BUTTON_NAMES[spec.substr(0, 1)]
+		c.min_buttons = 2
+	else:
+		for b: String in spec.split("+", false):
+			c.buttons |= BUTTON_NAMES[b]
+		c.all_buttons = spec.contains("+")
 	c.where = d.get("where", c.where)
 	c.stance = d.get("stance", c.stance)
 	c.cond = d.get("cond", c.cond)
@@ -58,7 +64,20 @@ func _press_frame(f: Fighter, frame: int, buffer: int) -> int:
 	while t > frame - buffer and t > f.consumed:
 		var pressed := f.pressed_at(t) & buttons
 		if pressed != 0:
-			if not all_buttons or f.input_at(t) & buttons == buttons:
+			var held := f.input_at(t) & buttons
+			if all_buttons and held != buttons:
+				pass
+			elif min_buttons > 1 and _count_bits(held) < min_buttons:
+				pass
+			else:
 				return t
 		t -= 1
 	return -1
+
+
+static func _count_bits(v: int) -> int:
+	var n := 0
+	while v != 0:
+		n += v & 1
+		v >>= 1
+	return n

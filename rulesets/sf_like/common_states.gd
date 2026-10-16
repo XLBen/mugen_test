@@ -6,6 +6,8 @@ const HURT_FRICTION := 60
 const THROW_TECH_WINDOW := 7 ## 被抓后多少帧内可以拆投
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_GUARD := 26000 ## 近距离防御的触发距离（单位）
+const SPECIAL_METER := 20 ## 出必杀技（无论是否命中）获得的超杀槽
+const FORWARD_DRIVE := 20 ## 前走每帧额外回复的 Drive
 
 
 static func states() -> Dictionary:
@@ -93,6 +95,8 @@ static func _ground(f: Fighter, sim: MatchSim) -> void:
 			1:
 				f.vx = f.def.walk_forward_speed * f.facing
 				_enter(f, "walk_f")
+				if f.burnout == 0:
+					Gauges.gain(f, Gauges.DRIVE, FORWARD_DRIVE)
 			-1:
 				if _threatened(f, sim):
 					f.vx = 0
@@ -112,12 +116,15 @@ static func try_commands(f: Fighter, sim: MatchSim, where: String) -> bool:
 			continue
 		if c.cond == "no_projectile" and sim.has_projectile(f):
 			continue
+		var target: StateDef = f.moveset.states[f.moveset.id(c.state)]
+		if not Gauges.can_afford(f, target.cost):
+			continue
 		var press := c.check(f, sim.frame)
 		if press < 0:
 			continue
 		if c.buttons != 0:
 			f.consumed = press
-		f.set_state(c.state)
+		_enter_move(f, target)
 		if where == "air":
 			f.air_used = 1
 		else:
@@ -139,11 +146,13 @@ static func try_cancel(f: Fighter, sim: MatchSim) -> bool:
 			continue
 		if c.cond == "no_projectile" and sim.has_projectile(f):
 			continue
+		if not Gauges.can_afford(f, target.cost):
+			continue
 		var press := c.check(f, sim.frame, Command.BUFFER + f.last_hitstop)
 		if press < 0:
 			continue
 		f.consumed = press
-		f.set_state(c.state)
+		_enter_move(f, target)
 		if not air:
 			f.vx = 0
 		return true
@@ -200,6 +209,14 @@ static func _throwing(f: Fighter, sim: MatchSim) -> void:
 		opp.facing = -f.facing
 	elif f.state_frame == s.throw_release:
 		Combat.apply_throw_release(sim, f, opp, s.throw_hit)
+
+
+## 进入招式：扣资源，出必杀技涨超杀槽。
+static func _enter_move(f: Fighter, target: StateDef) -> void:
+	Gauges.spend(f, target.cost)
+	if target.kind == "special" and not target.cost.has("super"):
+		Gauges.gain(f, Gauges.SUPER, SPECIAL_METER)
+	f.set_state(target.name)
 
 
 static func _enter(f: Fighter, state_name: String) -> void:

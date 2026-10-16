@@ -2,6 +2,7 @@ extends Node2D
 ## 训练场景：固定 60 帧推进仿真，表现层每帧读取状态绘制。
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
+## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
 const ROSTER: Array[FighterDef] = [
@@ -20,6 +21,7 @@ var picks: Array[int] = [0, 1]
 
 @onready var view: MatchView = $MatchView
 @onready var hud: Label = $HUD/Info
+@onready var hud_view: HudView = $HUD/HudView
 @onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
 
 
@@ -27,7 +29,10 @@ func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
 	LocalInput.register_actions()
 	sim = MatchSim.new(STAGE, ROSTER[picks[0]], ROSTER[picks[1]])
+	sim.training = true
+	sim.reset()
 	view.sim = sim
+	hud_view.sim = sim
 	view.load_sprites()
 
 
@@ -79,6 +84,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_cycle_character(0)
 		KEY_F9:
 			_cycle_character(1)
+		KEY_F10:
+			sim.versus = not sim.versus
+			sim.training = not sim.versus
+			sim.reset()
+			saved_state = {}
+		KEY_F11:
+			sim.infinite_meter = not sim.infinite_meter
+		KEY_F12:
+			hud.visible = not hud.visible
 
 
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。
@@ -94,6 +108,10 @@ func _hud_text() -> String:
 	var lines := PackedStringArray()
 	lines.append("frame %d   hash %08x   camera %d px%s" % [
 		sim.frame, sim.state_hash(), int(SimConst.px(sim.camera_x)), "   [PAUSED]" if paused else ""])
+	for i in 2:
+		var g := sim.fighters[i]
+		lines.append("P%d  super %4d  drive %5d%s" % [i + 1, g.gauges[Gauges.SUPER], g.gauges[Gauges.DRIVE],
+			"  BURNOUT" if g.burnout else ""])
 	for i in sim.fighters.size():
 		var f := sim.fighters[i]
 		lines.append("P%d  HP %5d  %-12s f%-3d  x %7.1f  y %6.1f  vx %5d  vy %5d  stun %2d  stop %2d  input %d" % [
@@ -101,5 +119,7 @@ func _hud_text() -> String:
 			f.vx, f.vy, f.stun, f.hitstop, f.numpad_at(sim.frame)])
 	lines.append("saved state: %s" % ("frame %d" % saved_state.frame if not saved_state.is_empty() else "none"))
 	lines.append("P1 %s (WASD)   P2 %s (Arrows)" % [sim.fighters[0].def.display_name, sim.fighters[1].def.display_name])
-	lines.append("F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset  F7 sprites  F8/F9 change character")
+	lines.append("F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset  F7 sprites  F8/F9 character")
+	lines.append("F10 %s  F11 infinite meter %s  F12 hide this" % [
+		"VERSUS" if sim.versus else "TRAINING", "ON" if sim.infinite_meter else "off"])
 	return "\n".join(lines)

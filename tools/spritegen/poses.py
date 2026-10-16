@@ -167,6 +167,10 @@ def specials(ch):
 			pose(ch, torso=-12, thigh_f=30, uarm_f=10, farm_f=60),
 			pose(ch, torso=-22, thigh_f=96, shin_f=96, thigh_b=-24, shin_b=-40, uarm_f=-10, farm_f=40,
 				uarm_b=-40, farm_b=0, flow=0.6)),
+		"super": attack(
+			dict(crouch_pose(ch), torso=8, uarm_f=-40, farm_f=30, uarm_b=60, farm_b=120, flow=-0.5),
+			pose(ch, torso=30, head=-2, uarm_f=88, farm_f=90, uarm_b=-60, farm_b=-20, thigh_f=48, shin_f=6,
+				thigh_b=-40, shin_b=-30, flow=1.0, knife=88)),
 		"throw": attack(
 			pose(ch, torso=14, uarm_f=60, farm_f=80, uarm_b=50, farm_b=70),
 			pose(ch, torso=20, uarm_f=82, farm_f=90, uarm_b=76, farm_b=86, thigh_f=28)),
@@ -209,7 +213,7 @@ ANIMS = {
 }
 for _name, _fn in NORMALS.items():
 	ANIMS[_name] = dict(loop=False, frames=_fn)
-for _name in ("fireball", "dp", "rush", "throw"):
+for _name in ("fireball", "dp", "rush", "throw", "super"):
 	ANIMS[_name] = dict(loop=False, frames=lambda ch, n=_name: specials(ch)[n])
 for _name in ("hit_stand", "hit_crouch", "block_stand", "block_crouch", "hit_air", "knockdown", "wakeup"):
 	ANIMS[_name] = dict(loop=False, frames=lambda ch, n=_name: hurt(ch)[n])

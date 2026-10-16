@@ -24,6 +24,9 @@ var juggle_start := 1 ## 把站立/跳跃中的对手打成浮空时，对方的
 var juggle_limit := 0 ## 对手追打计数 <= 此值时才能打中浮空受击中的对手
 var juggle_add := 1 ## 追打命中后对方计数增加
 var counter_effect := -1 ## 打康时替换的命中效果（-1 = 不替换）
+var meter := -1 ## 命中时攻击方获得的超杀槽（-1 = 按强度取默认值，被防减半）
+var drive := -1 ## 命中时攻击方获得 / 被防时防御方损失的 Drive（-1 = 按强度取默认值）
+var min_scale := 10 ## 连段补正的下限（超杀有保底）
 
 
 static func from_dict(d: Dictionary) -> HitDef:
@@ -43,6 +46,9 @@ static func from_dict(d: Dictionary) -> HitDef:
 	h.juggle_start = d.get("juggle_start", h.juggle_start)
 	h.juggle_limit = d.get("juggle_limit", h.juggle_limit)
 	h.juggle_add = d.get("juggle_add", h.juggle_add)
+	h.meter = d.get("meter", [20, 40, 60][h.strength])
+	h.drive = d.get("drive", [500, 1000, 1500][h.strength])
+	h.min_scale = d.get("min_scale", h.min_scale)
 	if d.has("counter_effect"):
 		h.counter_effect = EFFECT_NAMES[d.counter_effect]
 	return h
