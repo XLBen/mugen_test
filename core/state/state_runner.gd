@@ -9,6 +9,8 @@ const MAX_CHAIN := 4 ## 同一帧内最多连续转移几次状态
 
 
 static func update(f: Fighter, sim: MatchSim) -> void:
+	if f.counter_timer > 0:
+		f.counter_timer -= 1
 	if f.hitstop > 0:
 		f.hitstop -= 1
 		return
@@ -18,9 +20,15 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 	if f.throw_protect > 0 and f.sd().kind != "hurt":
 		f.throw_protect -= 1
 
+	# 恢复可行动（不在受击/防御/被投中）即连段结束
+	if f.sd().kind != "hurt" and f.combo_hits + f.juggle > 0:
+		f.reset_combo()
+
 	for i in MAX_CHAIN:
 		var s := f.sd()
-		if s.total > 0 and f.state_frame >= s.total:
+		if f.contact != 0 and s.can_cancel(f.state_frame) and CommonStates.try_cancel(f, sim):
+			pass
+		elif s.total > 0 and f.state_frame >= s.total:
 			f.set_state(s.next)
 		elif s.logic != "":
 			CommonStates.run(s.logic, f, sim)

@@ -15,7 +15,7 @@ var name := ""
 var motion: Motion
 var buttons := 0 ## 按键位掩码；0 表示纯方向指令（冲刺）
 var all_buttons := false ## true：buttons 必须同时按住（投技）
-var where := "ground" ## ground / air
+var where := "ground" ## ground / air / cancel（只能从取消窗口里出，如 Target Combo 后续）
 var stance := "any" ## any / stand / crouch（地面普攻按是否按下区分）
 var state := "" ## 目标状态名
 var cond := "" ## 额外条件：no_projectile 等
@@ -37,14 +37,14 @@ static func build(d: Dictionary) -> Command:
 
 
 ## 返回触发它的按键帧（>= 0），不成立返回 -1。
-func check(f: Fighter, frame: int) -> int:
+func check(f: Fighter, frame: int, buffer := BUFFER) -> int:
 	if stance != "any":
 		var down := InputBits.is_down(f.numpad_at(frame))
 		if down != (stance == "crouch"):
 			return -1
 	if buttons == 0:
 		return frame if motion != null and motion.matches(f, frame) else -1
-	var press := _press_frame(f, frame)
+	var press := _press_frame(f, frame, buffer)
 	if press < 0:
 		return -1
 	if motion != null and not motion.matches(f, press):
@@ -53,9 +53,9 @@ func check(f: Fighter, frame: int) -> int:
 
 
 ## 在缓冲窗口内找最近一次满足条件的按键帧（且晚于已经被消耗的输入）。
-func _press_frame(f: Fighter, frame: int) -> int:
+func _press_frame(f: Fighter, frame: int, buffer: int) -> int:
 	var t := frame
-	while t > frame - BUFFER and t > f.consumed:
+	while t > frame - buffer and t > f.consumed:
 		var pressed := f.pressed_at(t) & buttons
 		if pressed != 0:
 			if not all_buttons or f.input_at(t) & buttons == buttons:

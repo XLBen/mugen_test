@@ -27,6 +27,15 @@ var knockdown := 0 ## 当前浮空受击落地后是否倒地
 var throw_protect := 0 ## 硬直结束后的投无敌剩余帧
 var push_transfer := 0 ## 版边被打时，击退是否反推给攻击方
 var consumed := -1 ## 最近一次被指令消耗的按键帧
+var contact := 0 ## 当前招式是否已接触对手：0 无 / 1 被防 / 2 命中（取消窗口用）
+var last_hitstop := 0 ## 最近一次接触的顿帧长度（取消时延长按键缓冲）
+# 以下是"作为被打方"的连段状态，恢复可行动时清零
+var combo_hits := 0
+var combo_damage := 0
+var combo_light := 0 ## 连段由轻攻击起手（额外补正）
+var juggle := 0 ## 浮空追打计数
+var counter_type := 0 ## 最近一次被打的打康类型（Combat.Counter）
+var counter_timer := 0 ## 打康提示剩余显示帧
 var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
 
 
@@ -54,6 +63,10 @@ func reset_state() -> void:
 	throw_protect = 0
 	push_transfer = 0
 	consumed = -1
+	contact = 0
+	last_hitstop = 0
+	reset_combo()
+	counter_timer = 0
 	history = PackedInt32Array()
 	history.resize(HISTORY)
 	set_state("stand")
@@ -79,6 +92,15 @@ func set_state(state_name_: String) -> void:
 	fresh = 1
 	hit_mask = 0
 	push_transfer = 0
+	contact = 0
+
+
+func reset_combo() -> void:
+	combo_hits = 0
+	combo_damage = 0
+	combo_light = 0
+	juggle = 0
+	counter_type = 0
 
 
 func is_airborne() -> bool:
@@ -140,7 +162,8 @@ func numpad_at(frame: int) -> int:
 # ---------------------------------------------------------------- 存档
 
 const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "health",
-	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed"]
+	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
+	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer"]
 
 
 func save_state() -> Dictionary:

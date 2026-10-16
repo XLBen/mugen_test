@@ -20,6 +20,7 @@ var picks: Array[int] = [0, 1]
 
 @onready var view: MatchView = $MatchView
 @onready var hud: Label = $HUD/Info
+@onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
 
 
 func _ready() -> void:
@@ -40,6 +41,18 @@ func _physics_process(_delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	hud.text = _hud_text()
+	for i in 2:
+		combo_labels[i].text = _combo_text(sim.fighters[1 - i])
+
+
+## 攻击方一侧显示：连段数 / 连段伤害 / 打康提示（数据取自被打方）。
+func _combo_text(victim: Fighter) -> String:
+	var lines := PackedStringArray()
+	if victim.counter_timer > 0:
+		lines.append("PUNISH COUNTER" if victim.counter_type == Combat.Counter.PUNISH else "COUNTER")
+	if victim.combo_hits >= 2:
+		lines.append("%d HITS  %d" % [victim.combo_hits, victim.combo_damage])
+	return "\n".join(lines)
 
 
 func _unhandled_input(event: InputEvent) -> void:

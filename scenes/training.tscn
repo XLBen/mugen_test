@@ -19,3 +19,20 @@ offset_top = 8.0
 offset_right = 1268.0
 offset_bottom = 140.0
 theme_override_font_sizes/font_size = 14
+
+[node name="ComboP1" type="Label" parent="HUD"]
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 440.0
+offset_bottom = 280.0
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="ComboP2" type="Label" parent="HUD"]
+offset_left = 840.0
+offset_top = 200.0
+offset_right = 1240.0
+offset_bottom = 280.0
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 2

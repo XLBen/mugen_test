@@ -1,10 +1,24 @@
 class_name Combat
 ## 每帧的命中检测与结算。先收集本帧所有碰撞，再统一结算，P1/P2 处理完全对称：
 ##   1. 投 vs 投 → 双方拆投；投 vs 打 → 打击优先（投被打断）
-##   2. 打 vs 打 → 相打，双方都吃到
+##   2. 打 vs 打 → 相打，双方都吃到（且都是打康）
 ##   3. 道具 vs 道具 → 互相抵消耐久
 ##   4. 道具 vs 角色
-## 防御判定使用结算前的状态，所以相打时双方都不会"防住"。
+## 防御判定与打康判定都使用结算前的状态。
+
+enum Counter { NONE, COUNTER, PUNISH }
+
+## 街霸风打康参数
+const COUNTER_HITSTUN := {Counter.COUNTER: 2, Counter.PUNISH: 4}
+const COUNTER_DAMAGE_PCT := 120
+const PUNISH_THROW_DAMAGE_PCT := 170
+const COUNTER_DISPLAY := 45
+
+## 街霸风连段补正：第 1、2 击 100%，第 3 击起每击 -10%，轻攻击起手再 -10%，最低 10%
+const SCALE_STEP := 10
+const SCALE_MIN := 10
+const LIGHT_STARTER_PENALTY := 10
+
 
 static func resolve(sim: MatchSim) -> void:
 	var fighters := sim.fighters
@@ -35,14 +49,15 @@ static func resolve(sim: MatchSim) -> void:
 		if not struck.has(t[0]):
 			_start_throw(t[0], t[1])
 
-	# 先做全部防御判定，再统一应用（相打）
+	# 先做全部防御 / 打康判定，再统一应用（相打）
 	var decisions := []
 	for st: Array in strikes:
-		decisions.append(can_block(sim, st[1], st[0].x, st[3]))
+		var blocked := can_block(sim, st[1], st[0].x, st[3])
+		decisions.append([blocked, Counter.NONE if blocked else counter_type(st[1])])
 	for i in strikes.size():
 		var st: Array = strikes[i]
 		st[0].hit_mask |= 1 << st[2]
-		apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i], st[0])
+		apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i][0], st[0], decisions[i][1])
 
 	_resolve_projectiles(sim)
 
@@ -51,14 +66,20 @@ static func _find_strike(atk: Fighter, dfn: Fighter, s: StateDef) -> Array:
 	if dfn.sd().is_invuln(dfn.state_frame, false):
 		return []
 	var hurt := dfn.hurtboxes()
+	var juggled := dfn.state_name() == "hit_air"
 	var i := 0
 	for h: Dictionary in s.hitboxes:
 		if atk.state_frame >= h.from and atk.state_frame <= h.to and not (atk.hit_mask & (1 << i)):
+			var hd: HitDef = h.hit
+			# 浮空受击中的对手只能被追打上限足够的招式打中，否则直接穿过
+			if juggled and hd.juggle_limit < dfn.juggle:
+				i += 1
+				continue
 			var world := []
 			for b: PackedInt32Array in h.boxes:
 				world.append(Box.to_world(atk.x, atk.y, atk.facing, b))
 			if Box.any_overlap(world, hurt):
-				return [atk, dfn, i, h.hit]
+				return [atk, dfn, i, hd]
 		i += 1
 	return []
 
@@ -79,12 +100,29 @@ static func throwable(f: Fighter) -> bool:
 
 
 static func _start_throw(atk: Fighter, dfn: Fighter) -> void:
+	var counter := counter_type(dfn)
 	var hold: String = atk.sd().name + "_hit"
 	atk.set_state(hold)
 	atk.vx = 0
 	dfn.set_state("thrown")
 	dfn.vx = 0
 	dfn.vy = 0
+	dfn.counter_type = counter
+
+
+## 打康类型由被打者"当前招式所处阶段"决定：发生/持续 → Counter，收招 → Punish Counter。
+static func counter_type(dfn: Fighter) -> int:
+	var s := dfn.sd()
+	if s.kind == "hurt" or s.kind == "guard":
+		return Counter.NONE
+	if s.punishable:
+		return Counter.PUNISH
+	match s.phase_at(dfn.state_frame):
+		StateDef.Phase.STARTUP, StateDef.Phase.ACTIVE:
+			return Counter.COUNTER
+		StateDef.Phase.RECOVERY:
+			return Counter.PUNISH
+	return Counter.NONE
 
 
 ## 能否防住：可防御状态 + 按住远离攻击方的方向 + 段位匹配（站防中上段，蹲防中下段）。
@@ -108,45 +146,86 @@ static func can_block(sim: MatchSim, dfn: Fighter, attacker_x: int, hd: HitDef) 
 	return true
 
 
-## 应用一次命中/防御。push_dir 为击退方向（远离攻击来源）；melee 为 null 表示飞行道具。
+## 连段补正后的伤害（不含打康加成）。
+static func scaled_damage(dfn: Fighter, base: int) -> int:
+	var n := dfn.combo_hits + 1
+	var scale := 100
+	if n >= 3:
+		scale -= SCALE_STEP * (n - 1)
+	if dfn.combo_light != 0 and n >= 2:
+		scale -= LIGHT_STARTER_PENALTY
+	return base * maxi(scale, SCALE_MIN) / 100
+
+
+## 应用一次命中/防御。melee 为 null 表示飞行道具（发射者不顿帧、不反推）。
 static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fighter, hd: HitDef,
-		blocked: bool, melee: Fighter) -> void:
+		blocked: bool, melee: Fighter, counter := Counter.NONE) -> void:
 	var dir := signi(dfn.x - source_x)
 	if dir == 0:
 		dir = source_facing
 	var crouching := dfn.input_at(sim.frame) & InputBits.DOWN != 0
-	dfn.health = maxi(dfn.health - (hd.chip if blocked else hd.damage), 0)
+	var was_juggled := dfn.state_name() == "hit_air"
+
+	if blocked:
+		dfn.health = maxi(dfn.health - hd.chip, 0)
+		dfn.reset_combo()
+	else:
+		var damage := scaled_damage(dfn, hd.damage)
+		if counter != Counter.NONE:
+			damage = damage * COUNTER_DAMAGE_PCT / 100
+		if dfn.combo_hits == 0:
+			dfn.combo_light = 1 if hd.strength == 0 else 0
+		dfn.combo_hits += 1
+		dfn.combo_damage += damage
+		dfn.health = maxi(dfn.health - damage, 0)
+		dfn.counter_type = counter
+		if counter != Counter.NONE:
+			dfn.counter_timer = COUNTER_DISPLAY
+
 	if blocked and dfn.health > 0:
 		dfn.set_state("block_crouch" if crouching else "block_stand")
 		dfn.stun = hd.blockstun
 		dfn.vx = hd.block_push * dir
 	else:
-		var launched := dfn.is_airborne() or hd.effect != HitDef.Effect.NORMAL or dfn.health <= 0
+		var effect := hd.effect
+		if counter != Counter.NONE and hd.counter_effect >= 0:
+			effect = hd.counter_effect
+		var launched := dfn.is_airborne() or effect != HitDef.Effect.NORMAL or dfn.health <= 0
 		if launched:
+			dfn.juggle = dfn.juggle + hd.juggle_add if was_juggled else hd.juggle_start
 			dfn.set_state("hit_air")
 			dfn.vx = hd.air_vx * dir
-			dfn.vy = hd.air_vy if hd.effect == HitDef.Effect.LAUNCH or dfn.is_airborne() else 500
+			dfn.vy = hd.air_vy if effect == HitDef.Effect.LAUNCH or dfn.is_airborne() else 500
 			dfn.y = maxi(dfn.y, 1)
-			dfn.knockdown = 1 if hd.effect != HitDef.Effect.NORMAL or dfn.health <= 0 else 0
+			dfn.knockdown = 1 if effect != HitDef.Effect.NORMAL or dfn.health <= 0 else 0
 		else:
 			var was_crouching := dfn.sd().type == "C"
 			dfn.set_state("hit_crouch" if was_crouching else "hit_stand")
-			dfn.stun = hd.hitstun
+			dfn.stun = hd.hitstun + COUNTER_HITSTUN.get(counter, 0)
 			dfn.vx = hd.push * dir
 	dfn.facing = -dir
 	dfn.hitstop = hd.hitstop
 	if melee != null:
 		melee.hitstop = hd.hitstop
+		melee.contact = 1 if blocked else 2
+		melee.last_hitstop = hd.hitstop
 		dfn.push_transfer = 1
 
 
 static func apply_throw_release(sim: MatchSim, atk: Fighter, dfn: Fighter, hd: HitDef) -> void:
-	dfn.health = maxi(dfn.health - hd.damage, 0)
+	var damage := hd.damage
+	if dfn.counter_type == Counter.PUNISH:
+		damage = damage * PUNISH_THROW_DAMAGE_PCT / 100
+		dfn.counter_timer = COUNTER_DISPLAY
+	dfn.health = maxi(dfn.health - damage, 0)
+	dfn.combo_hits += 1
+	dfn.combo_damage += damage
 	dfn.set_state("hit_air")
 	dfn.vx = hd.air_vx * atk.facing
 	dfn.vy = hd.air_vy
 	dfn.y = 1
 	dfn.knockdown = 1
+	dfn.juggle = 99 ## 投后不可追打
 	dfn.hitstop = hd.hitstop
 	atk.hitstop = hd.hitstop
 
@@ -168,12 +247,15 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 		if p.hits <= 0:
 			continue
 		var dfn := sim.fighters[1 - p.owner]
+		var hd := sim.projectile_def(p).hit
 		if dfn.sd().is_invuln(dfn.state_frame, false):
+			continue
+		if dfn.state_name() == "hit_air" and hd.juggle_limit < dfn.juggle:
 			continue
 		if not Box.any_overlap([sim.projectile_box(p)], dfn.hurtboxes()):
 			continue
-		var hd := sim.projectile_def(p).hit
-		apply_hit(sim, p.x, p.facing, dfn, hd, can_block(sim, dfn, p.x, hd), null)
+		var blocked := can_block(sim, dfn, p.x, hd)
+		apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn))
 		p.hits -= 1
 	var alive: Array[Projectile] = []
 	for p in ps:

@@ -24,7 +24,7 @@ static func states() -> Dictionary:
 		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump"},
 		"air": {"type": "A", "logic": "air", "anim": "jump"},
 		"landing": {"type": "S", "guard_ok": true, "logic": "landing", "anim": "land"},
-		"landing_long": {"type": "S", "total": 16, "anim": "land"},
+		"landing_long": {"type": "S", "total": 16, "anim": "land", "punishable": true},
 		"hit_stand": {"type": "S", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_stand"},
 		"hit_crouch": {"type": "C", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_crouch"},
 		"block_stand": {"type": "S", "kind": "hurt", "guard_ok": true, "logic": "hurt", "friction": HURT_FRICTION,
@@ -121,6 +121,30 @@ static func try_commands(f: Fighter, sim: MatchSim, where: String) -> bool:
 		if where == "air":
 			f.air_used = 1
 		else:
+			f.vx = 0
+		return true
+	return false
+
+
+## 取消：当前招式接触对手后，在取消窗口内按出招表找允许的目标招式。
+## 顿帧期间按下的键也有效（缓冲延长顿帧长度），这样"打中后立刻搓招"总能取消。
+static func try_cancel(f: Fighter, sim: MatchSim) -> bool:
+	var s := f.sd()
+	var air := f.is_airborne()
+	for c in f.moveset.commands:
+		if c.where != "cancel" and c.where != ("air" if air else "ground"):
+			continue
+		var target: StateDef = f.moveset.states[f.moveset.id(c.state)]
+		if not s.cancel_allows(target):
+			continue
+		if c.cond == "no_projectile" and sim.has_projectile(f):
+			continue
+		var press := c.check(f, sim.frame, Command.BUFFER + f.last_hitstop)
+		if press < 0:
+			continue
+		f.consumed = press
+		f.set_state(c.state)
+		if not air:
 			f.vx = 0
 		return true
 	return false

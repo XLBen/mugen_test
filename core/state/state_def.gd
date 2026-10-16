@@ -28,6 +28,9 @@ var invuln: Array = [] ## [{from, to, strike, throw}]
 var events: Array = [] ## [{frame, vx?, vy?, spawn?}]
 var first_active := -1
 var last_active := -1
+var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
+var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
+var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
 
 
 static func build(state_name: String, d: Dictionary) -> StateDef:
@@ -68,6 +71,10 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	if d.has("active_hint") and s.first_active < 0:
 		s.first_active = d.active_hint[0] - 1
 		s.last_active = d.active_hint[1] - 1
+	s.cancel_targets = d.get("cancel", [])
+	if not s.cancel_targets.is_empty():
+		s.cancel_until = d.get("cancel_until", s.last_active + 1 + 3) - 1
+	s.punishable = d.get("punishable", false)
 	for v: Dictionary in d.get("invuln", []):
 		s.invuln.append({"from": v.frames[0] - 1, "to": v.frames[1] - 1,
 			"strike": v.get("strike", true), "throw": v.get("throw", true)})
@@ -119,6 +126,14 @@ func phase_at(frame: int) -> int:
 	if frame <= last_active:
 		return Phase.ACTIVE
 	return Phase.RECOVERY
+
+
+func can_cancel(frame: int) -> bool:
+	return frame <= cancel_until and not cancel_targets.is_empty()
+
+
+func cancel_allows(target: StateDef) -> bool:
+	return target.kind in cancel_targets or target.name in cancel_targets
 
 
 func is_attack() -> bool:

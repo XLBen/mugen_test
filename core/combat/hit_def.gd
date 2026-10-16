@@ -19,7 +19,11 @@ var push := 500 ## 地面被打时的击退初速度
 var block_push := 600
 var air_vx := 350 ## 空中被打 / 浮空时的水平速度（远离攻击方）
 var air_vy := 900
-var strength := 0 ## 0 轻 / 1 中 / 2 重，表现层选受击动画用
+var strength := 0 ## 0 轻 / 1 中 / 2 重（轻攻击起手的连段有额外补正）
+var juggle_start := 1 ## 把站立/跳跃中的对手打成浮空时，对方的追打计数初值
+var juggle_limit := 0 ## 对手追打计数 <= 此值时才能打中浮空受击中的对手
+var juggle_add := 1 ## 追打命中后对方计数增加
+var counter_effect := -1 ## 打康时替换的命中效果（-1 = 不替换）
 
 
 static func from_dict(d: Dictionary) -> HitDef:
@@ -36,4 +40,9 @@ static func from_dict(d: Dictionary) -> HitDef:
 	h.air_vx = d.get("air_vx", h.air_vx)
 	h.air_vy = d.get("air_vy", h.air_vy)
 	h.strength = d.get("strength", h.strength)
+	h.juggle_start = d.get("juggle_start", h.juggle_start)
+	h.juggle_limit = d.get("juggle_limit", h.juggle_limit)
+	h.juggle_add = d.get("juggle_add", h.juggle_add)
+	if d.has("counter_effect"):
+		h.counter_effect = EFFECT_NAMES[d.counter_effect]
 	return h
