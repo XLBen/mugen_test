@@ -3,6 +3,7 @@ extends Node2D
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 ## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
+## 训练模式：1 假人模式  2 自动防御  3 录制/回放  Shift+F6 版边重置
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
 const ROSTER: Array[FighterDef] = [
@@ -18,10 +19,14 @@ var step_once := false
 var saved_state: Dictionary = {}
 var last_inputs: Array[int] = [0, 0]
 var picks: Array[int] = [0, 1]
+var meter := FrameMeter.new()
+var dummy := TrainingDummy.new()
+var logs := [InputLog.new(), InputLog.new()]
 
 @onready var view: MatchView = $MatchView
 @onready var hud: Label = $HUD/Info
 @onready var hud_view: HudView = $HUD/HudView
+@onready var overlay: TrainingOverlay = $HUD/TrainingOverlay
 @onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
 
 
@@ -33,6 +38,10 @@ func _ready() -> void:
 	sim.reset()
 	view.sim = sim
 	hud_view.sim = sim
+	overlay.sim = sim
+	overlay.meter = meter
+	overlay.dummy = dummy
+	overlay.logs = logs
 	view.load_sprites()
 
 
@@ -40,8 +49,16 @@ func _physics_process(_delta: float) -> void:
 	if paused and not step_once:
 		return
 	step_once = false
-	last_inputs = [LocalInput.read(0), LocalInput.read(1)]
+	advance([LocalInput.read(0), LocalInput.read(1)])
+
+
+## 推进一帧：训练模式下由假人决定 P2 输入，然后记录帧计量条和输入历史。
+func advance(human: Array[int]) -> void:
+	last_inputs = dummy.inputs_for(sim, human) if sim.training else human
 	sim.step(last_inputs)
+	meter.record(sim)
+	for i in 2:
+		logs[i].record(InputBits.clean_socd(last_inputs[i]))
 
 
 func _process(_delta: float) -> void:
@@ -78,6 +95,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			step_once = true
 		KEY_F6:
 			sim.reset()
+			if key.shift_pressed:
+				var edge := sim.stage.half_width - sim.fighters[1].def.push_half_width
+				sim.place(edge - 9000, edge)
 		KEY_F7:
 			view.show_sprites = not view.show_sprites
 		KEY_F8:
@@ -93,6 +113,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			sim.infinite_meter = not sim.infinite_meter
 		KEY_F12:
 			hud.visible = not hud.visible
+		KEY_1:
+			dummy.cycle_mode()
+		KEY_2:
+			dummy.guard = (dummy.guard + 1) % TrainingDummy.Guard.size()
+		KEY_3:
+			dummy.toggle_record()
 
 
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。

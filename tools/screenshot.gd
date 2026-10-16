@@ -23,10 +23,11 @@ func _process(_delta: float) -> bool:
 	_tick += 1
 	if _tick == 2:
 		_scene.paused = true
+		_scene.dummy.mode = TrainingDummy.Mode.PLAYER
 		var n := maxi(_frames[0].size(), _frames[1].size())
 		for i in n:
 			var inputs: Array[int] = [_at(0, i), _at(1, i)]
-			_scene.sim.step(inputs)
+			_scene.advance(inputs)
 	if _tick == 6:
 		root.get_texture().get_image().save_png(_out)
 		print("saved ", _out)

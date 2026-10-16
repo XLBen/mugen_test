@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scenes/training.gd" id="1_training"]
 [ext_resource type="Script" path="res://view/match_view.gd" id="2_view"]
 [ext_resource type="Script" path="res://view/hud_view.gd" id="3_hud"]
+[ext_resource type="Script" path="res://view/training_overlay.gd" id="4_overlay"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_training")
@@ -23,6 +24,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_hud")
+
+[node name="TrainingOverlay" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_overlay")
 
 [node name="Info" type="Label" parent="HUD"]
 offset_left = 12.0

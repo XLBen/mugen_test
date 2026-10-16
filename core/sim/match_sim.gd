@@ -65,6 +65,15 @@ func _reset_round(keep_gauges: bool) -> void:
 	round_state = Round.INTRO if versus else Round.FIGHT
 
 
+## 把两人放到指定位置（训练模式的版边重置等），摄像机随之对齐。
+func place(p1_x: int, p2_x: int) -> void:
+	fighters[0].x = p1_x
+	fighters[1].x = p2_x
+	for f in fighters:
+		f.facing = 1 if opponent(f).x > f.x else -1
+	camera_x = clampi((p1_x + p2_x) / 2, -_camera_limit(), _camera_limit())
+
+
 func opponent(f: Fighter) -> Fighter:
 	return fighters[1 - f.index]
 

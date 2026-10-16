@@ -58,7 +58,7 @@ func _draw_side(i: int, f: Fighter, w: float, font: Font) -> void:
 		draw_string(font, Vector2(x0, TOP + BAR_H + 60), "BURNOUT", HORIZONTAL_ALIGNMENT_RIGHT if left else HORIZONTAL_ALIGNMENT_LEFT, BAR_W, 16, C_HEALTH_LOW)
 	# 超杀槽：底部
 	var super_def: Dictionary = Gauges.DEFS[Gauges.SUPER]
-	var sy := size.y - 34.0
+	var sy := size.y - 36.0
 	var sw := 300.0
 	var sx := MARGIN if left else w - MARGIN - sw
 	_segments(sx, sy, sw, 14.0, f.gauges[Gauges.SUPER], super_def.max, super_def.segments, C_SUPER, left)
