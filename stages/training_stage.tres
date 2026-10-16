@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="StageDef" format=3]
+
+[ext_resource type="Script" path="res://core/stage/stage_def.gd" id="1_stage"]
+
+[resource]
+script = ExtResource("1_stage")
+display_name = "Training"

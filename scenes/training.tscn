@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/training.gd" id="1_training"]
+[ext_resource type="Script" path="res://view/match_view.gd" id="2_view"]
+
+[node name="Training" type="Node2D"]
+script = ExtResource("1_training")
+
+[node name="MatchView" type="Node2D" parent="."]
+script = ExtResource("2_view")
+
+[node name="Camera2D" type="Camera2D" parent="MatchView"]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Info" type="Label" parent="HUD"]
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 1268.0
+offset_bottom = 120.0
+theme_override_font_sizes/font_size = 14
