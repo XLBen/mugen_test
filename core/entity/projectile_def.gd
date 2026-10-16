@@ -10,6 +10,9 @@ var hits := 1
 var lifetime := 180
 var anim := "fireball"
 var group := "fireball" ## 同组道具同屏只能有一个（指令条件 limit:<group>）
+var speed_y := 0 ## 垂直速度（正 = 向上），空中斜向道具用
+var arm := 0 ## 生成后多少帧才开始有攻击判定（设置物）
+var hit_interval := 0 ## 多段道具两次命中之间的间隔
 
 
 static func build(p_name: String, d: Dictionary) -> ProjectileDef:
@@ -23,4 +26,7 @@ static func build(p_name: String, d: Dictionary) -> ProjectileDef:
 	p.lifetime = d.get("lifetime", p.lifetime)
 	p.anim = d.get("anim", p.anim)
 	p.group = d.get("group", p.group)
+	p.speed_y = d.get("speed_y", 0)
+	p.arm = d.get("arm", 0)
+	p.hit_interval = d.get("hit_interval", 0)
 	return p

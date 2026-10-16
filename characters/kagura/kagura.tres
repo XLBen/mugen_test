@@ -1,8 +1,26 @@
 [gd_resource type="Resource" script_class="FighterDef" format=3]
 
 [ext_resource type="Script" path="res://core/entity/fighter_def.gd" id="1_def"]
+[ext_resource type="Script" path="res://characters/kagura/moveset.gd" id="2_moves"]
 
 [resource]
 script = ExtResource("1_def")
 display_name = "Kagura"
 sprite_dir = "res://characters/kagura/sprites"
+moveset = ExtResource("2_moves")
+max_health = 9000
+walk_forward_speed = 520
+walk_back_speed = 400
+prejump_frames = 3
+jump_velocity = 1850
+jump_forward_speed = 480
+jump_back_speed = 400
+gravity = 88
+landing_frames = 3
+push_half_width = 3200
+stand_height = 19000
+crouch_height = 12000
+air_height = 14000
+stand_hurtbox = PackedInt32Array(-27, 0, 54, 180)
+crouch_hurtbox = PackedInt32Array(-30, 0, 60, 112)
+air_hurtbox = PackedInt32Array(-26, 30, 52, 135)

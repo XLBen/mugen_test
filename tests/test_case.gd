@@ -19,8 +19,20 @@ func check_eq(actual: Variant, expected: Variant, msg: String) -> void:
 	check(actual == expected, "%s: expected %s, got %s" % [msg, str(expected), str(actual)])
 
 
+const KAGURA: FighterDef = preload("res://characters/kagura/kagura.tres")
+const VOLK: FighterDef = preload("res://characters/volk/volk.tres")
+const MIO: FighterDef = preload("res://characters/mio/mio.tres")
+
+
 func new_sim() -> MatchSim:
 	return MatchSim.new(STAGE, DUMMY, DUMMY)
+
+
+## 指定双方角色，P1 在 0、P2 在 gap_px 处。
+func char_sim(p1: FighterDef, p2: FighterDef, gap_px: int) -> MatchSim:
+	var sim := MatchSim.new(STAGE, p1, p2)
+	sim.place(0, gap_px * SimConst.UNITS_PER_PX)
+	return sim
 
 
 ## 两人贴身站好：P1 在 x，P2 在 x + gap（像素）。

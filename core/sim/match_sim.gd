@@ -182,6 +182,7 @@ func spawn_projectile(owner: Fighter, def_name: String, offset_x: int, offset_y:
 	p.x = owner.x + offset_x * owner.facing
 	p.y = owner.y + offset_y
 	p.vx = pd.speed * owner.facing
+	p.vy = pd.speed_y
 	p.hits = pd.hits
 	projectiles.append(p)
 
@@ -198,6 +199,11 @@ func projectile_def(p: Projectile) -> ProjectileDef:
 	return fighters[p.owner].moveset.projectiles[p.def_id]
 
 
+## 道具当前是否有攻击判定（设置物未启动、多段间隔中都没有）。
+func projectile_live(p: Projectile) -> bool:
+	return p.age >= projectile_def(p).arm and p.cooldown == 0
+
+
 func projectile_box(p: Projectile) -> PackedInt32Array:
 	return Box.to_world(p.x, p.y, p.facing, projectile_def(p).box)
 
@@ -206,8 +212,12 @@ func _move_projectiles() -> void:
 	var alive: Array[Projectile] = []
 	for p in projectiles:
 		p.x += p.vx
+		p.y += p.vy
 		p.age += 1
-		if p.age < projectile_def(p).lifetime and absi(p.x) < stage.half_width + 20000:
+		if p.cooldown > 0:
+			p.cooldown -= 1
+		var landed := p.vy < 0 and p.y <= 0
+		if not landed and p.age < projectile_def(p).lifetime and absi(p.x) < stage.half_width + 20000:
 			alive.append(p)
 	projectiles = alive
 

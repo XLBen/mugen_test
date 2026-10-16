@@ -12,6 +12,8 @@ static func clamp_to_walls(f: Fighter, wall_left: int, wall_right: int) -> void:
 static func resolve(a: Fighter, b: Fighter, wall_left: int, wall_right: int) -> void:
 	if not _overlap_y(a, b):
 		return
+	if not a.sd().pushes_at(a.state_frame) or not b.sd().pushes_at(b.state_frame):
+		return
 	var left := a
 	var right := b
 	if _is_left_of(b, a):

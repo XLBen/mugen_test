@@ -7,13 +7,16 @@ var def_id := 0 ## 发射者 Moveset.projectiles 中的索引
 var x := 0
 var y := 0
 var vx := 0
+var vy := 0
 var facing := 1
 var hits := 1 ## 剩余耐久
 var age := 0
+var cooldown := 0 ## 多段道具：命中后到下一次能命中的剩余帧
 
 
 func save_state() -> Dictionary:
-	return {"owner": owner, "def_id": def_id, "x": x, "y": y, "vx": vx, "facing": facing, "hits": hits, "age": age}
+	return {"owner": owner, "def_id": def_id, "x": x, "y": y, "vx": vx, "vy": vy, "facing": facing, "hits": hits,
+		"age": age, "cooldown": cooldown}
 
 
 static func from_state(s: Dictionary) -> Projectile:
@@ -23,6 +26,8 @@ static func from_state(s: Dictionary) -> Projectile:
 	p.x = s.x
 	p.y = s.y
 	p.vx = s.vx
+	p.vy = s.vy
+	p.cooldown = s.cooldown
 	p.facing = s.facing
 	p.hits = s.hits
 	p.age = s.age
@@ -30,4 +35,4 @@ static func from_state(s: Dictionary) -> Projectile:
 
 
 func hash_values() -> Array[int]:
-	return [owner, def_id, x, y, vx, facing, hits, age]
+	return [owner, def_id, x, y, vx, vy, facing, hits, age, cooldown]

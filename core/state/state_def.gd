@@ -31,6 +31,9 @@ var last_active := -1
 var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}
+var armor: Dictionary = {} ## 霸体 {from, to, hits}：期间吸收 hits 次打击（超杀与投可以破）
+var untechable := false ## 投技：被投方不能拆（指令投）
+var no_push: Array = [] ## [from, to]：这段帧数不参与推挤（可以穿过对手）
 var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
 var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
 
@@ -80,6 +83,11 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	s.punishable = d.get("punishable", false)
 	s.punishable_from = d.get("punishable_from", 0) - 1
 	s.cost = d.get("cost", {})
+	if d.has("armor"):
+		s.armor = {"from": d.armor.frames[0] - 1, "to": d.armor.frames[1] - 1, "hits": d.armor.get("hits", 1)}
+	s.untechable = d.get("untechable", false)
+	if d.has("no_push"):
+		s.no_push = [d.no_push[0] - 1, d.no_push[1] - 1]
 	for v: Dictionary in d.get("invuln", []):
 		s.invuln.append({"from": v.frames[0] - 1, "to": v.frames[1] - 1,
 			"strike": v.get("strike", true), "throw": v.get("throw", true)})
@@ -131,6 +139,16 @@ func phase_at(frame: int) -> int:
 	if frame <= last_active:
 		return Phase.ACTIVE
 	return Phase.RECOVERY
+
+
+func armor_at(frame: int) -> int:
+	if armor.is_empty() or frame < armor.from or frame > armor.to:
+		return 0
+	return armor.hits
+
+
+func pushes_at(frame: int) -> bool:
+	return no_push.is_empty() or frame < no_push[0] or frame > no_push[1]
 
 
 func can_cancel(frame: int) -> bool:

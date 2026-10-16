@@ -1,8 +1,26 @@
 [gd_resource type="Resource" script_class="FighterDef" format=3]
 
 [ext_resource type="Script" path="res://core/entity/fighter_def.gd" id="1_def"]
+[ext_resource type="Script" path="res://characters/volk/moveset.gd" id="2_moves"]
 
 [resource]
 script = ExtResource("1_def")
 display_name = "Volk"
 sprite_dir = "res://characters/volk/sprites"
+moveset = ExtResource("2_moves")
+max_health = 11000
+walk_forward_speed = 330
+walk_back_speed = 280
+prejump_frames = 5
+jump_velocity = 1800
+jump_forward_speed = 360
+jump_back_speed = 330
+gravity = 82
+landing_frames = 4
+push_half_width = 4000
+stand_height = 21500
+crouch_height = 14000
+air_height = 16000
+stand_hurtbox = PackedInt32Array(-34, 0, 68, 200)
+crouch_hurtbox = PackedInt32Array(-36, 0, 72, 130)
+air_hurtbox = PackedInt32Array(-32, 30, 64, 150)

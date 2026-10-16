@@ -226,7 +226,7 @@ static func _launch_jump(f: Fighter) -> void:
 
 ## 被抓住的前几帧内同时按 LP+LK（任一刚按下）即可拆投。
 static func _thrown(f: Fighter, sim: MatchSim) -> void:
-	if f.state_frame >= THROW_TECH_WINDOW:
+	if f.state_frame >= THROW_TECH_WINDOW or sim.opponent(f).sd().untechable:
 		return
 	var tech := InputBits.B0 | InputBits.B3
 	if f.input_at(sim.frame) & tech == tech and f.pressed_at(sim.frame) & tech:

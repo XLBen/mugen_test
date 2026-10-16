@@ -179,6 +179,9 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 	var dir := signi(dfn.x - source_x)
 	if dir == 0:
 		dir = source_facing
+	if not blocked and _absorbs(dfn, hd):
+		_armor_hit(sim, dfn, hd, melee)
+		return
 	var crouching := dfn.input_at(sim.frame) & InputBits.DOWN != 0
 	var was_juggled := dfn.state_name() == "hit_air"
 
@@ -236,6 +239,22 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dfn.push_transfer = 1
 
 
+## 霸体：状态处于霸体帧且还有吸收次数，且不是超杀。
+static func _absorbs(dfn: Fighter, hd: HitDef) -> bool:
+	return hd.source != "super" and dfn.armor_used < dfn.sd().armor_at(dfn.state_frame)
+
+
+## 霸体吸收：照常扣血、双方顿帧，但被打方不进入硬直、继续自己的招式。
+static func _armor_hit(sim: MatchSim, dfn: Fighter, hd: HitDef, melee: Fighter) -> void:
+	dfn.armor_used += 1
+	dfn.health = maxi(dfn.health - hd.damage, sim.health_floor)
+	dfn.hitstop = hd.hitstop
+	if melee != null:
+		melee.hitstop = hd.hitstop
+		melee.contact = 2
+		melee.last_hitstop = hd.hitstop
+
+
 static func apply_throw_release(sim: MatchSim, atk: Fighter, dfn: Fighter, hd: HitDef) -> void:
 	var damage := hd.damage
 	if dfn.counter_type == Counter.PUNISH:
@@ -263,12 +282,14 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 			var b := ps[j]
 			if a.owner == b.owner or a.hits <= 0 or b.hits <= 0:
 				continue
+			if not sim.projectile_live(a) or not sim.projectile_live(b):
+				continue
 			if Box.overlap(sim.projectile_box(a), sim.projectile_box(b)):
 				a.hits -= 1
 				b.hits -= 1
 	# 道具命中角色
 	for p in ps:
-		if p.hits <= 0:
+		if p.hits <= 0 or not sim.projectile_live(p):
 			continue
 		var dfn := sim.fighters[1 - p.owner]
 		var hd := sim.projectile_def(p).hit
@@ -281,6 +302,7 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 		var blocked := can_block(sim, dfn, p.x, hd)
 		apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn))
 		p.hits -= 1
+		p.cooldown = sim.projectile_def(p).hit_interval
 	var alive: Array[Projectile] = []
 	for p in ps:
 		if p.hits > 0:
