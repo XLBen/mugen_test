@@ -1,0 +1,88 @@
+extends TestCase
+## 指令识别：搓招、捷径、优先级、朝向翻转、缓冲。
+
+
+func _far_sim() -> MatchSim:
+	var sim := new_sim()
+	sim.fighters[0].x = -40000
+	sim.fighters[1].x = 40000
+	sim.camera_x = 0
+	return sim
+
+
+func test_quarter_circle_forward() -> void:
+	var sim := _far_sim()
+	play(sim, "2,3,6LP")
+	check_eq(sim.fighters[0].state_name(), "fireball_l", "236LP -> fireball")
+
+
+func test_quarter_circle_back() -> void:
+	var sim := _far_sim()
+	play(sim, "2,1,4LK")
+	check_eq(sim.fighters[0].state_name(), "rush", "214K -> rush")
+
+
+func test_dragon_punch_and_shortcut() -> void:
+	var sim := _far_sim()
+	play(sim, "6,2,3HP")
+	check_eq(sim.fighters[0].state_name(), "dp", "623P -> dp")
+	sim = _far_sim()
+	play(sim, "3,2,3HP")
+	check_eq(sim.fighters[0].state_name(), "dp", "323P shortcut -> dp")
+
+
+func test_dp_beats_fireball_priority() -> void:
+	var sim := _far_sim()
+	play(sim, "6,2,3,6LP")
+	check_eq(sim.fighters[0].state_name(), "dp", "6236+P resolves to dp, not fireball")
+
+
+func test_motion_gaps() -> void:
+	var sim := _far_sim()
+	play(sim, "2x2,3x2,6x2,5,5LP")
+	check_eq(sim.fighters[0].state_name(), "fireball_l", "short pause before button is fine")
+	sim = _far_sim()
+	play(sim, "2,3,6,5x12,5LP")
+	check_eq(sim.fighters[0].state_name(), "5lp", "button long after motion is just a normal")
+	sim = _far_sim()
+	play(sim, "2,5x12,3,6LP")
+	check_eq(sim.fighters[0].state_name(), "5lp", "motion broken by long gap")
+
+
+func test_motion_respects_facing() -> void:
+	# P2 面朝左：物理上的 2,1,4 = 相对的 2,3,6
+	var sim := _far_sim()
+	play(sim, "", "2,3,6LP")
+	check_eq(sim.fighters[1].state_name(), "fireball_l", "P2 fireball uses relative directions")
+
+
+func test_stance_selects_normal() -> void:
+	var sim := _far_sim()
+	play(sim, "2MK")
+	check_eq(sim.fighters[0].state_name(), "2mk", "down + MK -> crouching normal")
+	sim = _far_sim()
+	play(sim, "6MK")
+	check_eq(sim.fighters[0].state_name(), "5mk", "forward + MK -> standing normal")
+
+
+func test_button_buffer() -> void:
+	# 收招中按下的键在恢复可行动的前几帧内仍然有效
+	var sim := _far_sim()
+	play(sim, "5HP")
+	var total: int = sim.fighters[0].sd().total
+	play(sim, "5x%d,5LP" % (total - 3))
+	play(sim, "5x3")
+	check_eq(sim.fighters[0].state_name(), "5lp", "buffered press comes out on first free frame")
+	sim = _far_sim()
+	play(sim, "5HP")
+	play(sim, "5x%d,5LP" % (total - 8))
+	play(sim, "5x8")
+	check(sim.fighters[0].state_name() != "5lp", "press too early is dropped")
+
+
+func test_one_fireball_at_a_time() -> void:
+	var sim := _far_sim()
+	play(sim, "2,3,6LP,5x50")
+	check_eq(sim.projectiles.size(), 1, "fireball spawned")
+	play(sim, "2,3,6LP")
+	check(sim.fighters[0].state_name() != "fireball_l", "second fireball blocked while first is alive")

@@ -71,7 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。
 func _cycle_character(player: int) -> void:
 	picks[player] = (picks[player] + 1) % ROSTER.size()
-	sim.fighters[player].def = ROSTER[picks[player]]
+	sim.fighters[player].set_def(ROSTER[picks[player]])
 	sim.reset()
 	saved_state = {}
 	view.load_sprites()
@@ -83,9 +83,9 @@ func _hud_text() -> String:
 		sim.frame, sim.state_hash(), int(SimConst.px(sim.camera_x)), "   [PAUSED]" if paused else ""])
 	for i in sim.fighters.size():
 		var f := sim.fighters[i]
-		lines.append("P%d  %-12s f%-3d  x %7.1f  y %6.1f  vx %5d  vy %5d  facing %+d  input %d" % [
-			i + 1, Fighter.state_name(f.state), f.state_frame, SimConst.px(f.x), SimConst.px(f.y),
-			f.vx, f.vy, f.facing, InputBits.to_numpad(InputBits.clean_socd(last_inputs[i]), f.facing)])
+		lines.append("P%d  HP %5d  %-12s f%-3d  x %7.1f  y %6.1f  vx %5d  vy %5d  stun %2d  stop %2d  input %d" % [
+			i + 1, f.health, f.state_name(), f.state_frame, SimConst.px(f.x), SimConst.px(f.y),
+			f.vx, f.vy, f.stun, f.hitstop, f.numpad_at(sim.frame)])
 	lines.append("saved state: %s" % ("frame %d" % saved_state.frame if not saved_state.is_empty() else "none"))
 	lines.append("P1 %s (WASD)   P2 %s (Arrows)" % [sim.fighters[0].def.display_name, sim.fighters[1].def.display_name])
 	lines.append("F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset  F7 sprites  F8/F9 change character")

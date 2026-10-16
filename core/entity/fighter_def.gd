@@ -5,6 +5,9 @@ extends Resource
 @export var display_name := "Dummy"
 ## 精灵目录（含 anims.json），为空则只画白模。只给表现层用，仿真层不读。
 @export_dir var sprite_dir := ""
+## 招式数据脚本（提供 data() -> Dictionary）
+@export var moveset: Script = preload("res://characters/shared/standard_moveset.gd")
+@export var max_health := 10000
 
 @export_group("Walk")
 @export var walk_forward_speed := 450
@@ -23,3 +26,28 @@ extends Resource
 @export var stand_height := 20000
 @export var crouch_height := 13000
 @export var air_height := 15000
+
+@export_group("Hurtbox (px: x, y, w, h)")
+@export var stand_hurtbox := PackedInt32Array([-30, 0, 60, 185])
+@export var crouch_hurtbox := PackedInt32Array([-32, 0, 64, 120])
+@export var air_hurtbox := PackedInt32Array([-28, 30, 56, 140])
+@export var down_hurtbox := PackedInt32Array([-60, 0, 120, 30])
+
+var _hurt_cache := {}
+
+
+## 按状态类型给出的身体受击盒（逻辑单位，相对脚底、面朝右）。
+func body_hurtbox(type: String) -> Array:
+	if not _hurt_cache.has(type):
+		var px: PackedInt32Array
+		match type:
+			"C":
+				px = crouch_hurtbox
+			"A":
+				px = air_hurtbox
+			"L":
+				px = down_hurtbox
+			_:
+				px = stand_hurtbox
+		_hurt_cache[type] = [Box.from_px(Array(px))]
+	return _hurt_cache[type]

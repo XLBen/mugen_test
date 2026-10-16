@@ -1,40 +1,95 @@
 class_name Fighter
 extends RefCounted
-## 角色的运行时状态。这里的每个字段都必须是整数，并完整出现在 save_state/load_state 中，
-## 否则会破坏确定性与回滚。
+## 角色的运行时状态。这里的每个字段都必须是整数（或整数数组），并完整出现在
+## save_state/load_state 中，否则会破坏确定性与回滚。
 
-enum State { STAND, CROUCH, WALK_FORWARD, WALK_BACK, PREJUMP, AIR, LANDING }
+const HISTORY := 64 ## 输入历史长度（帧）
 
 var def: FighterDef
+var moveset: Moveset
+var index := 0 ## 玩家索引（0 = P1），不属于可变状态
 
 var x := 0
 var y := 0 ## 离地高度，0 = 地面，向上为正
 var vx := 0
 var vy := 0
 var facing := 1 ## 1 = 面朝右，-1 = 面朝左
-var state: int = State.STAND
+var state := 0 ## Moveset.states 的索引
 var state_frame := 0 ## 进入当前状态后经过的帧数
-var jump_dir := 0 ## -1 后跳 / 0 垂直跳 / 1 前跳（相对起跳时的朝向）
+var fresh := 1 ## 1 = 刚进入状态，第 0 帧逻辑尚未执行
+var jump_dir := 0 ## -1 后跳 / 0 垂直跳 / 1 前跳
+var health := 0
+var stun := 0 ## 当前受击/防御硬直的长度
+var hitstop := 0 ## 剩余顿帧
+var hit_mask := 0 ## 当前状态里已经命中过的攻击判定（按 hitboxes 下标）
+var air_used := 0 ## 本次跳跃已经出过空中技
+var knockdown := 0 ## 当前浮空受击落地后是否倒地
+var throw_protect := 0 ## 硬直结束后的投无敌剩余帧
+var push_transfer := 0 ## 版边被打时，击退是否反推给攻击方
+var consumed := -1 ## 最近一次被指令消耗的按键帧
+var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
 
 
 func _init(p_def: FighterDef) -> void:
+	set_def(p_def)
+
+
+func set_def(p_def: FighterDef) -> void:
 	def = p_def
+	moveset = Moveset.for_def(def)
 
 
-func set_state(new_state: int) -> void:
-	state = new_state
+func reset_state() -> void:
+	x = 0
+	y = 0
+	vx = 0
+	vy = 0
+	facing = 1
+	jump_dir = 0
+	health = def.max_health
+	stun = 0
+	hitstop = 0
+	air_used = 0
+	knockdown = 0
+	throw_protect = 0
+	push_transfer = 0
+	consumed = -1
+	history = PackedInt32Array()
+	history.resize(HISTORY)
+	set_state("stand")
+
+
+# ---------------------------------------------------------------- 状态
+
+func sd() -> StateDef:
+	return moveset.states[state]
+
+
+func state_name() -> String:
+	return moveset.states[state].name
+
+
+func is_in(state_names: Array) -> bool:
+	return state_name() in state_names
+
+
+func set_state(state_name_: String) -> void:
+	state = moveset.id(state_name_)
 	state_frame = 0
+	fresh = 1
+	hit_mask = 0
+	push_transfer = 0
 
 
-func is_grounded() -> bool:
-	return state != State.AIR
+func is_airborne() -> bool:
+	return y > 0 or sd().type == "A"
 
 
 func push_height() -> int:
-	match state:
-		State.CROUCH:
+	match sd().type:
+		"C", "L":
 			return def.crouch_height
-		State.AIR:
+		"A":
 			return def.air_height
 		_:
 			return def.stand_height
@@ -48,28 +103,65 @@ func push_right() -> int:
 	return x + def.push_half_width
 
 
+## 当前帧的世界受击盒：按状态类型的身体盒 + 招式额外受击盒（伸出的手脚）。
+func hurtboxes() -> Array:
+	var s := sd()
+	var body: Array = def.body_hurtbox(s.type)
+	var out := []
+	for b: PackedInt32Array in body + s.extra_hurtboxes_at(state_frame):
+		out.append(Box.to_world(x, y, facing, b))
+	return out
+
+
+func pushbox_world() -> PackedInt32Array:
+	return PackedInt32Array([push_left(), y, push_right(), y + push_height()])
+
+
+# ---------------------------------------------------------------- 输入
+
+func record_input(frame: int, bits: int) -> void:
+	history[frame % HISTORY] = bits
+
+
+func input_at(frame: int) -> int:
+	if frame < 0:
+		return 0
+	return history[frame % HISTORY]
+
+
+func pressed_at(frame: int) -> int:
+	return input_at(frame) & ~input_at(frame - 1) & InputBits.BUTTONS
+
+
+func numpad_at(frame: int) -> int:
+	return InputBits.to_numpad(input_at(frame), facing)
+
+
+# ---------------------------------------------------------------- 存档
+
+const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "health",
+	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed"]
+
+
 func save_state() -> Dictionary:
-	return {
-		"x": x, "y": y, "vx": vx, "vy": vy, "facing": facing,
-		"state": state, "state_frame": state_frame, "jump_dir": jump_dir,
-	}
+	var s := {}
+	for field: String in _FIELDS:
+		s[field] = get(field)
+	s.history = history.duplicate()
+	return s
 
 
 func load_state(s: Dictionary) -> void:
-	x = s.x
-	y = s.y
-	vx = s.vx
-	vy = s.vy
-	facing = s.facing
-	state = s.state
-	state_frame = s.state_frame
-	jump_dir = s.jump_dir
+	for field: String in _FIELDS:
+		set(field, s[field])
+	history = s.history.duplicate()
 
 
 ## 参与状态哈希的整数序列，顺序固定。
 func hash_values() -> Array[int]:
-	return [x, y, vx, vy, facing, state, state_frame, jump_dir]
-
-
-static func state_name(s: int) -> String:
-	return State.keys()[s]
+	var out: Array[int] = []
+	for field: String in _FIELDS:
+		out.append(get(field))
+	for v in history:
+		out.append(v)
+	return out

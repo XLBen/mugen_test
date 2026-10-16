@@ -24,12 +24,16 @@ F1 判定框 · F2 存档 · F3 读档 · F4 暂停 · F5 单帧步进 · F6 重
 
 ## 测试
 ```bash
-godot --headless --path . -s res://tests/determinism_test.gd
+godot --headless --path . -s res://tests/run_all.gd
 ```
+`tests/test_*.gd` 中所有 `test_` 开头的方法都会被执行；可加 `-- combat` 只跑文件名包含 combat 的测试。
 
 ## 目录
 - `core/` 纯逻辑仿真（不依赖场景树）
 - `view/` 表现层，只读取仿真状态
 - `input/` 本机键盘/手柄输入
 - `characters/` `stages/` 角色与舞台数据
+- `rulesets/sf_like/` 街霸风规则模块（公共状态：移动、受击、防御、倒地、被投）
+- `characters/shared/` 共用招式表（帧数据）
+- `tools/` 精灵生成器、截图工具、输入脚本
 - `tests/` 无头测试
