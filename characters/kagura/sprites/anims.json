@@ -74,6 +74,14 @@
 				["land_00", 1]
 			]
 		},
+		"throw": {
+			"loop": false,
+			"frames": [
+				["throw_00", 1],
+				["throw_01", 1],
+				["throw_02", 1]
+			]
+		},
 		"throw_hit": {
 			"loop": false,
 			"frames": [
@@ -225,46 +233,6 @@
 				["j_hk_02", 1]
 			]
 		},
-		"fireball": {
-			"loop": false,
-			"frames": [
-				["fireball_00", 1],
-				["fireball_01", 1],
-				["fireball_02", 1]
-			]
-		},
-		"dp": {
-			"loop": false,
-			"frames": [
-				["dp_00", 1],
-				["dp_01", 1],
-				["dp_02", 1]
-			]
-		},
-		"rush": {
-			"loop": false,
-			"frames": [
-				["rush_00", 1],
-				["rush_01", 1],
-				["rush_02", 1]
-			]
-		},
-		"throw": {
-			"loop": false,
-			"frames": [
-				["throw_00", 1],
-				["throw_01", 1],
-				["throw_02", 1]
-			]
-		},
-		"super": {
-			"loop": false,
-			"frames": [
-				["super_00", 1],
-				["super_01", 1],
-				["super_02", 1]
-			]
-		},
 		"hit_stand": {
 			"loop": false,
 			"frames": [
@@ -308,16 +276,42 @@
 				["wakeup_01", 9]
 			]
 		},
-		"fx_fireball": {
-			"loop": true,
-			"anchor": [
-				20,
-				20
-			],
+		"slash": {
+			"loop": false,
 			"frames": [
-				["fx_fireball_00", 3],
-				["fx_fireball_01", 3],
-				["fx_fireball_02", 3]
+				["slash_00", 1],
+				["slash_01", 1],
+				["slash_02", 1]
+			]
+		},
+		"step": {
+			"loop": false,
+			"frames": [
+				["step_00", 24]
+			]
+		},
+		"rising": {
+			"loop": false,
+			"frames": [
+				["rising_00", 1],
+				["rising_01", 1],
+				["rising_02", 1]
+			]
+		},
+		"dive": {
+			"loop": false,
+			"frames": [
+				["dive_00", 1],
+				["dive_01", 1],
+				["dive_02", 1]
+			]
+		},
+		"super_k": {
+			"loop": false,
+			"frames": [
+				["super_k_00", 1],
+				["super_k_01", 1],
+				["super_k_02", 1]
 			]
 		}
 	}

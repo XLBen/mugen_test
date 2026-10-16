@@ -74,6 +74,14 @@
 				["land_00", 1]
 			]
 		},
+		"throw": {
+			"loop": false,
+			"frames": [
+				["throw_00", 1],
+				["throw_01", 1],
+				["throw_02", 1]
+			]
+		},
 		"throw_hit": {
 			"loop": false,
 			"frames": [
@@ -225,46 +233,6 @@
 				["j_hk_02", 1]
 			]
 		},
-		"fireball": {
-			"loop": false,
-			"frames": [
-				["fireball_00", 1],
-				["fireball_01", 1],
-				["fireball_02", 1]
-			]
-		},
-		"dp": {
-			"loop": false,
-			"frames": [
-				["dp_00", 1],
-				["dp_01", 1],
-				["dp_02", 1]
-			]
-		},
-		"rush": {
-			"loop": false,
-			"frames": [
-				["rush_00", 1],
-				["rush_01", 1],
-				["rush_02", 1]
-			]
-		},
-		"throw": {
-			"loop": false,
-			"frames": [
-				["throw_00", 1],
-				["throw_01", 1],
-				["throw_02", 1]
-			]
-		},
-		"super": {
-			"loop": false,
-			"frames": [
-				["super_00", 1],
-				["super_01", 1],
-				["super_02", 1]
-			]
-		},
 		"hit_stand": {
 			"loop": false,
 			"frames": [
@@ -308,16 +276,80 @@
 				["wakeup_01", 9]
 			]
 		},
-		"fx_fireball": {
+		"charm": {
+			"loop": false,
+			"frames": [
+				["charm_00", 1],
+				["charm_01", 1],
+				["charm_02", 1]
+			]
+		},
+		"air_charm": {
+			"loop": false,
+			"frames": [
+				["air_charm_00", 1],
+				["air_charm_01", 1],
+				["air_charm_02", 1]
+			]
+		},
+		"seal": {
+			"loop": false,
+			"frames": [
+				["seal_00", 1],
+				["seal_01", 1],
+				["seal_02", 1]
+			]
+		},
+		"spin": {
+			"loop": false,
+			"frames": [
+				["spin_00", 1],
+				["spin_01", 1],
+				["spin_02", 1]
+			]
+		},
+		"storm": {
+			"loop": false,
+			"frames": [
+				["storm_00", 1],
+				["storm_01", 1],
+				["storm_02", 1]
+			]
+		},
+		"fx_charm": {
 			"loop": true,
 			"anchor": [
 				20,
 				20
 			],
 			"frames": [
-				["fx_fireball_00", 3],
-				["fx_fireball_01", 3],
-				["fx_fireball_02", 3]
+				["fx_charm_00", 4],
+				["fx_charm_01", 4],
+				["fx_charm_02", 4]
+			]
+		},
+		"fx_seal": {
+			"loop": true,
+			"anchor": [
+				32,
+				17
+			],
+			"frames": [
+				["fx_seal_00", 10],
+				["fx_seal_01", 10]
+			]
+		},
+		"fx_storm": {
+			"loop": true,
+			"anchor": [
+				48,
+				48
+			],
+			"frames": [
+				["fx_storm_00", 3],
+				["fx_storm_01", 3],
+				["fx_storm_02", 3],
+				["fx_storm_03", 3]
 			]
 		}
 	}

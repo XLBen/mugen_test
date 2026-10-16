@@ -201,6 +201,70 @@ def hurt(ch):
 	}
 
 
+def _kagura(ch):
+	knife_low = dict(uarm_f=-30, farm_f=20, knife=100)
+	return {
+		"slash": attack(
+			dict(crouch_pose(ch), torso=34, **knife_low),
+			pose(ch, torso=26, uarm_f=96, farm_f=100, knife=60, uarm_b=-50, farm_b=-10,
+				thigh_f=52, shin_f=8, thigh_b=-46, shin_b=-30, flow=1.0)),
+		"step": [(pose(ch, torso=42, head=-10, thigh_f=62, shin_f=-18, thigh_b=-44, shin_b=-64,
+			uarm_f=-60, farm_f=-30, uarm_b=-70, farm_b=-40, flow=1.0), 24)],
+		"rising": attack(
+			dict(crouch_pose(ch), uarm_f=-20, farm_f=30),
+			pose(ch, grounded=False, torso=-40, head=-20, thigh_f=150, shin_f=162, thigh_b=20, shin_b=-40,
+				uarm_f=-120, farm_f=-100, uarm_b=-140, farm_b=-120, flow=-1.0),
+			pose(ch, grounded=False, torso=10, thigh_f=80, shin_f=-30, thigh_b=50, shin_b=-60, flow=0.6)),
+		"dive": attack(
+			air_pose(ch, thigh_f=90, shin_f=-30, torso=0),
+			air_pose(ch, torso=22, thigh_f=42, shin_f=46, thigh_b=-20, shin_b=-60, uarm_f=-40, farm_f=0,
+				uarm_b=-60, farm_b=-30, flow=-0.8)),
+		"super_k": attack(
+			dict(crouch_pose(ch), torso=30, **knife_low),
+			pose(ch, torso=30, uarm_f=125, farm_f=150, knife=40, uarm_b=-60, farm_b=-20,
+				thigh_f=55, shin_f=6, thigh_b=-48, shin_b=-30, flow=1.0)),
+	}
+
+
+def _volk(ch):
+	reach = dict(torso=18, uarm_f=72, farm_f=72, uarm_b=62, farm_b=70)
+	lift = pose(ch, torso=-12, head=-16, uarm_f=170, farm_f=176, uarm_b=164, farm_b=174, thigh_f=20, thigh_b=-20)
+	slam = dict(crouch_pose(ch), torso=52, head=0, uarm_f=60, farm_f=40, uarm_b=50, farm_b=35)
+	return {
+		"crush": attack(pose(ch, torso=10, uarm_f=50, farm_f=60, uarm_b=40, farm_b=60),
+			pose(ch, thigh_f=30, **reach)),
+		"crush_hit": [(lift, 25), (slam, 30)],
+		"super_grab": attack(pose(ch, torso=6, uarm_f=40, farm_f=50, uarm_b=30, farm_b=50),
+			pose(ch, thigh_f=40, shin_f=4, thigh_b=-30, **dict(reach, torso=28))),
+		"super_grab_hit": [(lift, 30), (slam, 25)],
+		"charge": attack(
+			pose(ch, torso=30, thigh_f=40, shin_f=-10, uarm_f=10, farm_f=120, uarm_b=-20, farm_b=90),
+			pose(ch, torso=42, thigh_f=52, shin_f=2, thigh_b=-42, shin_b=-22, uarm_f=0, farm_f=125,
+				uarm_b=-30, farm_b=100, flow=1.0)),
+		"hammer": attack(dict(crouch_pose(ch), uarm_f=10, farm_f=40),
+			pose(ch, torso=2, thigh_f=26, shin_f=-8, thigh_b=6, shin_b=-30, uarm_f=172, farm_f=178, uarm_b=-20)),
+	}
+
+
+def _mio(ch):
+	return {
+		"charm": attack(pose(ch, torso=-6, uarm_f=-35, farm_f=30, uarm_b=20, farm_b=60),
+			pose(ch, torso=16, uarm_f=92, farm_f=96, uarm_b=-30, farm_b=10, thigh_f=26)),
+		"air_charm": attack(air_pose(ch, uarm_f=150, farm_f=170),
+			air_pose(ch, torso=18, uarm_f=60, farm_f=42, uarm_b=-30, farm_b=0)),
+		"seal": attack(dict(crouch_pose(ch), uarm_f=120, farm_f=160),
+			dict(crouch_pose(ch), torso=36, uarm_f=72, farm_f=28)),
+		"spin": attack(dict(crouch_pose(ch), uarm_f=-30, farm_f=10),
+			pose(ch, grounded=False, torso=0, thigh_f=8, shin_f=-6, thigh_b=-6, shin_b=-12,
+				uarm_f=92, farm_f=100, uarm_b=-92, farm_b=-100, flow=-1.0),
+			pose(ch, grounded=False, torso=6, thigh_f=40, shin_f=-30, thigh_b=10, shin_b=-40,
+				uarm_f=140, farm_f=160, uarm_b=-140, farm_b=-160, flow=0.6)),
+		"storm": attack(pose(ch, torso=-8, uarm_f=-30, farm_f=30, uarm_b=-40, farm_b=20),
+			pose(ch, torso=14, uarm_f=96, farm_f=110, uarm_b=84, farm_b=70, thigh_f=30, shin_f=0, thigh_b=-26, flow=1.0)),
+	}
+
+
+## 所有角色共用的动画：移动、普攻、受击 / 防御、通用投
 ANIMS = {
 	"idle": dict(loop=True, frames=idle),
 	"walk_f": dict(loop=True, frames=lambda ch: _walk(ch, True)),
@@ -209,11 +273,23 @@ ANIMS = {
 	"prejump": dict(loop=False, frames=lambda ch: [(prejump_pose(ch), 1)]),
 	"jump": dict(loop=False, frames=jump),  # 0 上升 / 1 顶点 / 2 下落，由显示层按 vy 选择
 	"land": dict(loop=False, frames=lambda ch: [(prejump_pose(ch), 1)]),
+	"throw": dict(loop=False, frames=lambda ch: specials(ch)["throw"]),
 	"throw_hit": dict(loop=False, frames=throw_hit),
 }
 for _name, _fn in NORMALS.items():
 	ANIMS[_name] = dict(loop=False, frames=_fn)
-for _name in ("fireball", "dp", "rush", "throw", "super"):
-	ANIMS[_name] = dict(loop=False, frames=lambda ch, n=_name: specials(ch)[n])
 for _name in ("hit_stand", "hit_crouch", "block_stand", "block_crouch", "hit_air", "knockdown", "wakeup"):
 	ANIMS[_name] = dict(loop=False, frames=lambda ch, n=_name: hurt(ch)[n])
+
+## 角色专属招式动画
+CHARACTER_MOVES = {"kagura": _kagura, "volk": _volk, "mio": _mio}
+
+
+def anims_for(char_id, ch):
+	"""某个角色要生成的全部动画：共用 + 专属。"""
+	out = dict(ANIMS)
+	moves = CHARACTER_MOVES.get(char_id)
+	if moves:
+		for name, frames in moves(ch).items():
+			out[name] = dict(loop=False, frames=lambda _ch, f=frames: f)
+	return out

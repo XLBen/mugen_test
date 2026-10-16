@@ -24,7 +24,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 from characters import CHARACTERS
-from poses import ANIMS
+from poses import anims_for
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -514,6 +514,77 @@ def render_fireball(outfit, i):
 	return img
 
 
+def render_charm(outfit, i):
+	"""纸符：象牙色长条纸片 + 有色符纹，三帧轻微翻转。"""
+	size = 40
+	img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+	c = (size / 2, size / 2)
+	tilt = (-12, 0, 12)[i % 3]
+	r = math.radians(tilt)
+	def rot(dx, dy):
+		return (c[0] + dx * math.cos(r) - dy * math.sin(r), c[1] + dx * math.sin(r) + dy * math.cos(r))
+	glow = Layer((size, size))
+	glow.ellipse(c, 13, 15)
+	img = Image.alpha_composite(img, shade(glow, ramp(_adjust(accent(outfit), value=1.4, sat=0.4)), shadow_k=0))
+	paper = Layer((size, size))
+	paper.poly([rot(-6, -11), rot(6, -11), rot(6, 11), rot(-6, 11)])
+	img = Image.alpha_composite(img, shade(paper, ramp((240, 232, 210)), shadow_k=1))
+	mark = Layer((size, size))
+	mark.poly([rot(-2, -7), rot(2, -7), rot(2, 6), rot(-2, 6)])
+	img = Image.alpha_composite(img, shade(mark, ramp(accent(outfit)), shadow_k=0, highlight=False))
+	return img
+
+
+def render_seal(outfit, i):
+	"""地面符阵：扁平的环 + 内符纹，两帧明暗交替。锚点在底边中心。"""
+	w, h = 64, 24
+	img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+	c = (w / 2, h - 7)
+	base = accent(outfit)
+	ring = Layer((w, h))
+	ring.ellipse(c, 28, 6)
+	img = Image.alpha_composite(img, shade(ring, ramp(_adjust(base, value=1.2 if i else 0.9)), shadow_k=0))
+	inner = Layer((w, h))
+	inner.ellipse(c, 20, 4)
+	img = Image.alpha_composite(img, shade(inner, ramp((240, 232, 210)), shadow_k=0, highlight=False))
+	core = Layer((w, h))
+	core.ellipse(c, 9, 2)
+	img = Image.alpha_composite(img, shade(core, ramp(base), shadow_k=0, highlight=False))
+	return img
+
+
+def render_storm(outfit, i):
+	"""纸吹雪：旋转的光环 + 四散的纸片，四帧循环。"""
+	size = 96
+	img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+	c = (size / 2, size / 2)
+	base = accent(outfit)
+	halo = Layer((size, size))
+	halo.ellipse(c, 34, 40)
+	img = Image.alpha_composite(img, shade(halo, ramp(_adjust(base, value=1.4, sat=0.35)), shadow_k=0))
+	for k in range(9):
+		a = math.radians(k * 40 + i * 22)
+		rad = 12 + (k * 7) % 26
+		pc = (c[0] + math.cos(a) * rad, c[1] + math.sin(a) * rad * 1.15)
+		paper = Layer((size, size))
+		d = (math.cos(a + 1.2) * 5, math.sin(a + 1.2) * 5)
+		n = (-d[1] * 0.5, d[0] * 0.5)
+		paper.poly([v_add(pc, v_add(d, n)), v_add(pc, v_add(d, v_mul(n, -1))),
+			v_add(pc, v_add(v_mul(d, -1), v_mul(n, -1))), v_add(pc, v_add(v_mul(d, -1), n))])
+		img = Image.alpha_composite(img, shade(paper, ramp((240, 232, 210) if k % 3 else base), shadow_k=1))
+	return img
+
+
+## 角色专属特效：名字 → (绘制函数, 帧数, 每帧时长, 锚点)。道具的 anim 名对应 fx_<名字>。
+FX = {
+	"mio": {
+		"charm": (render_charm, 3, 4, (20, 20)),
+		"seal": (render_seal, 2, 10, (32, 17)),
+		"storm": (render_storm, 4, 3, (48, 48)),
+	},
+}
+
+
 def generate(char_id, out_root=ROOT / "characters"):
 	ch = CHARACTERS[char_id]
 	sprite_dir = out_root / char_id / "sprites"
@@ -523,19 +594,20 @@ def generate(char_id, out_root=ROOT / "characters"):
 		pal_dir.mkdir(parents=True, exist_ok=True)
 		for old in pal_dir.glob("*.png"):
 			old.unlink()
-		for anim_name, anim in ANIMS.items():
+		for anim_name, anim in anims_for(char_id, ch).items():
 			frames = []
 			for i, (pose, duration) in enumerate(anim["frames"](ch)):
 				name = f"{anim_name}_{i:02d}"
 				render(ch, outfit, pose).save(pal_dir / f"{name}.png")
 				frames.append([name, duration])
 			anims_meta[anim_name] = {"loop": anim["loop"], "frames": frames}
-		frames = []
-		for i in range(3):
-			name = f"fx_fireball_{i:02d}"
-			render_fireball(outfit, i).save(pal_dir / f"{name}.png")
-			frames.append([name, 3])
-		anims_meta["fx_fireball"] = {"loop": True, "anchor": [FX_SIZE // 2, FX_SIZE // 2], "frames": frames}
+		for fx_name, (fn, count, duration, anchor) in FX.get(char_id, {}).items():
+			frames = []
+			for i in range(count):
+				name = f"fx_{fx_name}_{i:02d}"
+				fn(outfit, i).save(pal_dir / f"{name}.png")
+				frames.append([name, duration])
+			anims_meta["fx_" + fx_name] = {"loop": True, "anchor": list(anchor), "frames": frames}
 	meta = {
 		"canvas": [CANVAS_W, CANVAS_H],
 		"anchor": list(ANCHOR),
@@ -552,15 +624,16 @@ def generate(char_id, out_root=ROOT / "characters"):
 
 
 def preview(path, scale=3):
-	"""所有角色 × 配色 × 每个动画的第一帧，拼成一张对照图。"""
+	"""每个角色 × 配色一行：共用动画取第一帧，专属招式取持续帧。"""
 	rows = []
-	for ch in CHARACTERS.values():
+	for cid, ch in CHARACTERS.items():
 		for outfit in ch["palettes"]:
 			row = []
-			for anim in ANIMS.values():
+			for name, anim in anims_for(cid, ch).items():
 				frames = anim["frames"](ch)
-				for pose, _ in frames[: min(len(frames), 3)]:
-					row.append(render(ch, outfit, pose))
+				if name in ("idle", "walk_f", "crouch", "jump", "5hp", "5hk", "2hk", "hit_air", "knockdown") \
+						or name not in ("walk_b", "prejump", "land") and len(frames) == 3 and name[0] not in "25j":
+					row.append(render(ch, outfit, frames[1 if len(frames) == 3 else 0][0]))
 			rows.append(row)
 	cols = max(len(r) for r in rows)
 	sheet = Image.new("RGBA", (cols * CANVAS_W, len(rows) * CANVAS_H), (70, 72, 82, 255))

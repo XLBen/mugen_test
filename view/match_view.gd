@@ -124,7 +124,9 @@ func _draw_projectile(p: Projectile) -> void:
 	if show_sprites and sprites != null and sprites.has(fx):
 		var center := Vector2(SimConst.px(p.x), -SimConst.px(p.y))
 		draw_set_transform(center, 0.0, Vector2(sprites.scale * p.facing, sprites.scale))
-		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx))
+		# 未启动的设置物 / 多段间隔中的道具画得半透明
+		var alpha := 1.0 if sim.projectile_live(p) else 0.45
+		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx), Color(1, 1, 1, alpha))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var r := _rect(sim.projectile_box(p))

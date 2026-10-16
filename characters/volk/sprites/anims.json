@@ -74,6 +74,14 @@
 				["land_00", 1]
 			]
 		},
+		"throw": {
+			"loop": false,
+			"frames": [
+				["throw_00", 1],
+				["throw_01", 1],
+				["throw_02", 1]
+			]
+		},
 		"throw_hit": {
 			"loop": false,
 			"frames": [
@@ -225,46 +233,6 @@
 				["j_hk_02", 1]
 			]
 		},
-		"fireball": {
-			"loop": false,
-			"frames": [
-				["fireball_00", 1],
-				["fireball_01", 1],
-				["fireball_02", 1]
-			]
-		},
-		"dp": {
-			"loop": false,
-			"frames": [
-				["dp_00", 1],
-				["dp_01", 1],
-				["dp_02", 1]
-			]
-		},
-		"rush": {
-			"loop": false,
-			"frames": [
-				["rush_00", 1],
-				["rush_01", 1],
-				["rush_02", 1]
-			]
-		},
-		"throw": {
-			"loop": false,
-			"frames": [
-				["throw_00", 1],
-				["throw_01", 1],
-				["throw_02", 1]
-			]
-		},
-		"super": {
-			"loop": false,
-			"frames": [
-				["super_00", 1],
-				["super_01", 1],
-				["super_02", 1]
-			]
-		},
 		"hit_stand": {
 			"loop": false,
 			"frames": [
@@ -308,16 +276,50 @@
 				["wakeup_01", 9]
 			]
 		},
-		"fx_fireball": {
-			"loop": true,
-			"anchor": [
-				20,
-				20
-			],
+		"crush": {
+			"loop": false,
 			"frames": [
-				["fx_fireball_00", 3],
-				["fx_fireball_01", 3],
-				["fx_fireball_02", 3]
+				["crush_00", 1],
+				["crush_01", 1],
+				["crush_02", 1]
+			]
+		},
+		"crush_hit": {
+			"loop": false,
+			"frames": [
+				["crush_hit_00", 25],
+				["crush_hit_01", 30]
+			]
+		},
+		"super_grab": {
+			"loop": false,
+			"frames": [
+				["super_grab_00", 1],
+				["super_grab_01", 1],
+				["super_grab_02", 1]
+			]
+		},
+		"super_grab_hit": {
+			"loop": false,
+			"frames": [
+				["super_grab_hit_00", 30],
+				["super_grab_hit_01", 25]
+			]
+		},
+		"charge": {
+			"loop": false,
+			"frames": [
+				["charge_00", 1],
+				["charge_01", 1],
+				["charge_02", 1]
+			]
+		},
+		"hammer": {
+			"loop": false,
+			"frames": [
+				["hammer_00", 1],
+				["hammer_01", 1],
+				["hammer_02", 1]
 			]
 		}
 	}
