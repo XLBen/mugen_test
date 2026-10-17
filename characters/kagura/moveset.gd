@@ -148,15 +148,15 @@ func _super() -> void:
 
 ## 连段路线（SF6 式：轻攻击连打确认、中攻击 Gatling、跳入、打康、超杀 / OD 收尾）。
 func _combos() -> void:
-	combo("Low confirm", "2LK > 2LP > 5LP xx 236LK", ["2lk", "2lp", "5lp", "slash_l"],
+	combo("下段确认", "2LK > 2LP > 5LP xx 236LK", ["2lk", "2lp", "5lp", "slash_l"],
 		[["2LK", 7], ["2LP", 7], ["5LP", 6], ["2,3,6LK", 0]], {"hits": 4})
-	combo("Gatling", "5MP > 5HP xx 236HK", ["5mp", "5hp", "slash_h"],
+	combo("Gatling 连续技", "5MP > 5HP xx 236HK", ["5mp", "5hp", "slash_h"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6HK", 0]], {"hits": 3})
-	combo("Jump in", "j.HK > 5HP xx 236HK", ["j_hk", "5hp", "slash_h"],
+	combo("跳入", "j.HK > 5HP xx 236HK", ["j_hk", "5hp", "slash_h"],
 		[["9", 33], ["5HK", 19], ["5HP", 10], ["2,3,6HK", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
-	combo("Punish counter", "PC 5HP > 5MP xx 236HK", ["5hp", "5mp", "slash_h"],
+	combo("确反", "PC 5HP > 5MP xx 236HK", ["5hp", "5mp", "slash_h"],
 		[["5", 40], ["5HP", 36], ["5MP", 8], ["2,3,6HK", 0]], {"hits": 3, "gap": 180, "p2": "6,2,3LP", "strict": [0]})
-	combo("Meter dump", "5MP > 5HP xx 236MK xx 236236K", ["5mp", "5hp", "slash_m", "super_k"],
+	combo("超杀收尾", "5MP > 5HP xx 236MK xx 236236K", ["5mp", "5hp", "slash_m", "super_k"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6MK", 22], ["2,3,6,2,3,6HK", 0]], {"hits": 8, "meter": true})
-	combo("Drive", "5MP > 5HP xx 236KK", ["5mp", "5hp", "slash_od"],
+	combo("OD 追加", "5MP > 5HP xx 236KK", ["5mp", "5hp", "slash_od"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6LK+MK", 0]], {"hits": 4})

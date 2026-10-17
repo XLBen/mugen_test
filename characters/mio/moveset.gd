@@ -140,15 +140,15 @@ func _super() -> void:
 
 ## 连段路线（远程型：中距离用 2MK / 5MP 取消纸符确认，近身才用轻攻击；623K 三段作收尾）。
 func _combos() -> void:
-	combo("Close confirm", "2LP > 5LP xx 236LP", ["2lp", "5lp", "charm_l"],
+	combo("近身确认", "2LP > 5LP xx 236LP", ["2lp", "5lp", "charm_l"],
 		[["2LP", 8], ["5LP", 6], ["2,3,6LP", 0]], {"hits": 3})
-	combo("Poke confirm", "2MK xx 236HP", ["2mk", "charm_h"],
+	combo("牵制确认", "2MK xx 236HP", ["2mk", "charm_h"],
 		[["2MK", 10], ["2,3,6HP", 0]], {"hits": 2, "gap": 110})
-	combo("Anti-air finish", "5LP > 5LP xx 623K", ["5lp", "5lp", "spin"],
+	combo("升龙收尾", "5LP > 5LP xx 623K", ["5lp", "5lp", "spin"],
 		[["5LP", 8], ["5LP", 6], ["6,2,3MK", 0]], {"hits": 5, "imported_only": true})
-	combo("Jump in", "j.HP > 5MP xx 236HP", ["j_hp", "5mp", "charm_h"],
+	combo("跳入", "j.HP > 5MP xx 236HP", ["j_hp", "5mp", "charm_h"],
 		[["9", 33], ["5HP", 23], ["5MP", 10], ["2,3,6HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
-	combo("Drive", "5HP xx 236PP", ["5hp", "charm_od"],
+	combo("OD 纸符", "5HP xx 236PP", ["5hp", "charm_od"],
 		[["5HP", 12], ["2,3,6LP+MP", 0]], {"hits": 3})
-	combo("Meter dump", "5MP xx 236236P", ["5mp", "storm"],
+	combo("超杀收尾", "5MP xx 236236P", ["5mp", "storm"],
 		[["5MP", 10], ["2,3,6,2,3,6HP", 0]], {"hits": 5, "meter": true})

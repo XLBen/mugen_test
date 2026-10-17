@@ -3,7 +3,7 @@ extends Node2D
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 ## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
-## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  Shift+F6 版边重置
+## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  6 判定框  Shift+F6 版边重置
 ## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
@@ -29,11 +29,23 @@ var logs := [InputLog.new(), InputLog.new()]
 var trial := ComboTrial.new()
 
 @onready var view: MatchView = $MatchView
-@onready var hud: Label = $HUD/Info
+@onready var hud: DebugPanel = $HUD/Info
 @onready var hud_view: HudView = $HUD/HudView
 @onready var overlay: TrainingOverlay = $HUD/TrainingOverlay
 @onready var sfx: Sfx = $Sfx
 @onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
+
+
+## 默认字体没有中文，系统自动回退可能选到繁体字体（macOS 上 "PingFang SC" 会解析成 PingFang HK，"杀"显示成方框），
+## 这里显式指定简体中文字体作为后备。
+## 在 _enter_tree 里设置，子节点画字之前就生效。
+func _enter_tree() -> void:
+	var cjk := SystemFont.new()
+	cjk.font_names = PackedStringArray(["Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Heiti SC",
+		"Source Han Sans SC", "WenQuanYi Micro Hei", "Arial Unicode MS"])
+	var font: Font = ThemeDB.fallback_font.duplicate()
+	font.fallbacks = [cjk]
+	ThemeDB.fallback_font = font
 
 
 func _ready() -> void:
@@ -50,6 +62,7 @@ func _ready() -> void:
 	view.sim = sim
 	hud_view.sim = sim
 	hud.visible = false
+	hud.sim = sim
 	overlay.sim = sim
 	overlay.meter = meter
 	overlay.dummy = dummy
@@ -72,7 +85,7 @@ func advance(human: Array[int]) -> void:
 	sim.step(last_inputs)
 	view.fx.sim = sim
 	view.fx.consume(sim.events)
-	sfx.consume(sim.events)
+	sfx.consume(sim.events, sim)
 	meter.record(sim)
 	if sim.training:
 		trial.record(sim)
@@ -81,7 +94,9 @@ func advance(human: Array[int]) -> void:
 
 
 func _process(_delta: float) -> void:
-	hud.text = _hud_text()
+	hud.paused = paused
+	overlay.debug_visible = hud.visible
+	hud.saved_frame = saved_state.frame if not saved_state.is_empty() else -1
 	for i in 2:
 		combo_labels[i].text = _combo_text(sim.fighters[1 - i])
 
@@ -90,9 +105,9 @@ func _process(_delta: float) -> void:
 func _combo_text(victim: Fighter) -> String:
 	var lines := PackedStringArray()
 	if victim.counter_timer > 0:
-		lines.append("PUNISH COUNTER" if victim.counter_type == Combat.Counter.PUNISH else "COUNTER")
+		lines.append("确反打康" if victim.counter_type == Combat.Counter.PUNISH else "打康")
 	if victim.combo_hits >= 2:
-		lines.append("%d HITS  %d" % [victim.combo_hits, victim.combo_damage])
+		lines.append("%d 连击  伤害 %d" % [victim.combo_hits, victim.combo_damage])
 	return "\n".join(lines)
 
 
@@ -150,6 +165,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			trial.restart()
 		KEY_5:
 			trial.next(-1 if key.shift_pressed else 1)
+		KEY_6:
+			view.show_boxes = not view.show_boxes
 
 
 ## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
@@ -208,24 +225,3 @@ func _cycle_character(player: int) -> void:
 	sim.reset()
 	saved_state = {}
 	view.load_sprites()
-
-
-func _hud_text() -> String:
-	var lines := PackedStringArray()
-	lines.append("frame %d   hash %08x   camera %d px%s" % [
-		sim.frame, sim.state_hash(), int(SimConst.px(sim.camera_x)), "   [PAUSED]" if paused else ""])
-	for i in 2:
-		var g := sim.fighters[i]
-		lines.append("P%d  super %4d  drive %5d%s" % [i + 1, g.gauges[Gauges.SUPER], g.gauges[Gauges.DRIVE],
-			"  BURNOUT" if g.burnout else ""])
-	for i in sim.fighters.size():
-		var f := sim.fighters[i]
-		lines.append("P%d  HP %5d  %-12s f%-3d  x %7.1f  y %6.1f  vx %5d  vy %5d  stun %2d  stop %2d  input %d" % [
-			i + 1, f.health, f.state_name(), f.state_frame, SimConst.px(f.x), SimConst.px(f.y),
-			f.vx, f.vy, f.stun, f.hitstop, f.numpad_at(sim.frame)])
-	lines.append("saved state: %s" % ("frame %d" % saved_state.frame if not saved_state.is_empty() else "none"))
-	lines.append("P1 %s (WASD)   P2 %s (Arrows)" % [sim.fighters[0].def.display_name, sim.fighters[1].def.display_name])
-	lines.append("F1 boxes  F2 save  F3 load  F4 pause  F5 step  F6 reset  F7 sprites  F8/F9 character")
-	lines.append("F10 %s  F11 infinite meter %s  F12 hide this" % [
-		"VERSUS" if sim.versus else "TRAINING", "ON" if sim.infinite_meter else "off"])
-	return "\n".join(lines)

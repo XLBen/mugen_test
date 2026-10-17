@@ -18,7 +18,7 @@ const FIREBALL_COLORS := [Color(0.5, 0.8, 1.0), Color(1.0, 0.6, 0.3)]
 const CAMERA_HEIGHT_PX := 260.0
 
 var sim: MatchSim
-var show_boxes := true
+var show_boxes := false ## 判定框显示（训练模式按 6 或 F1 切换）
 var show_sprites := true
 var _sprites: Array = [null, null] ## 每名玩家的 SpriteSet（没有精灵时为 null）
 
@@ -178,7 +178,7 @@ func _draw_label(f: Fighter, color: Color, label: String, font: Font) -> void:
 	for b: PackedInt32Array in f.hurtboxes():
 		top = minf(top, -SimConst.px(b[3]))
 	top = minf(top, -SimConst.px(f.pushbox_world()[3])) - 12.0
-	var text := "%s  %s" % [label, f.state_name()]
+	var text := "%s  %s" % [label, UiText.state(f.state_name())]
 	draw_string(font, Vector2(SimConst.px(f.x) - 40, top), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, color)
 
 

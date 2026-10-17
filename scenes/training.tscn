@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://view/training_overlay.gd" id="4_overlay"]
 [ext_resource type="Script" path="res://view/fx_layer.gd" id="5_fx"]
 [ext_resource type="Script" path="res://view/sfx.gd" id="6_sfx"]
+[ext_resource type="Script" path="res://view/debug_panel.gd" id="7_debug"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_training")
@@ -43,12 +44,14 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_overlay")
 
-[node name="Info" type="Label" parent="HUD"]
-offset_left = 12.0
-offset_top = 118.0
-offset_right = 1268.0
-offset_bottom = 340.0
-theme_override_font_sizes/font_size = 14
+[node name="Info" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 0
+offset_top = 128.0
+offset_right = 1280.0
+offset_bottom = 250.0
+mouse_filter = 2
+script = ExtResource("7_debug")
 
 [node name="ComboP1" type="Label" parent="HUD"]
 offset_left = 40.0
