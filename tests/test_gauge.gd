@@ -52,7 +52,7 @@ func test_super_hits_with_damage_floor() -> void:
 	var sim := adjacent_sim()
 	sim.fighters[0].gauges[S] = 1000
 	play(sim, "2,3,6,2,3,6LP", "", 80)
-	check_eq(sim.fighters[1].health, DUMMY.max_health - 2600, "super damage")
+	check_eq(sim.fighters[1].health, DUMMY.max_health - 2000, "SA1 damage")
 	var f := sim.fighters[1]
 	f.combo_hits = 12
 	check_eq(Combat.scaled_damage(f, 2600, 30), 780, "super keeps 30% minimum in long combos")
@@ -93,3 +93,36 @@ func test_burnout() -> void:
 	p2.gauge_delay[D] = 0
 	hold(sim, 0, 0, 5)
 	check_eq(p2.burnout, 0, "refilling the gauge ends burnout")
+
+
+## 超杀等级：SA1 1 格 / SA2 2 格 / SA3 3 格；体力 25% 以下 SA3 变成 Critical Art（更痛）。
+func test_super_art_levels() -> void:
+	var sim := adjacent_sim()
+	var p1 := sim.fighters[0]
+	p1.gauges[S] = 1000
+	play(sim, "2,3,6,2,3,6LK")
+	check(p1.state_name() != "super3", "one bar is not enough for SA3")
+	sim = adjacent_sim()
+	p1 = sim.fighters[0]
+	p1.gauges[S] = 3000
+	play(sim, "2,3,6,2,3,6LK", "", 90)
+	check_eq(Gauges.value(p1, S), 0, "SA3 spends three bars")
+	var sa3_damage := DUMMY.max_health - sim.fighters[1].health
+	check(sa3_damage >= 3500, "SA3 hurts (%d)" % sa3_damage)
+	sim = adjacent_sim()
+	p1 = sim.fighters[0]
+	p1.gauges[S] = 3000
+	p1.health = 2000
+	play(sim, "2,3,6,2,3,6LK", "", 90)
+	check(p1.state_name() == "super3_ca" or DUMMY.max_health - sim.fighters[1].health > sa3_damage,
+		"low health turns SA3 into the Critical Art")
+	check(DUMMY.max_health - sim.fighters[1].health > sa3_damage, "Critical Art deals more damage")
+
+
+func test_level_two_super() -> void:
+	var sim := char_sim(KAGURA, DUMMY, 90)
+	var p1 := sim.fighters[0]
+	p1.gauges[S] = 2000
+	play(sim, "2,1,4,2,1,4LK")
+	check_eq(p1.state_name(), "super2_k", "214214K is Kagura's SA2")
+	check_eq(Gauges.value(p1, S), 0, "SA2 spends two bars")

@@ -10,7 +10,9 @@ extends MovesetBuilder
 ##   623K  月轮       对空翻踢，L / M / H 无敌 4（只防打击）/ 5 / 7 帧，越重越高越痛
 ##   空中 214K  坠星  斜下俯冲踢，上段
 ##   236KK / 623KK   OD 版本
-##   236236K 千刃     超必杀，突进五连斩
+##   236236K 千刃     SA1，突进五连斩
+##   214214K 月华     SA2，无敌上升多段（对空）
+##   236236P 千刃·极   SA3（体力 25% 以下为 Critical Art），更长的突进连斩
 
 const SPECIAL := ["special", "super"]
 const FROM_LIGHT := ["special", "super", "5lp", "2lp", "2lk"]
@@ -146,22 +148,49 @@ func _specials() -> void:
 
 
 func _super() -> void:
-	# 千刃：236236K。超杀暂停后高速突进，四段斩 + 最后一击浮空
+	# 千刃（SA1）：236236K。超杀暂停后高速突进，四段斩 + 最后一击浮空，共约 2000
+	super_art("super_k", 1, "236236", "K", _slashes([[9, 10], [12, 13], [15, 16], [18, 19]], 250, [22, 24], 1000, 24))
+
+	# 月华（SA2）：214214K。1~12 帧无敌，原地起跳的多段上升踢，对空用，共约 2600
+	var rise := []
+	for w in [[6, 7], [9, 10], [12, 13]]:
+		rise.append({"active": w, "boxes": [[0, 70, 70, 150]],
+			"hit": {"damage": 500, "chip": 120, "hitstop": 6, "hitstun": 30, "blockstun": 20, "push": 0, "block_push": 100,
+				"air_vx": 60, "air_vy": 1300, "juggle_limit": 10, "strength": 1}})
+	rise.append({"active": [16, 19], "boxes": [[0, 90, 75, 150]],
+		"hit": {"damage": 1100, "chip": 270, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1600,
+			"blockstun": 18, "push": 700, "block_push": 900, "juggle_limit": 10, "strength": 2}})
+	super_art("super2_k", 2, "214214", "K", {"type": "S", "air_from": 6, "land": "landing_long", "anim": "super2_k",
+		"anim_fallback": ["rising"], "invuln": [{"frames": [1, 12]}], "events": [{"frame": 6, "vx": 150, "vy": 1750}],
+		"hitboxes": rise})
+
+	# 千刃·极（SA3 / Critical Art）：236236P。突进更远的八段斩，共约 4000
+	var sa3 := _slashes([[9, 10], [12, 13], [15, 16], [18, 19], [21, 22], [24, 25], [27, 28]], 330, [31, 33], 1700, 33)
+	sa3.anim = "super3_k"
+	sa3.anim_fallback = ["super_k"]
+	super_art("super3_k", 3, "236236", "P", sa3, true)
+	super_art("super3_k", 3, "236236", "P", sa3)
+
+
+## 突进连斩超杀：windows 每段的持续帧，each 每段伤害，last 最后一击（浮空）的持续帧与伤害，end 最后一击结束帧。
+func _slashes(windows: Array, each: int, last_window: Array, last: int, end: int) -> Dictionary:
 	var hits := []
-	for w in [[9, 10], [12, 13], [15, 16], [18, 19]]:
+	for w in windows:
 		hits.append({"active": w, "boxes": [[5, 40, 85, 130]],
-			"hit": {"damage": 400, "chip": 100, "hitstop": 5, "hitstun": 30, "blockstun": 22, "push": 50,
-				"block_push": 50, "juggle_limit": 10, "min_scale": 30, "meter": 0, "strength": 1}})
-	hits.append({"active": [22, 24], "boxes": [[5, 40, 90, 140]],
-		"hit": {"damage": 1200, "chip": 300, "hitstop": 14, "effect": "launch", "air_vx": 450, "air_vy": 1500,
-			"blockstun": 18, "push": 900, "block_push": 1000, "juggle_limit": 10, "min_scale": 30, "meter": 0, "strength": 2}})
-	states["super_k"] = {
-		"type": "S", "kind": "super", "total": 24 + 30, "anim": "super_k", "cost": {"super": 1000},
-		"invuln": [{"frames": [1, 14]}], "friction": 60,
-		"events": [{"frame": 1, "freeze": 40}, {"frame": 6, "vx": 1600}, {"frame": 12, "vx": 200}, {"frame": 24, "vx": 0}],
-		"hitboxes": hits,
+			"hit": {"damage": each, "chip": each / 4, "hitstop": 5, "hitstun": 30, "blockstun": 22, "push": 50,
+				"block_push": 50, "juggle_limit": 10, "strength": 1}})
+	hits.append({"active": last_window, "boxes": [[5, 40, 90, 140]],
+		"hit": {"damage": last, "chip": last / 4, "hitstop": 14, "effect": "launch", "air_vx": 450, "air_vy": 1500,
+			"blockstun": 18, "push": 900, "block_push": 1000, "juggle_limit": 10, "strength": 2}})
+	var events := [{"frame": 6, "vx": 1600}, {"frame": 12, "vx": 200}]
+	# 后面几段每段前再小步追上（击退会把对手推远）
+	for w: Array in windows.slice(4) + [last_window]:
+		events.append({"frame": w[0] - 2, "vx": 450})
+	events.append({"frame": end, "vx": 0})
+	return {
+		"type": "S", "total": end + 30, "anim": "super_k", "invuln": [{"frames": [1, 14]}], "friction": 60,
+		"events": events, "hitboxes": hits,
 	}
-	command("236236K", "super", {"motion": "236236", "buttons": "K", "state": "super_k"})
 
 
 ## 连段路线（SF6 式：轻攻击连打确认、中攻击 Gatling、跳入、打康、超杀 / OD 收尾）。
@@ -180,3 +209,5 @@ func _combos() -> void:
 		[["5MP", 8], ["5HP", 10], ["2,3,6LK+MK", 0]], {"hits": 4})
 	combo("目标连段（脚）", "5LK > MK xx 236LK", ["5lk", "tc_lk_mk", "slash_l"],
 		[["5LK", 6], ["5MK", 8], ["2,3,6LK", 0]], {"hits": 3})
+	combo("3 格收尾", "5MP > HP xx 236MK xx 236236P", ["5mp", "tc_mp_hp", "slash_m", "super3_k"],
+		[["5MP", 8], ["5HP", 10], ["2,3,6MK", 22], ["2,3,6,2,3,6HP", 0]], {"hits": 11, "meter": true})

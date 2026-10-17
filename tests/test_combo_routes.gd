@@ -27,7 +27,7 @@ static func run_combo(def: FighterDef, c: Dictionary, shift := [-1, 0], opp: Fig
 	var entered := []
 	var last := -1
 	var last_frame := 0
-	for i in a.size() + 90:
+	for i in a.size() + 160:
 		sim.step([a[i] if i < a.size() else 0, b[i] if i < b.size() else 0])
 		best = maxi(best, sim.fighters[1].combo_hits)
 		var f := sim.fighters[0]

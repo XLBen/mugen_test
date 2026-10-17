@@ -9,7 +9,9 @@ extends MovesetBuilder
 ##   623K   缎带旋     三段对空；L / M / H 无敌 4（只防打击）/ 6 / 8 帧，越重飞得越高
 ## 指令普攻：6HK 远距离踢。目标连段：2MP > HP。
 ##   236PP / 623KK   OD 版本（两段纸符 / 更长无敌）
-##   236236P 纸吹雪     超杀，慢速多段巨型道具
+##   236236P 纸吹雪     SA1，慢速多段巨型道具
+##   214214P 缎带天舞   SA2，无敌的多段上升（对空）
+##   236236K 纸吹雪·终   SA3（体力 25% 以下为 Critical Art），更大更多段的道具
 
 const SPECIAL := ["special", "super"]
 const LIGHT_CHAIN := ["special", "super", "5lp", "2lp", "2lk"]
@@ -144,17 +146,39 @@ func _spin() -> void:
 
 
 func _super() -> void:
-	# 纸吹雪：236236P。超杀暂停后放出缓慢的巨型多段道具
-	states["storm"] = {
-		"type": "S", "kind": "super", "total": 50, "anim": "storm", "active_hint": [10, 14], "cost": {"super": 1000},
-		"invuln": [{"frames": [1, 12]}],
-		"events": [{"frame": 1, "freeze": 40}, {"frame": 10, "spawn": "storm", "x": 70, "y": 110}],
-	}
-	command("236236P", "super", {"motion": "236236", "buttons": "P", "state": "storm"})
-	projectiles["storm"] = {"speed": 550, "box": [-70, -80, 140, 160], "hits": 6, "hit_interval": 4, "kind": "super",
-		"anim": "storm", "lifetime": 120,
-		"hit": {"damage": 450, "chip": 110, "hitstun": 30, "blockstun": 20, "hitstop": 5, "push": 150, "block_push": 150,
-			"juggle_limit": 10, "min_scale": 30, "meter": 0, "strength": 1}}
+	# 纸吹雪（SA1）：236236P。超杀暂停后放出缓慢的巨型多段道具，共约 2000
+	super_art("storm", 1, "236236", "P", {"type": "S", "total": 50, "anim": "storm", "active_hint": [10, 14],
+		"invuln": [{"frames": [1, 12]}], "events": [{"frame": 10, "spawn": "storm", "x": 70, "y": 110}]})
+	projectiles["storm"] = _storm(6, 330, 30, [-70, -80, 140, 160])
+
+	# 缎带天舞（SA2）：214214P。1~12 帧无敌，多段上升，对空用，共约 2600
+	var rise := []
+	for w in [[6, 7], [9, 10], [12, 13]]:
+		rise.append({"active": w, "boxes": [[0, 80, 70, 150]],
+			"hit": {"damage": 480, "chip": 120, "hitstop": 6, "hitstun": 30, "blockstun": 20, "push": 0, "block_push": 100,
+				"air_vx": 60, "air_vy": 1300, "juggle_limit": 10, "strength": 1}})
+	rise.append({"active": [16, 19], "boxes": [[0, 90, 75, 150]],
+		"hit": {"damage": 1150, "chip": 280, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1600,
+			"blockstun": 18, "push": 700, "block_push": 900, "juggle_limit": 10, "strength": 2}})
+	super_art("super2_m", 2, "214214", "P", {"type": "S", "air_from": 6, "land": "landing_long", "anim": "super2_m",
+		"anim_fallback": ["spin"], "invuln": [{"frames": [1, 12]}], "events": [{"frame": 6, "vx": 200, "vy": 1800}],
+		"hitboxes": rise})
+
+	# 纸吹雪·终（SA3 / Critical Art）：236236K。更大的道具，10 段，共约 4000（CA 约 4600）
+	var sa3 := {"type": "S", "total": 56, "anim": "super3_m", "anim_fallback": ["storm"], "active_hint": [12, 16],
+		"invuln": [{"frames": [1, 14]}], "events": [{"frame": 12, "spawn": "storm3_ca", "x": 80, "y": 120}]}
+	super_art("super3_m", 3, "236236", "K", sa3, true)
+	sa3.events = [{"frame": 12, "spawn": "storm3", "x": 80, "y": 120}]
+	super_art("super3_m", 3, "236236", "K", sa3)
+	projectiles["storm3"] = _storm(10, 400, 50, [-95, -100, 190, 200])
+	projectiles["storm3_ca"] = _storm(10, 460, 50, [-95, -100, 190, 200])
+
+
+## 纸吹雪道具：hits 段、每段 each 伤害、补正保底 min_scale%、判定 box。
+func _storm(hits: int, each: int, min_scale: int, box: Array) -> Dictionary:
+	return {"speed": 550, "box": box, "hits": hits, "hit_interval": 4, "kind": "super", "anim": "storm", "lifetime": 140,
+		"hit": {"damage": each, "chip": each / 4, "hitstun": 30, "blockstun": 20, "hitstop": 5, "push": 150,
+			"block_push": 150, "juggle_limit": 10, "min_scale": min_scale, "meter": 0, "strength": 1}}
 
 
 ## 连段路线（远程型：中距离用 2MK / 5MP 取消纸符确认，近身才用轻攻击；623K 三段作收尾）。
@@ -173,3 +197,5 @@ func _combos() -> void:
 		[["2MP", 9], ["5HP", 10], ["2,3,6HP", 0]], {"hits": 3})
 	combo("超杀收尾", "5MP xx 236236P", ["5mp", "storm"],
 		[["5MP", 10], ["2,3,6,2,3,6HP", 0]], {"hits": 5, "meter": true})
+	combo("3 格收尾", "5MP xx 236236K", ["5mp", "super3_m"],
+		[["5MP", 10], ["2,3,6,2,3,6HK", 0]], {"hits": 7, "meter": true})

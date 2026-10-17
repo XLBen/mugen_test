@@ -57,7 +57,8 @@ static func _events(f: Fighter, sim: MatchSim) -> void:
 			f.vy = e.vy
 		if e.has("freeze"):
 			sim.freeze = e.freeze
-			sim.emit("super", f.x, f.y + 12000)
+			sim.emit("super", f.x, f.y + 12000, {"level": e.get("level", 1), "critical": e.get("critical", false),
+				"target": f.index, "dir": f.facing})
 		if e.has("fx"):
 			sim.emit(e.fx, f.x, f.y + f.push_height() / 2, {"target": f.index, "dir": f.facing})
 		if e.has("spawn"):

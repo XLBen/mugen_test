@@ -8,7 +8,9 @@ extends MovesetBuilder
 ##   623P   铁锤       对空上勾拳，原地不起飞；L / M / H 打击无敌 4 / 6 / 8 帧，越重越痛、收招越长
 ## 指令普攻：4HP 对空直拳（判定偏上，可打浮空）。目标连段：5MP > HK（击倒）。
 ##   360PP / 214PP   OD 版本（范围更大 / 两次霸体）
-##   236236P 西伯利亚坠落  超杀指令投，范围很大
+##   236236P 西伯利亚坠落  SA1，超杀指令投，范围很大
+##   214214P 重炮冲锋     SA2，三次霸体的多段冲撞
+##   236236K 冻土崩落     SA3（体力 25% 以下为 Critical Art），范围更大的超杀指令投
 
 const SPECIAL := ["special", "super"]
 const LIGHT_CHAIN := ["special", "super", "5lp", "2lp", "2lk"]
@@ -69,11 +71,24 @@ func _grabs() -> void:
 	_command_grab("crush_od", "crush", 2, 115, 2800, 30, {"cost": {"drive": 20000}, "invuln": [{"frames": [1, 3], "throw": false}]})
 	command("360PP", "od", {"motion": "360", "buttons": "PP", "state": "crush_od"})
 
-	# 西伯利亚坠落：236236P。超杀暂停后发生 3，范围 140
-	_command_grab("super_grab", "super_grab", 3, 140, 3600, 50,
-		{"cost": {"super": 1000}, "kind": "super", "invuln": [{"frames": [1, 4]}],
-		"events": [{"frame": 1, "freeze": 40}]})
+	# 西伯利亚坠落（SA1）：236236P。超杀暂停后发生 3，范围 140
+	_super_grab("super_grab", 1, 140, 2200)
 	command("236236P", "super", {"motion": "236236", "buttons": "P", "state": "super_grab"})
+	# 冻土崩落（SA3 / Critical Art）：236236K。范围 165
+	_super_grab("super3_v_ca", 3, 165, 4600, true)
+	command("236236K_ca", "super", {"motion": "236236", "buttons": "K", "state": "super3_v_ca", "cond": "critical"})
+	_super_grab("super3_v", 3, 165, 4000)
+	command("236236K", "super", {"motion": "236236", "buttons": "K", "state": "super3_v"})
+
+
+## 投技超杀：等级决定消耗和暂停时间（MovesetBuilder.SUPER_LEVELS），超杀暂停后发生 3。
+func _super_grab(state_name: String, level: int, range_px: int, damage: int, critical := false) -> void:
+	var lv: Dictionary = SUPER_LEVELS[level]
+	_command_grab(state_name, "super_grab", 3, range_px, damage, 50,
+		{"cost": {"super": lv.cost}, "kind": "super", "invuln": [{"frames": [1, 4]}],
+		"events": [{"frame": 1, "freeze": lv.freeze, "level": level, "critical": critical}]})
+	states[state_name].anim = "super_grab"
+	states[state_name + "_hit"].anim = "super_grab_hit"
 
 
 func _command_grab(state_name: String, anim: String, startup: int, range_px: int, damage: int,
@@ -113,6 +128,19 @@ func _specials() -> void:
 	states["charge_od"] = od
 	command("214PP", "od", {"motion": "214", "buttons": "PP", "state": "charge_od"})
 
+	# 重炮冲锋（SA2）：214214P。1~16 帧三次霸体的冲撞，四段，共约 2600
+	var rush := []
+	for w in [[12, 13], [15, 16], [18, 19]]:
+		rush.append({"active": w, "boxes": [[15, 60, 75, 100]],
+			"hit": {"damage": 450, "chip": 110, "hitstop": 6, "hitstun": 28, "blockstun": 20, "push": 100,
+				"block_push": 150, "juggle_limit": 10, "strength": 1}})
+	rush.append({"active": [22, 24], "boxes": [[15, 60, 80, 110]],
+		"hit": {"damage": 1250, "chip": 310, "hitstop": 14, "effect": "knockdown", "air_vx": 600, "air_vy": 900,
+			"blockstun": 18, "push": 900, "block_push": 1000, "juggle_limit": 10, "strength": 2}})
+	super_art("super2_v", 2, "214214", "P", {"type": "S", "total": 24 + 28, "anim": "super2_v",
+		"anim_fallback": ["charge"], "friction": 70, "armor": {"frames": [1, 16], "hits": 3},
+		"events": [{"frame": 8, "vx": 1300}, {"frame": 22, "vx": 0}], "hitboxes": rush})
+
 	# 铁锤：623P。原地对空，打击无敌（不防投），收招长；越重无敌越长、越痛、收招越长
 	var hammer := {"l": [4, 1100, 24], "m": [6, 1200, 26], "h": [8, 1300, 28]}
 	for k in ["h", "m", "l"]:
@@ -140,3 +168,4 @@ func _combos() -> void:
 	combo("OD 冲撞", "5MP xx 214PP", ["5mp", "charge_od"],
 		[["5MP", 10], ["2,1,4LP+MP", 0]], {"hits": 2})
 	combo("目标连段", "5MP > HK", ["5mp", "tc_mp_hk"], [["5MP", 9], ["5HK", 0]], {"hits": 2})
+	combo("超杀收尾", "2MK xx 214214P", ["2mk", "super2_v"], [["2MK", 10], ["2,1,4,2,1,4HP", 0]], {"hits": 5, "meter": true})

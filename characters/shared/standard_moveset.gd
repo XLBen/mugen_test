@@ -111,16 +111,21 @@ func _specials() -> void:
 	}
 	command("214K", "special", {"motion": "214", "buttons": "K", "state": "rush"})
 
-	# 超必杀 Lv1：236236P，1 格超杀槽。第 1 帧超杀暂停 40 帧，1~12 帧无敌，伤害保底 30%
+	# 超必杀 SA1：236236P，1 格。第 1 帧超杀暂停 40 帧，1~12 帧无敌，伤害保底 30%
 	var super_total := 8 + 6 + 34 - 1
-	states["super1"] = {
-		"type": "S", "kind": "super", "total": super_total, "anim": "super", "cost": {"super": 1000},
-		"invuln": [{"frames": [1, 12]}],
-		"events": [{"frame": 1, "freeze": 40}, {"frame": 6, "vx": 900}, {"frame": 14, "vx": 0}],
-		"friction": 60,
+	var sa1 := {
+		"type": "S", "total": super_total, "anim": "super", "invuln": [{"frames": [1, 12]}],
+		"events": [{"frame": 6, "vx": 900}, {"frame": 14, "vx": 0}], "friction": 60,
 		"hitboxes": [{"active": [8, 13], "boxes": [[15, 40, 85, 130]],
-			"hit": {"damage": 2600, "chip": 650, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1500,
-				"blockstun": 18, "push": 800, "block_push": 1000, "juggle_limit": 10, "min_scale": 30,
-				"meter": 0, "strength": 2}}],
+			"hit": {"damage": 2000, "chip": 500, "hitstop": 14, "effect": "launch", "air_vx": 400, "air_vy": 1500,
+				"blockstun": 18, "push": 800, "block_push": 1000, "juggle_limit": 10, "strength": 2}}],
 	}
-	command("236236P", "super", {"motion": "236236", "buttons": "P", "state": "super1"})
+	super_art("super1", 1, "236236", "P", sa1)
+	# SA3：236236K，3 格，更痛；Critical Art 在体力 25% 以下
+	var sa3: Dictionary = sa1.duplicate(true)
+	sa3.anim_fallback = ["super"]
+	sa3.anim = "super3"
+	sa3.hitboxes[0].hit.damage = 4000
+	sa3.hitboxes[0].hit.chip = 1000
+	super_art("super3", 3, "236236", "K", sa3, true)
+	super_art("super3", 3, "236236", "K", sa3)

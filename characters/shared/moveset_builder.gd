@@ -192,6 +192,36 @@ func drive_system() -> void:
 	command("MP+MK", "drive", {"buttons": "MP+MK", "state": "parry"})
 
 
+## 超杀等级（SF6）：SA1 1 格 / SA2 2 格 / SA3 3 格；Critical Art = 体力 25% 以下时的 SA3（同指令、更痛）。
+## 返回 {cost, freeze, min_scale}，各角色的超杀按这个填。
+const SUPER_LEVELS := {
+	1: {"cost": 1000, "freeze": 40, "min_scale": 30},
+	2: {"cost": 2000, "freeze": 45, "min_scale": 40},
+	3: {"cost": 3000, "freeze": 50, "min_scale": 50},
+}
+
+
+## 登记一个超杀：level 1–3；critical = true 时登记为 Critical Art（名字加 _ca，体力 25% 以下才能出，伤害 × ca_pct%）。
+## d 里的 freeze 事件和 cost、命中的 min_scale 按等级补上。Critical Art 必须在同指令的 SA3 之前登记（优先）。
+func super_art(state_name: String, level: int, motion: String, buttons: String, d: Dictionary, critical := false,
+		ca_pct := 115) -> void:
+	var lv: Dictionary = SUPER_LEVELS[level]
+	var s: Dictionary = d.duplicate(true)
+	s.kind = "super"
+	s.cost = {"super": lv.cost}
+	var events: Array = s.get("events", [])
+	events.push_front({"frame": 1, "freeze": lv.freeze, "level": level, "critical": critical})
+	s.events = events
+	for h: Dictionary in s.get("hitboxes", []):
+		h.hit.min_scale = lv.min_scale
+		h.hit.meter = 0
+		if critical:
+			h.hit.damage = h.hit.damage * ca_pct / 100
+	var name := state_name + ("_ca" if critical else "")
+	states[name] = s
+	command(name, "super", {"motion": motion, "buttons": buttons, "state": name, "cond": "critical" if critical else ""})
+
+
 func dashes(forward_speed: int, forward_frames: int, forward_total: int,
 		back_speed: int, back_frames: int, back_total: int, back_invuln: int) -> void:
 	states["dash_f"] = {"type": "S", "total": forward_total, "anim": "walk_f",

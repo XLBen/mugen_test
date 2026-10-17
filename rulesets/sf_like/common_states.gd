@@ -218,6 +218,8 @@ static func _usable(f: Fighter, sim: MatchSim, c: Command, target: StateDef) -> 
 		return false
 	if c.cond == "no_projectile" and sim.has_projectile(f):
 		return false
+	if c.cond == "critical" and f.health * 4 > f.def.max_health:
+		return false # Critical Art：体力 25% 以下才能出
 	return Gauges.can_afford(f, target.cost)
 
 

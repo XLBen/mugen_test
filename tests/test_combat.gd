@@ -127,7 +127,7 @@ func test_super_always_chips() -> void:
 	var sim := adjacent_sim()
 	sim.fighters[0].gauges[Gauges.SUPER] = 1000
 	play(sim, "2,3,6,2,3,6LP", "4x80")
-	check_eq(sim.fighters[1].health, DUMMY.max_health - 650, "super chip damage")
+	check_eq(sim.fighters[1].health, DUMMY.max_health - 500, "super chip damage")
 
 
 func test_fireballs_clash() -> void:
