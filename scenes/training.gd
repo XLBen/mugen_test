@@ -3,7 +3,8 @@ extends Node2D
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 ## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
-## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  6 判定框  Shift+F6 版边重置
+## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  6 判定框
+##   7 电脑演示当前连段（Shift+7 依次演示全部，再按 7 或任意操作键停止）  Shift+F6 版边重置
 ## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
@@ -27,6 +28,7 @@ var meter := FrameMeter.new()
 var dummy := TrainingDummy.new()
 var logs := [InputLog.new(), InputLog.new()]
 var trial := ComboTrial.new()
+var demo := ComboDemo.new()
 
 @onready var view: MatchView = $MatchView
 @onready var hud: DebugPanel = $HUD/Info
@@ -68,6 +70,7 @@ func _ready() -> void:
 	overlay.dummy = dummy
 	overlay.logs = logs
 	overlay.trial = trial
+	overlay.demo = demo
 	trial.setup(roster[picks[0]])
 	view.load_sprites()
 
@@ -79,9 +82,14 @@ func _physics_process(_delta: float) -> void:
 	advance([LocalInput.read(0), LocalInput.read(1)])
 
 
-## 推进一帧：训练模式下由假人决定 P2 输入，然后记录帧计量条和输入历史。
+## 推进一帧：训练模式下由假人决定 P2 输入（连段演示中由演示脚本操作双方），然后记录帧计量条和输入历史。
 func advance(human: Array[int]) -> void:
-	last_inputs = dummy.inputs_for(sim, human) if sim.training else human
+	if demo.playing and (human[0] != 0 or human[1] != 0):
+		demo.stop() # 有人按键就把控制交还给玩家
+	if demo.playing and sim.training:
+		last_inputs = demo.inputs(sim, trial)
+	else:
+		last_inputs = dummy.inputs_for(sim, human) if sim.training else human
 	sim.step(last_inputs)
 	view.fx.sim = sim
 	view.fx.consume(sim.events)
@@ -135,6 +143,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_F5:
 			step_once = true
 		KEY_F6:
+			demo.stop()
 			sim.reset()
 			if key.shift_pressed:
 				var edge := sim.stage.half_width - sim.fighters[1].def.push_half_width
@@ -146,6 +155,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_F9:
 			_cycle_character(1)
 		KEY_F10:
+			demo.stop()
 			sim.versus = not sim.versus
 			sim.training = not sim.versus
 			sim.reset()
@@ -167,6 +177,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			trial.next(-1 if key.shift_pressed else 1)
 		KEY_6:
 			view.show_boxes = not view.show_boxes
+		KEY_7:
+			if demo.playing:
+				demo.stop()
+			elif sim.training:
+				trial.enabled = true
+				demo.start(trial, key.shift_pressed)
 
 
 ## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
@@ -218,6 +234,7 @@ static func _local_order(dir_name: String) -> int:
 
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。
 func _cycle_character(player: int) -> void:
+	demo.stop()
 	picks[player] = (picks[player] + 1) % roster.size()
 	sim.fighters[player].set_def(roster[picks[player]])
 	if player == 0:

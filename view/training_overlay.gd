@@ -21,6 +21,7 @@ var meter: FrameMeter
 var dummy: TrainingDummy
 var logs: Array = [] ## [InputLog, InputLog]
 var trial: ComboTrial
+var demo: ComboDemo
 var debug_visible := false ## 调试面板打开时，连段挑战往下挪
 
 
@@ -39,7 +40,7 @@ func _draw() -> void:
 	_draw_meter(font)
 	_draw_logs(font)
 	_draw_trial(font)
-	var status := "假人：%s    自动防御：%s        [1] 假人模式    [2] 自动防御    [3] 录制 / 回放    [4] 连段挑战    [6] 判定框" % [
+	var status := "假人：%s    自动防御：%s        [1] 假人模式    [2] 自动防御    [3] 录制 / 回放    [4] 连段挑战    [6] 判定框    [7] 演示连段" % [
 		UiText.DUMMY_MODES[dummy.mode], UiText.DUMMY_GUARD[dummy.guard]]
 	if dummy.mode == TrainingDummy.Mode.RECORD:
 		status += "    ● 录制 %d 帧" % dummy.recording.size()
@@ -86,8 +87,11 @@ func _draw_trial(font: Font) -> void:
 	if c.is_empty():
 		draw_string(font, Vector2(0, y), "这个角色还没有设计连段", HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color.WHITE)
 		return
-	var title := "连段挑战 %d / %d    %s%s        [5] 下一条    [Shift+5] 上一条    [4] 关闭" % [trial.index + 1,
-		trial.combos.size(), c.name, "（已完成）" if trial.cleared.has(trial.index) else ""]
+	var title := "连段挑战 %d / %d    %s%s        [5] 下一条    [Shift+5] 上一条    [7] 演示    [4] 关闭" % [
+		trial.index + 1, trial.combos.size(), c.name, "（已完成）" if trial.cleared.has(trial.index) else ""]
+	if demo != null and demo.playing:
+		title = "电脑演示中%s    %s        [7] 停止" % [
+			" %d / %d" % [demo.position(), demo.total] if demo.total > 1 else "", c.name]
 	draw_rect(Rect2(size.x / 2 - 330, y - 18, 660, 64), Color(0, 0, 0, 0.55))
 	draw_string(font, Vector2(0, y), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 15, Color(1, 0.85, 0.3))
 	var parts := ComboTrial.notation_parts(c)
@@ -106,6 +110,8 @@ func _draw_trial(font: Font) -> void:
 	var notes := PackedStringArray()
 	if c.has("p2"):
 		notes.append("需要打康起手：先用 [3] 录一段假人出招再回放")
+	if c.has("p2_recovery"):
+		notes.append("确反：在对手出招的收招中打中（[7] 演示会自动布置）")
 	if c.get("meter", false):
 		notes.append("需要 1 格超杀槽")
 	if not notes.is_empty():

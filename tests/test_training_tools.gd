@@ -109,9 +109,8 @@ func test_combo_trial_tracks_progress() -> void:
 	trial.setup(KAGURA)
 	trial.enabled = true
 	var c := trial.current()
-	var routes: GDScript = load("res://tests/test_combo_routes.gd")
 	var sim := char_sim(KAGURA, DUMMY, c.get("gap", 75))
-	var inputs := InputScript.parse(routes.build_script(c))
+	var inputs := InputScript.parse(ComboTrial.build_script(c))
 	var succeeded := false
 	for i in inputs.size() + 60:
 		sim.step([inputs[i] if i < inputs.size() else 0, 0])
@@ -131,3 +130,37 @@ func test_combo_trial_tracks_progress() -> void:
 	check_eq(peak, 1, "first move counts as step 1")
 	check_eq(trial.step, 0, "dropping the combo resets the trial")
 	check_eq(ComboTrial.notation_parts(c).size(), c.states.size(), "notation splits into one part per move")
+
+
+## 连段演示：电脑按脚本打出当前连段，连段挑战判定成功；演示全部时依次跑完每一条后自动停止。
+func test_combo_demo_plays_routes() -> void:
+	var trial := ComboTrial.new()
+	trial.setup(KAGURA)
+	trial.enabled = true
+	var demo := ComboDemo.new()
+	var sim := char_sim(KAGURA, VOLK, 300)
+	demo.start(trial, true)
+	check_eq(demo.total, trial.combos.size(), "queues every combo")
+	var guard := 0
+	while demo.playing and guard < 3000:
+		sim.step(demo.inputs(sim, trial))
+		trial.record(sim)
+		guard += 1
+	check(not demo.playing, "stops after the last combo")
+	check_eq(trial.cleared.size(), trial.combos.size(), "every demonstrated combo clears the trial against Volk")
+
+
+func test_combo_demo_single_and_stop() -> void:
+	var trial := ComboTrial.new()
+	trial.setup(MIO)
+	trial.next()
+	var demo := ComboDemo.new()
+	var sim := char_sim(MIO, KAGURA, 300)
+	demo.start(trial)
+	check_eq(demo.total, 1, "single combo")
+	sim.step(demo.inputs(sim, trial))
+	check_eq(sim.fighters[1].x - sim.fighters[0].x, trial.current().get("gap", 75) * SimConst.UNITS_PER_PX,
+		"demo places the fighters like the route test")
+	demo.stop()
+	check(not demo.playing, "stop ends the demo")
+	check_eq(demo.inputs(sim, trial), [0, 0] as Array[int], "no inputs once stopped")
