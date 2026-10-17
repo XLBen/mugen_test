@@ -1,19 +1,21 @@
 class_name TrainingDummy
 extends RefCounted
-## 训练假人（控制 P2）：站 / 蹲 / 跳 / 玩家操作 / 录制 / 回放，可选自动防御。
+## 训练假人（控制 P2）：站 / 蹲 / 跳 / 玩家操作 / 录制 / 回放 / 电脑（CpuPlayer，等级 CPU_LEVEL），可选自动防御。
 ## 录制时由 P1 的操作控制假人（P1 站着不动），回放时循环播放录下的输入。
 ## 输出的仍然是普通 InputBits，所以假人行为同样确定、可存读档重放。
 
-enum Mode { PLAYER, STAND, CROUCH, JUMP, RECORD, PLAYBACK }
+enum Mode { PLAYER, STAND, CROUCH, JUMP, RECORD, PLAYBACK, CPU }
 enum Guard { NONE, ALL }
 
-const MODE_NAMES := ["player", "stand", "crouch", "jump", "record", "playback"]
+const MODE_NAMES := ["player", "stand", "crouch", "jump", "record", "playback", "cpu"]
+const CPU_LEVEL := 6
 const GUARD_NAMES := ["none", "all"]
 
 var mode: int = Mode.STAND
 var guard: int = Guard.NONE
 var recording: Array[int] = []
 var _play_index := 0
+var cpu: CpuPlayer
 
 
 ## 给出本帧双方的输入。human = [P1 手柄/键盘, P2 手柄/键盘]
@@ -35,7 +37,11 @@ func inputs_for(sim: MatchSim, human: Array[int]) -> Array[int]:
 			if not recording.is_empty():
 				p2 = recording[_play_index % recording.size()]
 				_play_index += 1
-	if guard == Guard.ALL and mode != Mode.PLAYER and mode != Mode.RECORD:
+		Mode.CPU:
+			if cpu == null:
+				cpu = CpuPlayer.new(1, CPU_LEVEL, sim.frame + 1)
+			p2 = cpu.inputs(sim)
+	if guard == Guard.ALL and mode != Mode.PLAYER and mode != Mode.RECORD and mode != Mode.CPU:
 		p2 = guarded(sim, p2)
 	return [p1, p2]
 
@@ -46,6 +52,7 @@ func cycle_mode() -> void:
 
 func set_mode(m: int) -> void:
 	mode = m
+	cpu = null
 	if mode == Mode.RECORD:
 		recording.clear()
 	_play_index = 0

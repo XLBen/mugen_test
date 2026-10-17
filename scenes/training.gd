@@ -27,6 +27,7 @@ var dummy := TrainingDummy.new()
 var logs := [InputLog.new(), InputLog.new()]
 var trial := ComboTrial.new()
 var demo := ComboDemo.new()
+var cpu: CpuPlayer ## 对战电脑模式下控制 P2
 var pause_menu: MenuPanel
 var result_menu: MenuPanel
 var _over := 0 ## 比赛结束后经过的帧数
@@ -58,6 +59,8 @@ func _ready() -> void:
 	sim.versus = versus
 	sim.training = not versus
 	sim.reset()
+	if Session.from_menu and Session.mode == Session.Mode.VS_CPU:
+		cpu = CpuPlayer.new(1, Session.cpu_level, Time.get_ticks_msec())
 	pause_menu = _make_menu()
 	pause_menu.chosen.connect(_on_pause_menu)
 	result_menu = _make_menu()
@@ -98,8 +101,12 @@ func advance(human: Array[int]) -> void:
 		demo.stop() # 有人按键就把控制交还给玩家
 	if demo.playing and sim.training:
 		last_inputs = demo.inputs(sim, trial)
+	elif sim.training:
+		last_inputs = dummy.inputs_for(sim, human)
 	else:
-		last_inputs = dummy.inputs_for(sim, human) if sim.training else human
+		last_inputs = human.duplicate()
+		if cpu != null:
+			last_inputs[1] = cpu.inputs(sim)
 	sim.step(last_inputs)
 	view.fx.sim = sim
 	view.fx.consume(sim.events)
