@@ -264,6 +264,11 @@
 				]
 			],
 			"loop": true
-		}
+		},
+		"punch": 1101,
+		"sweep": 1103,
+		"burst": 1300,
+		"air_dive": 1102,
+		"hammer_od": 2200
 	}
 }

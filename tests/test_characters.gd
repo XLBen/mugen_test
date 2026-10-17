@@ -384,3 +384,13 @@ func test_kagura_new_specials() -> void:
 		var sim := char_sim(KAGURA, DUMMY, _gap(KAGURA))
 		play(sim, script, "", 40)
 		check(sim.fighters[1].health < DUMMY.max_health, "%s hits" % script)
+
+
+func test_volk_new_specials() -> void:
+	for script: String in ["2,3,6HP", "2,1,4HK", "2,5,2HP", "2,3,6LP+MP", "6,2,3LP+MP"]:
+		var sim := char_sim(VOLK, DUMMY, _gap(VOLK))
+		play(sim, script, "", 50)
+		check(sim.fighters[1].health < DUMMY.max_health, "%s hits" % script)
+	var sim := char_sim(VOLK, DUMMY, _gap(VOLK))
+	play(sim, "2,1,4HK", "4x40", 0)
+	check(sim.fighters[1].health < DUMMY.max_health, "214K sweep is low (beats standing block)")

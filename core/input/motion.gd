@@ -16,6 +16,7 @@ const PRESETS := {
 		["147", "123", "369", "789"], ["123", "369", "789", "147"]],
 	"214214": [["2", "1", "4", "2", "1", "4"]],
 	"66": [["6", "124578", "6"]],
+	"22": [["2", "456789", "2"]],
 	"44": [["4", "235689", "4"]],
 	# 蓄力：先按住 [方向] 至少 CHARGE_FRAMES 帧，松开后 CHARGE_RELEASE 帧内输入后一个方向（蓄力角色用）
 	"[4]6": [["147", "369"]],
@@ -43,7 +44,7 @@ static func preset(motion_name: String) -> Motion:
 			steps.append(mask)
 		m.patterns.append(steps)
 	match motion_name:
-		"66", "44":
+		"66", "44", "22":
 			m.max_gap = 6
 			m.final_gap = 0
 			m.window = 14
