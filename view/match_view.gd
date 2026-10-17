@@ -53,6 +53,9 @@ func _draw() -> void:
 		return
 	var font := ThemeDB.fallback_font
 	_draw_stage()
+	if sim.freeze > 0:
+		# 超杀暂停：背景压暗，突出角色（纯表现）
+		draw_rect(Rect2(SimConst.px(sim.camera_x) - 2000, -2000, 4000, 2600), Color(0.02, 0.0, 0.08, 0.6))
 	for i in sim.fighters.size():
 		var sprites: SpriteSet = _sprites[i]
 		if show_sprites and sprites != null:

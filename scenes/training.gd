@@ -144,7 +144,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
 func _fit_window_to_screen() -> void:
-	if DisplayServer.get_name() == "headless":
+	# 在编辑器的 Game 面板里内嵌运行时，窗口大小由编辑器决定，这里改不了（画面上会提示）
+	if DisplayServer.get_name() == "headless" or Engine.is_embedded_in_editor():
 		return
 	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
 		return

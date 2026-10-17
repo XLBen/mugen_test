@@ -14,6 +14,7 @@ const CAT_COLORS := {
 	FrameMeter.Cat.DOWN: Color(0.65, 0.45, 0.9),
 }
 const LOG_ROWS := 10
+const EMBED_HINT := "Running inside the editor's Game tab: its size is set by the editor. For a full-size window, turn off \"Embed Game on Next Play\" in the Game tab, then run again."
 
 var sim: MatchSim
 var meter: FrameMeter
@@ -26,9 +27,13 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	if sim == null or sim.versus:
+	if sim == null:
 		return
 	var font := ThemeDB.fallback_font
+	if Engine.is_embedded_in_editor():
+		draw_string(font, Vector2(0, 150), EMBED_HINT, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color(1, 0.85, 0.3))
+	if sim.versus:
+		return
 	_draw_meter(font)
 	_draw_logs(font)
 	var status := "[F8] P1 char  [F9] P2 char   dummy: %s   guard: %s   [1] mode  [2] guard  [3] record/playback  [Shift+F6] corner  [F12] debug  [Alt+Enter] fullscreen" % [
