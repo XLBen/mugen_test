@@ -11,9 +11,12 @@
     "idle": 0                              一个动作，按原时长播放
     "crouch": [10, 11]                     多个动作首尾相接
     "jump": {"frames": [[41, 0], [41, -1], [44, 0]]}   手动挑帧（-1 = 最后一帧）
+    "hit_stand_hi_h": {"actions": [5002, 5007], "recover": 5007}   从 5007 起是受击恢复段
+    "hit_air": {"actions": [5030, 5035, 5050], "fall": 5050}       从 5050 起是下落段
+    "idle": {"actions": [0], "max_time": 8}                        每帧最长 8（有的待机第一帧停很久）
 另外可写 "scale": 2 固定显示倍数（低分辨率 320x240 人物用整数倍更清晰），否则按 target_height 计算。
-带 Clsn1（攻击判定）的动作会自动压成本工程的五帧攻击动画（蓄力 / 出手 / 持续 / 收势 / 复原），
-持续帧的攻击盒取所有攻击帧 Clsn1 的并集；每帧受击盒取 Clsn2。招式的发生 / 持续 / 收招帧数仍以本工程招式表为准。
+带 Clsn1（攻击判定）的动作保留全部帧并标出 发生 / 持续 / 收招 段，游戏里按招式表的帧数逐段对齐播放
+（持续帧一定显示带攻击盒的帧，收招太长时剩下的部分在待机里作为"尾巴"播完）；每帧受击盒取 Clsn2。
 
 注意：这些人物大多由商业游戏素材提取而来，只能本地自用，不要提交到公开仓库。
 """
@@ -209,38 +212,38 @@ def cmd_moves(char_dir: Path) -> list:
 # ---------------------------------------------------------------- import
 
 def pick_frames(actions: dict, spec) -> tuple[list, bool]:
-	"""映射项 → [(Frame, 时长)] 和"是否攻击动画"。"""
+	"""映射项 → [(Frame, 时长, 阶段)] 和"是否攻击动画"。
+
+	阶段（写进 anims.json 帧条目第 4 项，AnimClock 用来对齐招式帧数）：
+	  攻击动作自动标 s 发生 / a 持续（有 Clsn1）/ r 收招；"recover" 起的动作标 r（受击恢复）；"fall" 起的动作标 f（下落）。
+	"""
 	if isinstance(spec, int):
 		spec = [spec]
-	if isinstance(spec, dict):
+	if isinstance(spec, dict) and "frames" in spec:
 		frames = []
 		for n, idx in spec["frames"]:
 			a = actions[n]
-			frames.append((a.frames[idx], spec.get("dur", 1)))
+			frames.append((a.frames[idx], spec.get("dur", 1), ""))
 		return frames, False
+	opts = spec if isinstance(spec, dict) else {}
+	numbers = opts.get("actions", spec if isinstance(spec, list) else [])
+	max_time = opts.get("max_time", 0)
 	frames = []
-	for n in spec:
+	tag = ""
+	for n in numbers:
+		if n == opts.get("recover"):
+			tag = "r"
+		if n == opts.get("fall"):
+			tag = "f"
 		for f in actions[n].frames:
-			frames.append((f, f.time if f.time > 0 else 60))
-	attack = any(f.clsn1 for f, _ in frames)
+			dur = f.time if f.time > 0 else (max_time or 60)
+			frames.append((f, min(dur, max_time) if max_time else dur, tag))
+	attack = any(f.clsn1 for f, _, _ in frames)
 	if attack:
-		frames = compress_attack([f for f, _ in frames])
+		hits = [i for i, (f, _, _) in enumerate(frames) if f.clsn1]
+		first, last = hits[0], hits[-1]
+		frames = [(f, dur, "s" if i < first else ("a" if i <= last else "r")) for i, (f, dur, _) in enumerate(frames)]
 	return frames, attack
-
-
-def compress_attack(frames: list) -> list:
-	"""任意长度的攻击动作 → 五帧（蓄力 / 出手 / 持续 / 收势 / 复原）。"""
-	hits = [i for i, f in enumerate(frames) if f.clsn1]
-	a, b = hits[0], hits[-1]
-	startup = frames[:a] or [frames[a]]
-	recovery = frames[b + 1:] or [frames[b]]
-	active = air_mod.Frame(frames[a].group, frames[a].image, frames[a].offset, frames[a].time, frames[a].flip,
-		[], list(frames[a].clsn2))
-	for f in frames[a:b + 1]:
-		for box in f.clsn1:
-			if box not in active.clsn1:
-				active.clsn1.append(box)
-	return [(startup[0], 1), (startup[-1], 1), (active, 1), (recovery[0], 1), (recovery[-1], 1)]
 
 
 def sprite_for(sff, frame):
@@ -263,6 +266,20 @@ def convert_box(box, scale):
 		max(1, round(abs(y2 - y1) * scale))]
 
 
+LOOPED = ("idle", "walk_f", "walk_b")
+
+
+def _numbers(spec) -> list:
+	"""映射项用到的全部动作号。"""
+	if isinstance(spec, int):
+		return [spec]
+	if isinstance(spec, list):
+		return spec
+	if "frames" in spec:
+		return [n for n, _ in spec["frames"]]
+	return list(spec["actions"])
+
+
 def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 	mapping = json.loads(map_path.read_text(encoding="utf-8"))
 	d, sff, actions, acts = load_char(char_dir)
@@ -272,21 +289,21 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 	# 1. 选帧
 	anims = {}
 	for name, spec in mapping["anims"].items():
-		missing = [n for n in ([spec] if isinstance(spec, int) else spec if isinstance(spec, list)
-			else [n for n, _ in spec["frames"]]) if n not in actions]
+		missing = [n for n in _numbers(spec) if n not in actions]
 		if missing:
 			print(f"  skip {name}: action {missing} not found")
 			continue
 		frames, attack = pick_frames(actions, spec)
-		frames = [(f, dur) for f, dur in frames if sprite_for(sff, f) is not None and sprite_for(sff, f).image]
+		frames = [x for x in frames if sprite_for(sff, x[0]) is not None and sprite_for(sff, x[0]).image]
 		if frames:
-			anims[name] = {"frames": frames, "attack": attack, "loop": name in ("idle", "walk_f", "walk_b")}
+			loop = spec.get("loop", name in LOOPED) if isinstance(spec, dict) else name in LOOPED
+			anims[name] = {"frames": frames, "attack": attack, "loop": loop}
 
 	# 2. 统一画布（所有帧的外接矩形），锚点 = 脚底
 	left = top = 10 ** 9
 	right = bottom = -10 ** 9
 	for a in anims.values():
-		for f, _ in a["frames"]:
+		for f, _, _ in a["frames"]:
 			l, t, w, h = frame_rect(sprite_for(sff, f), f)
 			left, top, right, bottom = min(left, l), min(top, t), max(right, l + w), max(bottom, t + h)
 	canvas = (right - left, bottom - top)
@@ -309,7 +326,7 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 			old.unlink()
 		for name, a in anims.items():
 			frames_meta = []
-			for k, (f, dur) in enumerate(a["frames"]):
+			for k, (f, dur, phase) in enumerate(a["frames"]):
 				spr = sprite_for(sff, f)
 				img = sff_mod.to_rgba(spr.image, pal_fn(spr))
 				if "H" in f.flip:
@@ -324,7 +341,10 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 				boxes = {"hurt": [convert_box(b, scale) for b in f.clsn2]}
 				if f.clsn1:
 					boxes["hit"] = [convert_box(b, scale) for b in f.clsn1]
-				frames_meta.append([file, max(int(dur), 1), boxes])
+				entry = [file, max(int(dur), 1), boxes]
+				if phase:
+					entry.append(phase)
+				frames_meta.append(entry)
 			meta_anims[name] = {"loop": a["loop"], "frames": frames_meta}
 	meta = {"canvas": list(canvas), "anchor": list(anchor), "scale": scale, "palettes": len(palettes),
 		"anims": meta_anims, "source": {"char": char_dir.name, "author": d.get("info", {}).get("author", "")}}

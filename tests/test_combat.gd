@@ -177,3 +177,17 @@ func test_ko() -> void:
 	play(sim, "5LP", "", 120)
 	check_eq(sim.fighters[1].health, 0, "health clamped at zero")
 	check_eq(sim.fighters[1].state_name(), "ko", "stays down when KO'd")
+
+
+## 受击动画按 上下段 × 强度 区分（纯表现）。
+func test_hit_reaction_variant() -> void:
+	var sim := adjacent_sim()
+	play(sim, "5HP", "", 3)
+	hold(sim, 0, 0, 12)
+	var p2 := sim.fighters[1]
+	check_eq(p2.state_name(), "hit_stand", "standing hit")
+	check_eq(p2.hit_var, 2, "5HP hits high with a heavy reaction")
+	sim = adjacent_sim()
+	play(sim, "2LK", "", 3)
+	hold(sim, InputBits.DOWN, 0, 8)
+	check_eq(sim.fighters[1].hit_var, 3, "low light kick: low light reaction")

@@ -18,6 +18,13 @@ var state := 0 ## Moveset.states 的索引
 var state_frame := 0 ## 进入当前状态后经过的帧数
 var fresh := 1 ## 1 = 刚进入状态，第 0 帧逻辑尚未执行
 var jump_dir := 0 ## -1 后跳 / 0 垂直跳 / 1 前跳
+var hit_var := 0 ## 最近一次被打的受击动画变体：上下段 * 3 + 强度（AnimClock.HIT_SUFFIX）
+# 动画尾巴（AnimClock）：上一个状态的动画在可行动状态里继续播的部分
+var tail_state := 0 ## 动画来自哪个状态
+var tail_var := 0 ## 那个状态当时的变体
+var tail_from := 0 ## 从动画的哪个时刻开始
+var tail_ticks := 0 ## 剩余动画时长
+var tail_len := 0 ## 用几帧播完（0 = 没有尾巴）
 var health := 0
 var stun := 0 ## 当前受击/防御硬直的长度
 var hitstop := 0 ## 剩余顿帧
@@ -63,6 +70,7 @@ func reset_state(keep_gauges := false) -> void:
 	vy = 0
 	facing = 1
 	jump_dir = 0
+	hit_var = 0
 	health = def.max_health
 	stun = 0
 	hitstop = 0
@@ -78,6 +86,7 @@ func reset_state(keep_gauges := false) -> void:
 	history = PackedInt32Array()
 	history.resize(HISTORY)
 	set_state("stand")
+	tail_len = 0
 
 
 # ---------------------------------------------------------------- 状态
@@ -95,7 +104,19 @@ func is_in(state_names: Array) -> bool:
 
 
 func set_state(state_name_: String) -> void:
+	# 离开攻击 / 落地等状态时，剩下的动画交给下一个可行动状态继续播（AnimClock 尾巴）
+	var valid := state < moveset.states.size() # 换角色后旧的状态索引可能不属于新招式表
+	var tail: Array[int] = AnimClock.tail_after(self, sd(), state_frame) if valid else []
+	var old_state := state
+	var old_var := AnimClock.variant(self, sd()) if valid else 0
 	state = moveset.id(state_name_)
+	tail_len = 0
+	if not tail.is_empty() and sd().tail_ok:
+		tail_state = old_state
+		tail_var = old_var
+		tail_from = tail[0]
+		tail_ticks = tail[1]
+		tail_len = tail[2]
 	state_frame = 0
 	fresh = 1
 	hit_mask = 0
@@ -146,9 +167,9 @@ func push_right() -> int:
 func hurtboxes() -> Array:
 	var s := sd()
 	var local: Array
-	var anim: AnimData = s.anim_alts[jump_dir + 1] if s.anim_dir else s.anim_data
+	var anim := AnimClock.sim_anim(self)
 	if anim != null:
-		local = anim.hurt[AnimClock.frame(s, anim, state_frame, vy, def.jump_velocity)]
+		local = anim.hurt[AnimClock.index(self, anim)]
 	if local.is_empty():
 		local = def.body_hurtbox(s.type) + s.extra_hurtboxes_at(state_frame)
 	var out := []
@@ -184,7 +205,8 @@ func numpad_at(frame: int) -> int:
 
 # ---------------------------------------------------------------- 存档
 
-const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "health",
+const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "hit_var",
+	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
 	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
 	"cmd_index", "upgrade_until", "armor_used"]

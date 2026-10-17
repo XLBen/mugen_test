@@ -48,18 +48,36 @@ func apply_anim_boxes(lib: Dictionary) -> void:
 		if not anim.has_boxes():
 			continue
 		s.anim_data = anim
-		if s.anim_dir:
-			for k in 3:
-				s.anim_alts[k] = lib.get(AnimClock.anim_name(s, k - 1), anim)
+		if s.variants != "":
+			s.anim_alts = []
+			for v in AnimClock.variant_count(s):
+				for anim_name in AnimClock.candidates(s, v):
+					if lib.has(anim_name):
+						s.anim_alts.append(lib[anim_name])
+						break
 		s.hurtboxes = []
-		for h: Dictionary in s.hitboxes:
-			var hits: Array = anim.hit[AnimClock.frame(s, anim, h.from, 0)]
-			if not hits.is_empty():
-				h.boxes = hits
+		if anim.has_phase(AnimData.Phase.ACTIVE):
+			for h: Dictionary in s.hitboxes:
+				var hits := _hits_between(s, anim, h.from, h.to)
+				if not hits.is_empty():
+					h.boxes = hits
 		s.reach = 0
 		for h: Dictionary in s.hitboxes:
 			for b: PackedInt32Array in h.boxes:
 				s.reach = maxi(s.reach, b[0] + b[2])
+
+
+## 招式第 from..to 帧显示的动画帧里所有攻击盒（多段招式每段各取自己的帧）。
+static func _hits_between(s: StateDef, anim: AnimData, from: int, to: int) -> Array:
+	var out := []
+	var seen := {}
+	for t in range(from, to + 1):
+		var i := anim.index_at_time(AnimClock.attack_tick(s, anim, t))
+		if seen.has(i):
+			continue
+		seen[i] = true
+		out.append_array(anim.hit[i])
+	return out
 
 
 func id(state_name: String) -> int:

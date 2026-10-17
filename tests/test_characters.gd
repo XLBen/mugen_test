@@ -198,10 +198,36 @@ func test_attack_boxes_come_from_animation_frames() -> void:
 		for s in m.states:
 			if s.hitboxes.is_empty() or s.anim_data == null:
 				continue
-			var idx := AnimClock.frame(s, s.anim_data, s.hitboxes[0].from, 0)
-			var drawn: Array = s.anim_data.hit[idx]
-			check(not drawn.is_empty(), "%s %s: active frame has a drawn hitbox" % [def.display_name, s.name])
-			check(s.hitboxes[0].boxes == drawn, "%s %s: hitbox equals the drawn one" % [def.display_name, s.name])
+			var anim := s.anim_data
+			if not anim.has_phase(AnimData.Phase.ACTIVE):
+				continue
+			for h: Dictionary in s.hitboxes:
+				var drawn := []
+				for t in range(h.from, h.to + 1):
+					var i := anim.index_at_time(AnimClock.attack_tick(s, anim, t))
+					check_eq(anim.phase[i], AnimData.Phase.ACTIVE, "%s %s f%d: active frame shows an active pose" % [
+						def.display_name, s.name, t])
+					for b in anim.hit[i]:
+						if not drawn.has(b):
+							drawn.append(b)
+				check(not drawn.is_empty(), "%s %s: active frames have drawn hitboxes" % [def.display_name, s.name])
+				for b in h.boxes:
+					check(drawn.has(b), "%s %s: hitbox comes from the drawn frames" % [def.display_name, s.name])
+
+
+## 攻击动画按阶段对齐：发生段在持续帧之前播完，收招段在持续帧之后。
+func test_attack_animation_phases_line_up() -> void:
+	var s := StateDef.build("x", {"type": "S", "kind": "normal", "total": 20,
+		"hitboxes": [{"active": [6, 7], "boxes": [[0, 0, 10, 10]], "hit": {}}]})
+	var anim := AnimData.from_meta({"frames": [["a", 3, {}, "s"], ["b", 3, {}, "s"], ["c", 2, {"hit": [[0, 0, 9, 9]]}, "a"],
+		["d", 4, {}, "r"], ["e", 4, {}, "r"], ["f", 4, {}, "r"]]})
+	var shown := []
+	for t in 20:
+		shown.append(anim.index_at_time(AnimClock.attack_tick(s, anim, t)))
+	check_eq(shown.slice(0, 5), [0, 0, 0, 1, 1], "startup frames spread over the 5 startup frames")
+	check_eq(shown.slice(5, 7), [2, 2], "active frames show the active pose")
+	check_eq(shown[7], 3, "recovery starts right after the active frames")
+	check_eq(shown[19], 5, "recovery reaches the last pose (12 ticks fit in 12 frames)")
 
 
 func test_hurtboxes_follow_the_pose() -> void:
@@ -217,3 +243,16 @@ func test_hurtboxes_follow_the_pose() -> void:
 	for b: PackedInt32Array in lying:
 		top_lying = maxi(top_lying, b[3])
 	check(top_lying < top_standing / 2, "lying hurtboxes are low (%d vs %d)" % [top_lying, top_standing])
+
+
+## 本地导入的人物（local_assets，不在仓库里；没有时跳过）：每个打击招式的动画都有攻击判定帧，持续帧显示出招姿势。
+func test_imported_attacks_have_drawn_hits() -> void:
+	var training: GDScript = load("res://scenes/training.gd")
+	for def: FighterDef in training.local_fighters():
+		var m := Moveset.for_def(def)
+		for s in m.states:
+			if s.hitboxes.is_empty() or s.kind == "throw":
+				continue
+			var anim := s.anim_data
+			check(anim != null and anim.has_phase(AnimData.Phase.ACTIVE) or s.kind == "super",
+				"%s %s: animation shows the strike" % [def.display_name, s.name])

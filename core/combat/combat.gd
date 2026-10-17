@@ -23,6 +23,7 @@ const LIGHT_STARTER_PENALTY := 10
 const DEFENDER_METER := 10 ## 被打 / 防御时获得的超杀槽
 const BURNOUT_BLOCKSTUN := 4 ## Burnout 中防御硬直增加
 const CHIP_DIV := 4 ## 没有单独指定削血量时，削血 = 伤害 / 4（SF6 约 25%）
+const HIGH_HIT_PCT := 60 ## 受击动画：接触点高于身高的这个比例算上段
 
 
 static func resolve(sim: MatchSim) -> void:
@@ -234,6 +235,7 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 			dfn.knockdown = 1 if effect != HitDef.Effect.NORMAL or dfn.health <= 0 else 0
 		else:
 			var was_crouching := dfn.sd().type == "C"
+			dfn.hit_var = hit_variant(dfn, hd, point, attacker)
 			dfn.set_state("hit_crouch" if was_crouching else "hit_stand")
 			dfn.stun = hd.hitstun + COUNTER_HITSTUN.get(counter, 0)
 			dfn.vx = hd.push * dir
@@ -244,6 +246,15 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		melee.contact = 1 if blocked else 2
 		melee.last_hitstop = hd.hitstop
 		dfn.push_transfer = 1
+
+
+## 受击动画变体（纯表现，AnimClock.HIT_SUFFIX）：上下段 * 3 + 强度。
+## 打在被打方身高 60% 以上、或攻击方在空中算上段（头部后仰），下段判定和打在身体上算下段（弯腰）。
+static func hit_variant(dfn: Fighter, hd: HitDef, point: PackedInt32Array, attacker: Fighter) -> int:
+	var low := hd.guard == HitDef.Guard.LOW or point[1] - dfn.y < dfn.def.stand_height * HIGH_HIT_PCT / 100
+	if attacker.is_airborne() and hd.guard != HitDef.Guard.LOW:
+		low = false
+	return (3 if low else 0) + clampi(hd.strength, 0, 2)
 
 
 ## 霸体：状态处于霸体帧且还有吸收次数，且不是超杀。

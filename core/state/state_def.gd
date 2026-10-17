@@ -30,8 +30,9 @@ var first_active := -1
 var last_active := -1
 var reach := 0 ## 攻击判定最远能伸到身前多远（单位），近距离防御用
 var anim_data: AnimData ## 动画逐帧判定盒（有则受击盒按动画帧取）
-var anim_dir := false ## 按跳跃方向换动画（起跳 / 空中 / 落地：<anim>_f 前跳、<anim>_b 后跳）
-var anim_alts: Array = [null, null, null] ## 后跳 / 垂直跳 / 前跳 各自的 AnimData（null = 用 anim_data）
+var variants := "" ## 动画变体来源："jump"（按跳跃方向）/ "hit"（按受击的上下段与强度），见 AnimClock
+var anim_alts: Array = [] ## 每个变体实际使用的 AnimData（按变体值索引）
+var tail_ok := false ## 可行动状态：进入时可以继续播上一个招式剩下的动画（尾巴）
 var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}
@@ -52,7 +53,8 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	s.total = d.get("total", s.total)
 	s.next = d.get("next", "crouch" if s.type == "C" else s.next)
 	s.anim = d.get("anim", state_name)
-	s.anim_dir = d.get("anim_dir", false)
+	s.variants = d.get("variants", "")
+	s.tail_ok = d.get("tail_ok", false)
 	s.physics = d.get("physics", "air" if s.type == "A" else s.physics)
 	s.friction = d.get("friction", s.friction)
 	if d.has("air_from"):

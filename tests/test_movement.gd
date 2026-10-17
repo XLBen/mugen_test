@@ -98,18 +98,44 @@ func test_jump_animation_by_direction_and_arc() -> void:
 	var p1 := sim.fighters[0]
 	hold(sim, U | R, 0, 1)
 	var air := p1.moveset.states[p1.moveset.id("air")]
-	check_eq(AnimClock.anim_name(air, p1.jump_dir), "jump_f", "forward jump uses jump_f")
-	check_eq(AnimClock.anim_name(air, -1), "jump_b", "back jump uses jump_b")
-	check_eq(AnimClock.anim_name(air, 0), "jump", "neutral jump uses jump")
+	check_eq(AnimClock.candidates(air, AnimClock.variant(p1, air))[0], "jump_f", "forward jump uses jump_f")
+	check_eq(AnimClock.candidates(air, 0)[0], "jump_b", "back jump uses jump_b")
+	check_eq(AnimClock.candidates(air, 1)[0], "jump", "neutral jump uses jump")
 	var stand := p1.moveset.states[p1.moveset.id("stand")]
-	check_eq(AnimClock.anim_name(stand, 1), stand.anim, "other states ignore jump direction")
+	check_eq(AnimClock.candidates(stand, 0), PackedStringArray([stand.anim]), "other states have no variants")
 	var arc := AnimData.from_meta({"frames": [["a", 2], ["b", 2], ["c", 2], ["d", 2], ["e", 2], ["f", 2]]})
-	var v0 := 2000
-	check_eq(AnimClock.frame(air, arc, 0, v0, v0), 0, "takeoff = first frame")
-	check_eq(AnimClock.frame(air, arc, 0, 0, v0), 3, "apex = middle of the animation")
-	check_eq(AnimClock.frame(air, arc, 0, -v0, v0), 5, "landing speed = last frame")
+	var v0 := p1.def.jump_velocity
+	for c: Array in [[v0, 0, "takeoff = first frame"], [0, 3, "apex = middle of the animation"], [-v0, 5, "landing speed = last frame"]]:
+		p1.vy = c[0]
+		check_eq(AnimClock.frame(p1, air, arc), c[1], c[2])
 	while p1.state_name() != "landing":
 		hold(sim, 0, 0, 1)
 	check_eq(p1.jump_dir, 1, "landing keeps the jump direction (land_f)")
 	hold(sim, 0, 0, DUMMY.landing_frames + 1)
 	check_eq(p1.jump_dir, 0, "direction cleared once standing")
+
+
+## 动画尾巴：招式收招动画比帧数长时，剩下的部分在待机里继续播；任何操作立刻打断，可行动时间不变。
+func test_animation_tail_is_visual_only() -> void:
+	var sim := char_sim(KAGURA, DUMMY, 400)
+	var k := sim.fighters[0]
+	var s: StateDef = k.moveset.states[k.moveset.id("5lp")]
+	var saved := s.anim_data
+	var long_recovery := AnimData.from_meta({"frames": [["a", 2, {}, "s"], ["b", 2, {}, "s"], ["c", 2, {"hit": [[0, 0, 9, 9]]}, "a"],
+		["d", 6, {}, "r"], ["e", 6, {}, "r"], ["f", 6, {}, "r"], ["g", 6, {}, "r"]]})
+	s.anim_data = long_recovery
+	play(sim, "5LP")
+	var frames_to_free := 0
+	while k.state_name() == "5lp":
+		hold(sim, 0, 0, 1)
+		frames_to_free += 1
+	check_eq(k.state_name(), "stand", "back to stand when the move ends")
+	check_eq(frames_to_free, s.total, "actionable exactly when the frame data says")
+	check(AnimClock.has_tail(k), "remaining recovery plays as a tail")
+	check(AnimClock.shown_state(k) == s, "tail shows the attack's animation")
+	var shown := AnimClock.index(k, AnimClock.sim_anim(k))
+	check(long_recovery.phase[shown] == AnimData.Phase.RECOVERY, "tail shows recovery poses")
+	hold(sim, InputBits.RIGHT, 0, 1)
+	check_eq(k.state_name(), "walk_f", "walking right away")
+	check(not AnimClock.has_tail(k), "walking interrupts the tail")
+	s.anim_data = saved

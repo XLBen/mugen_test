@@ -14,8 +14,8 @@ const UPGRADE_WINDOW := 3 ## 同时按宽容：出招后几帧内补按的键可
 
 static func states() -> Dictionary:
 	return {
-		"stand": {"type": "S", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "idle"},
-		"crouch": {"type": "C", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "crouch"},
+		"stand": {"type": "S", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "idle", "tail_ok": true},
+		"crouch": {"type": "C", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "crouch", "tail_ok": true},
 		"walk_f": {"type": "S", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "walk_f"},
 		"walk_b": {"type": "S", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "walk_b"},
 		"guard_stand": {"type": "S", "ctrl": true, "guard_ok": true, "logic": "ground", "anim": "block_stand", "kind": "guard"},
@@ -25,12 +25,14 @@ static func states() -> Dictionary:
 		"dash_b": {"type": "S", "total": 22, "anim": "walk_b", "punishable_from": 8,
 			"invuln": [{"frames": [1, 7], "strike": true, "throw": true}],
 			"events": [{"frame": 1, "vx": -850}, {"frame": 13, "vx": 0}]},
-		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump", "anim_dir": true},
-		"air": {"type": "A", "logic": "air", "anim": "jump", "anim_dir": true},
-		"landing": {"type": "S", "guard_ok": true, "logic": "landing", "anim": "land", "anim_dir": true},
+		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump", "variants": "jump"},
+		"air": {"type": "A", "logic": "air", "anim": "jump", "variants": "jump", "tail_ok": true},
+		"landing": {"type": "S", "guard_ok": true, "logic": "landing", "anim": "land", "variants": "jump"},
 		"landing_long": {"type": "S", "total": 16, "anim": "land", "punishable": true},
-		"hit_stand": {"type": "S", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_stand"},
-		"hit_crouch": {"type": "C", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_crouch"},
+		"hit_stand": {"type": "S", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_stand",
+			"variants": "hit"},
+		"hit_crouch": {"type": "C", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_crouch",
+			"variants": "hit"},
 		"block_stand": {"type": "S", "kind": "hurt", "guard_ok": true, "logic": "hurt", "friction": HURT_FRICTION,
 			"anim": "block_stand"},
 		"block_crouch": {"type": "C", "kind": "hurt", "guard_ok": true, "logic": "hurt", "friction": HURT_FRICTION,
@@ -63,8 +65,8 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 				try_commands(f, sim, "air")
 		"landing":
 			if f.state_frame >= f.def.landing_frames:
+				f.set_state("stand") # 先切状态：落地剩下的动画按跳跃方向交给尾巴
 				f.jump_dir = 0
-				f.set_state("stand")
 		"hurt":
 			if f.state_frame >= f.stun:
 				f.throw_protect = THROW_PROTECT

@@ -127,14 +127,12 @@ func draw_fighter_sprite(canvas: CanvasItem, f: Fighter, modulate := Color.WHITE
 
 ## 逻辑状态 → 动画帧：与仿真取判定盒用同一个 AnimClock，画面和判定逐帧一致。
 func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
-	var s := f.sd()
-	var anim := AnimClock.anim_name(s, f.jump_dir)
-	if not sprites.has(anim):
-		anim = s.anim
-	if not sprites.has(anim):
-		anim = {"C": "crouch", "A": "jump", "L": "crouch"}.get(s.type, "idle")
-		return sprites.frame_index(anim, 1 if anim == "jump" else 0)
-	return sprites.frame_index(anim, AnimClock.frame(s, sprites.data(anim), f.state_frame, f.vy, f.def.jump_velocity))
+	var s := AnimClock.shown_state(f)
+	for anim in AnimClock.candidates(s, AnimClock.shown_variant(f)):
+		if sprites.has(anim):
+			return sprites.frame_index(anim, AnimClock.index(f, sprites.data(anim)))
+	var fallback: String = {"C": "crouch", "A": "jump", "L": "crouch"}.get(f.sd().type, "idle")
+	return sprites.frame_index(fallback, 1 if fallback == "jump" else 0)
 
 
 func _draw_projectile(p: Projectile) -> void:

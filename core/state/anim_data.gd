@@ -2,11 +2,17 @@ class_name AnimData
 extends RefCounted
 ## 一个动画的时序与逐帧判定盒（相当于 MUGEN AIR 里的一个 Action：每帧的时长 + Clsn1 / Clsn2）。
 ## 判定盒为逻辑单位，相对脚底、面朝右的 [x, y, w, h]。
+## 每帧还有一个阶段标记（导入器写在帧条目第 4 项，没写时按攻击盒推断），AnimClock 用它把动画对齐到招式帧数：
+##   s 发生 / a 持续（有攻击判定）/ r 收招或受击恢复 / f 浮空受击的下落段 / 空 = 不分段
+
+enum Phase { NONE, STARTUP, ACTIVE, RECOVERY, FALL }
+const PHASE_CODES := {"": Phase.NONE, "s": Phase.STARTUP, "a": Phase.ACTIVE, "r": Phase.RECOVERY, "f": Phase.FALL}
 
 var loop := false
 var ends: Array[int] = [] ## 每帧结束时的累计时长
 var hurt: Array = [] ## 每帧的受击盒 Array[PackedInt32Array]（可能为空 = 沿用默认身体盒）
 var hit: Array = [] ## 每帧的攻击盒（只有持续帧有）
+var phase: Array[int] = [] ## 每帧的阶段（Phase）
 
 static var _cache := {} ## anims.json 路径 -> {name: AnimData}
 
@@ -36,7 +42,25 @@ static func from_meta(m: Dictionary) -> AnimData:
 		var boxes: Dictionary = f[2] if f.size() > 2 else {}
 		a.hurt.append(_convert(boxes.get("hurt", [])))
 		a.hit.append(_convert(boxes.get("hit", [])))
+		a.phase.append(PHASE_CODES.get(str(f[3]) if f.size() > 3 else "", Phase.NONE))
+	if not a.phase.has(Phase.ACTIVE) and not a.phase.has(Phase.STARTUP):
+		a._infer_attack_phases()
 	return a
+
+
+## 没有阶段标记的攻击动画（如生成器的五帧动画）：第一个攻击盒之前是发生，有攻击盒的是持续，之后是收招。
+func _infer_attack_phases() -> void:
+	var first := -1
+	var last := -1
+	for i in hit.size():
+		if not hit[i].is_empty():
+			first = i if first < 0 else first
+			last = i
+	if first < 0:
+		return
+	for i in phase.size():
+		if phase[i] == Phase.NONE:
+			phase[i] = Phase.STARTUP if i < first else (Phase.ACTIVE if i <= last else Phase.RECOVERY)
 
 
 static func _convert(list: Array) -> Array:
@@ -55,6 +79,28 @@ func has_boxes() -> bool:
 		if not list.is_empty():
 			return true
 	return false
+
+
+func length() -> int:
+	return ends[-1] if not ends.is_empty() else 0
+
+
+## 第 i 帧开始的时刻。
+func start_of(i: int) -> int:
+	return ends[i - 1] if i > 0 else 0
+
+
+## 某个阶段的时间段 [开始时刻, 时长]；没有这个阶段时时长为 0。
+func segment(p: int) -> Vector2i:
+	var first := phase.find(p)
+	if first < 0:
+		return Vector2i(0, 0)
+	var last := phase.rfind(p)
+	return Vector2i(start_of(first), ends[last] - start_of(first))
+
+
+func has_phase(p: int) -> bool:
+	return phase.has(p)
 
 
 ## 按时长播放：第 t 帧对应的动画帧（非循环动画停在最后一帧）。

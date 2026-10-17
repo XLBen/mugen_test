@@ -197,13 +197,19 @@ class AirTests(unittest.TestCase):
 		self.assertEqual(a200.frames[1].clsn1, [(10, -60, 40, -50)])
 		self.assertEqual(a200.frames[2].clsn1, [], "one-shot Clsn1 only applies to the next frame")
 
-	def test_compress_attack(self):
-		frames = air.parse(AIR_TEXT)[200].frames
-		five = import_char.compress_attack(frames)
-		self.assertEqual(len(five), 5)
-		self.assertEqual(five[2][0].clsn1, [(10, -60, 40, -50)])
-		self.assertEqual(five[0][0].image, 0)
-		self.assertEqual(five[4][0].image, 2)
+	def test_attack_frames_keep_all_with_phases(self):
+		acts = air.parse(AIR_TEXT)
+		frames, attack = import_char.pick_frames(acts, 200)
+		self.assertTrue(attack)
+		self.assertEqual([p for _, _, p in frames], ["s", "a", "r"])
+		self.assertEqual(frames[1][0].clsn1, [(10, -60, 40, -50)])
+
+	def test_recover_and_max_time(self):
+		acts = air.parse(AIR_TEXT)
+		frames, attack = import_char.pick_frames(acts, {"actions": [0, 200], "recover": 200, "max_time": 3})
+		self.assertTrue(attack, "contains Clsn1, so attack phases win")
+		frames, _ = import_char.pick_frames(acts, {"actions": [0], "max_time": 3})
+		self.assertTrue(all(d <= 3 for _, d, _ in frames), "durations capped (also -1 = infinite)")
 
 	def test_convert_box(self):
 		self.assertEqual(import_char.convert_box((-10, -80, 10, 0), 1.5), [-15, 0, 30, 120])
@@ -250,8 +256,9 @@ class ImportTests(unittest.TestCase):
 			self.assertEqual(meta["scale"], 2.0)
 			self.assertEqual(set(meta["anims"]), {"idle", "5lp"})
 			attack = meta["anims"]["5lp"]["frames"]
-			self.assertEqual(len(attack), 5)
-			self.assertEqual(attack[2][2]["hit"], [[20, 100, 60, 20]])
+			self.assertEqual(len(attack), 3, "attack actions keep every frame")
+			self.assertEqual([f[3] for f in attack], ["s", "a", "r"])
+			self.assertEqual(attack[1][2]["hit"], [[20, 100, 60, 20]])
 			self.assertTrue((out / "sprites" / "pal1" / "5lp_02.png").exists())
 			self.assertIn('display_name = "Test"', (out / "fighter.tres").read_text())
 		finally:
