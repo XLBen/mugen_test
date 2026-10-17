@@ -1,69 +1,249 @@
 class_name Sfx
 extends Node
-## 程序合成的占位音效（纯表现）：命中（轻/中/重）、防御、霸体、相杀、超杀、KO。
-## 启动时生成 PCM 波形，避免引入音频文件；以后可以直接换成真正的音效资源。
+## 程序合成的音效（纯表现，不入存档）。启动时生成 PCM 波形，不需要音频文件。
+## 每种打击声由几层叠成：
+##   起音"咔"（极短的高频噪声）+ 打肉的"啪"（带通滤波噪声）+ 下沉的低频"咚"（音高快速下滑的正弦），
+##   重攻击再加饱和失真和短混响尾巴；Counter 额外叠一声清脆的"叮"。
+## 防御是几个不成谐波的正弦叠成的金属"锵"；出招时按强度播放挥空的"呼"（扫频带通噪声）。
+## 每种声音生成几个音高略有不同的版本轮流播放，连打时不会像机关枪一样完全重复。
 
-const RATE := 22050
-const VOICES := 8
+const RATE := 44100
+const VOICES := 12
+const VARIANTS := 3
 
-var _streams := {}
+var _streams := {} ## 名字 -> Array[AudioStreamWAV]
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
+var _count := 0
+var _prev_state: Array[int] = [-1, -1]
+var _prev_frame: Array[int] = [0, 0]
 
 
 func _ready() -> void:
-	_streams["hit0"] = _make(0.07, 900.0, 0.65, 0.5)
-	_streams["hit1"] = _make(0.10, 520.0, 0.7, 0.6)
-	_streams["hit2"] = _make(0.16, 260.0, 0.75, 0.75)
-	_streams["block"] = _make(0.06, 1800.0, 0.25, 0.4)
-	_streams["armor"] = _make(0.12, 140.0, 0.3, 0.6)
-	_streams["clash"] = _make(0.09, 2400.0, 0.2, 0.45)
-	_streams["super"] = _make(0.35, 180.0, 0.4, 0.5, true)
-	_streams["ko"] = _make(0.5, 110.0, 0.6, 0.8)
+	for v in VARIANTS:
+		var p := 1.0 + (v - 1) * 0.06
+		_add("hit0", _hit(0.09, 1.0 * p, 0.0))
+		_add("hit1", _hit(0.14, 0.75 * p, 0.25))
+		_add("hit2", _hit(0.24, 0.55 * p, 0.6))
+		_add("block", _metal(0.12, [1450.0 * p, 2210.0 * p, 3170.0 * p], 0.55))
+		_add("whoosh0", _whoosh(0.10, 900.0 * p, 2600.0 * p, 0.28))
+		_add("whoosh1", _whoosh(0.15, 650.0 * p, 2000.0 * p, 0.34))
+		_add("whoosh2", _whoosh(0.22, 420.0 * p, 1500.0 * p, 0.42))
+	_add("counter", _metal(0.35, [2637.0, 3951.0, 5274.0], 0.45))
+	_add("armor", _metal(0.30, [180.0, 271.0, 397.0], 0.8))
+	_add("clash", _metal(0.30, [1760.0, 2490.0, 3720.0], 0.7))
+	_add("super", _riser(0.55))
+	_add("ko", _hit(0.9, 0.35, 1.0))
+	_add("land", _thud(0.08, 0.35))
 	for i in VOICES:
-		var p := AudioStreamPlayer.new()
-		add_child(p)
-		_players.append(p)
+		var player := AudioStreamPlayer.new()
+		add_child(player)
+		_players.append(player)
 
 
-func consume(events: Array[Dictionary]) -> void:
+## 每推进一帧仿真后调用：播放本帧事件的声音，并给新出的招式配挥空声。
+func consume(events: Array[Dictionary], sim: MatchSim = null) -> void:
 	for e in events:
 		match e.type:
 			"hit":
-				_play("hit%d" % e.get("strength", 0), 2.0 if e.get("counter", 0) else 0.0)
+				var strength: int = e.get("strength", 0)
+				_play("hit%d" % strength, (3.0 if e.get("super", false) else 0.0))
+				if e.get("counter", 0):
+					_play("counter", -2.0)
 			"block", "armor", "clash", "super", "ko":
 				_play(e.type)
+	if sim != null:
+		_watch_moves(sim)
+
+
+func _watch_moves(sim: MatchSim) -> void:
+	for i in sim.fighters.size():
+		var f := sim.fighters[i]
+		var started := f.state != _prev_state[i] or f.state_frame < _prev_frame[i]
+		if started and f.state_frame <= 1:
+			var s := f.sd()
+			if s.is_attack() and s.kind != "throw":
+				var strength := 0
+				for h: Dictionary in s.hitboxes:
+					strength = maxi(strength, (h.hit as HitDef).strength)
+				_play("whoosh%d" % strength, -6.0)
+			elif s.name in ["landing", "dash_f", "dash_b"]:
+				_play("land", -8.0)
+		_prev_state[i] = f.state
+		_prev_frame[i] = f.state_frame
+
+
+func _add(stream_name: String, s: AudioStreamWAV) -> void:
+	if not _streams.has(stream_name):
+		_streams[stream_name] = []
+	_streams[stream_name].append(s)
 
 
 func _play(stream_name: String, boost_db := 0.0) -> void:
 	if not _streams.has(stream_name):
 		return
+	var list: Array = _streams[stream_name]
+	_count += 1
 	var p := _players[_next]
 	_next = (_next + 1) % VOICES
-	p.stream = _streams[stream_name]
-	p.volume_db = -8.0 + boost_db
+	p.stream = list[_count % list.size()]
+	p.volume_db = -6.0 + boost_db
 	p.play()
 
 
-## 噪声 + 下滑正弦的短促打击声。noise：噪声占比；rise：true 为上扬（超杀）。
-func _make(length: float, freq: float, noise: float, punch: float, rise := false) -> AudioStreamWAV:
+# ---------------------------------------------------------------- 合成
+
+## 打击声。pitch：整体音高（越小越沉）；weight：重量感（失真、混响、低频比例）。
+func _hit(length: float, pitch: float, weight: float) -> AudioStreamWAV:
 	var n := int(RATE * length)
-	var data := PackedByteArray()
-	data.resize(n * 2)
+	var out := PackedFloat32Array()
+	out.resize(n)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = int(freq * 1000.0 + length * 100.0)
+	rng.seed = int(pitch * 9973.0 + weight * 31.0)
+	var bp := _Svf.new(1800.0 * pitch, 2.2)
+	var hp_prev := 0.0
 	var phase := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var noise := rng.randf_range(-1.0, 1.0)
+		# 起音"咔"：前 4 毫秒的高频噪声
+		var click := 0.0
+		if t < 0.004:
+			click = (noise - hp_prev) * (1.0 - t / 0.004) * 0.9
+		hp_prev = noise
+		# 打肉的"啪"：带通噪声，快速衰减
+		var slap := bp.process(noise) * exp(-t * (38.0 - weight * 18.0)) * 1.4
+		# 低频"咚"：音高从高快速滑到低
+		var f0 := 90.0 + 260.0 * pitch * exp(-t * 32.0)
+		phase += TAU * f0 / RATE
+		var thump := sin(phase) * exp(-t * (22.0 - weight * 12.0)) * (0.55 + weight * 0.5)
+		var v := click + slap + thump
+		v = tanh(v * (1.2 + weight * 2.0)) * 0.8
+		out[i] = v
+	if weight > 0.3:
+		_reverb(out, 0.031, 0.35 * weight)
+	return _to_wav(out, 0.004)
+
+
+## 金属声：不成谐波的几个正弦（高的衰减快）+ 起音噪声。
+func _metal(length: float, freqs: Array, ring: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(freqs[0])
+	for i in n:
+		var t := float(i) / RATE
+		var v := 0.0
+		for k in freqs.size():
+			v += sin(TAU * freqs[k] * t) * exp(-t * (6.0 + k * 9.0) / ring) / (k + 1.0)
+		if t < 0.006:
+			v += rng.randf_range(-1.0, 1.0) * (1.0 - t / 0.006) * 0.8
+		out[i] = tanh(v * 1.4) * 0.7
+	_reverb(out, 0.023, 0.25)
+	return _to_wav(out, 0.002)
+
+
+## 挥空声：带通噪声，中心频率由低扫到高再回落，音量先升后降。
+func _whoosh(length: float, f_from: float, f_to: float, gain: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(f_from)
+	var bp := _Svf.new(f_from, 1.6)
+	for i in n:
+		var x := float(i) / n
+		bp.set_freq(lerpf(f_from, f_to, sin(x * PI * 0.8)))
+		var env := sin(x * PI) * pow(1.0 - x, 0.6)
+		out[i] = bp.process(rng.randf_range(-1.0, 1.0)) * env * gain * 2.2
+	return _to_wav(out, 0.0)
+
+
+## 超杀：上扬的锯齿扫频 + 闪烁的高音。
+func _riser(length: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var phase := 0.0
+	var phase2 := 0.0
 	var lp := 0.0
 	for i in n:
-		var t := i / float(n)
-		var env := pow(1.0 - t, 2.2) * (1.0 if t > 0.01 else t / 0.01)
-		var f := freq * (1.0 + 2.0 * t if rise else 1.0 - 0.6 * t)
-		phase += TAU * f / RATE
-		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.35
-		var v := (sin(phase) * (1.0 - noise) + lp * noise) * env * punch
-		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 32000.0))
+		var x := float(i) / n
+		var f := 120.0 * pow(8.0, x)
+		phase = fmod(phase + f / RATE, 1.0)
+		phase2 += TAU * (1800.0 + 1600.0 * x) / RATE
+		var saw := phase * 2.0 - 1.0
+		lp += (saw - lp) * 0.08
+		var shimmer := sin(phase2) * (0.5 + 0.5 * sin(x * 60.0)) * 0.25 * x
+		out[i] = (lp * 0.6 + shimmer) * sin(x * PI) * 0.9
+	_reverb(out, 0.041, 0.3)
+	return _to_wav(out, 0.01)
+
+
+## 落地 / 冲刺的脚步闷响。
+func _thud(length: float, gain: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var lp := 0.0
+	var phase := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.06
+		phase += TAU * (70.0 + 60.0 * exp(-t * 40.0)) / RATE
+		out[i] = (lp * 1.5 + sin(phase) * 0.6) * exp(-t * 45.0) * gain
+	return _to_wav(out, 0.002)
+
+
+## 简单的梳状混响（加一点空间感）。
+func _reverb(buf: PackedFloat32Array, delay_s: float, amount: float) -> void:
+	var d := int(delay_s * RATE)
+	for i in range(d, buf.size()):
+		buf[i] += buf[i - d] * amount
+	var d2 := int(delay_s * 1.7 * RATE)
+	for i in range(d2, buf.size()):
+		buf[i] += buf[i - d2] * amount * 0.6
+
+
+func _to_wav(buf: PackedFloat32Array, attack_s: float) -> AudioStreamWAV:
+	var n := buf.size()
+	var peak := 0.001
+	for v in buf:
+		peak = maxf(peak, absf(v))
+	var scale := minf(1.0, 0.95 / peak)
+	var attack := maxi(int(attack_s * RATE), 1)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	for i in n:
+		var env := minf(1.0, float(i) / attack)
+		var fade := minf(1.0, float(n - i) / (0.01 * RATE)) # 结尾淡出，避免爆音
+		data.encode_s16(i * 2, int(clampf(buf[i] * scale * env * fade, -1.0, 1.0) * 32000.0))
 	var s := AudioStreamWAV.new()
 	s.format = AudioStreamWAV.FORMAT_16_BITS
 	s.mix_rate = RATE
 	s.data = data
 	return s
+
+
+## 状态变量滤波器（带通）。
+class _Svf:
+	var low := 0.0
+	var band := 0.0
+	var f := 0.0
+	var q := 1.0
+
+	func _init(freq: float, resonance: float) -> void:
+		q = 1.0 / resonance
+		set_freq(freq)
+
+	func set_freq(freq: float) -> void:
+		f = 2.0 * sin(PI * minf(freq, RATE / 6.0) / RATE)
+
+	func process(x: float) -> float:
+		low += f * band
+		var high := x - low - q * band
+		band += f * high
+		return band
