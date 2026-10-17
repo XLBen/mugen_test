@@ -9,6 +9,7 @@ const STATES := {
 	"knockdown": "倒地", "wakeup": "起身", "ko": "KO", "thrown": "被投", "throw_tech": "拆投",
 	"throw": "投", "throw_hit": "投（命中）", "wakeup_back": "后滚起身", "crumple": "崩溃", "wall_splat": "贴墙",
 	"dizzy": "眩晕", "drive_impact": "Drive Impact", "drive_reversal": "Drive Reversal",
+	"parry": "招架", "parry_end": "招架收招",
 }
 const DUMMY_MODES := ["玩家操作", "站立", "蹲下", "跳跃", "录制中", "回放"]
 const DUMMY_GUARD := ["关", "全部"]

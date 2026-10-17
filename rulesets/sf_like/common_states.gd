@@ -8,6 +8,12 @@ const THROW_TECH_PREBUFFER := 4 ## 被抓前几帧内按下的拆投也算（预
 const WAKEUP_THROW_PROTECT := 1 ## 起身后的投无敌帧数（未核实）
 const BACK_RISE_WINDOW := 10 ## 软倒地时，躺地最后几帧里按过后方向就后滚起身
 const WALL_SPLAT_FRAMES := 45 ## 贴墙多久后滑落（期间可以追打）
+## Drive Parry（MP+MK 按住）：开招架 0.5 格，按住每帧再扣；最短 PARRY_MIN 帧，松开后收招 PARRY_END 帧可被确反（数值未核实）
+const PARRY_COST := 5000
+const PARRY_DRAIN := 40
+const PARRY_MIN := 12
+const PARRY_MAX := 240
+const PARRY_END := 10
 const DIZZY_FRAMES := 120 ## 眩晕（Burnout 时被 Drive Impact 打到墙上）持续帧数
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
@@ -52,6 +58,9 @@ static func states() -> Dictionary:
 			"anim_fallback": ["hit_stand_hi_h", "hit_stand"]},
 		"wall_splat": {"type": "A", "kind": "hurt", "physics": "none", "logic": "splat", "anim": "wall_splat",
 			"anim_fallback": ["hit_air"]},
+		"parry": {"type": "S", "kind": "guard", "logic": "parry", "anim": "parry", "anim_fallback": ["block_stand"],
+			"friction": HURT_FRICTION, "cost": {"drive": PARRY_COST}},
+		"parry_end": {"type": "S", "total": PARRY_END, "anim": "parry", "anim_fallback": ["block_stand"], "punishable": true},
 		"dizzy": {"type": "S", "kind": "hurt", "logic": "dizzy", "friction": HURT_FRICTION, "anim": "dizzy",
 			"anim_fallback": ["hit_stand_lo_l", "hit_stand"]},
 		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}],
@@ -101,6 +110,8 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 		"dizzy":
 			if f.state_frame >= DIZZY_FRAMES:
 				f.set_state("stand")
+		"parry":
+			_parry(f, sim)
 		"splat":
 			# 贴墙：停一会儿再滑落，落地倒地
 			if f.state_frame >= WALL_SPLAT_FRAMES:
@@ -249,6 +260,16 @@ static func _threatened(f: Fighter, sim: MatchSim) -> bool:
 		if p.owner != f.index and absi(p.x - f.x) < PROXIMITY_PROJECTILE and signi(f.x - p.x) == signi(p.vx):
 			return true
 	return false
+
+
+## Drive Parry：按住 MP+MK 持续招架，每帧扣 Drive；松开（至少 PARRY_MIN 帧后）、Drive 耗尽或超时进入收招。
+static func _parry(f: Fighter, sim: MatchSim) -> void:
+	if f.burnout == 0:
+		Gauges.drain(f, Gauges.DRIVE, PARRY_DRAIN)
+	var keys := InputBits.B1 | InputBits.B4
+	var held := f.input_at(sim.frame) & keys == keys
+	if f.burnout != 0 or f.state_frame >= PARRY_MAX or (not held and f.state_frame >= PARRY_MIN - 1):
+		f.set_state("parry_end")
 
 
 ## 最近 frames 帧里是否按过后方向（相对朝向）。

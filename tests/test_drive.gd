@@ -110,3 +110,56 @@ func test_late_heavy_kick_upgrades_to_drive_impact() -> void:
 	sim = adjacent_sim()
 	play(sim, "5HP,5x4,5HP+HK")
 	check_eq(sim.fighters[0].state_name(), "5hp", "too late: stays 5HP")
+
+
+func test_parry_costs_and_drains_while_held() -> void:
+	var sim := adjacent_sim(400)
+	var p1 := sim.fighters[0]
+	play(sim, "5MP+MKx30")
+	check_eq(p1.state_name(), "parry", "MP+MK held is Drive Parry")
+	var drive := Gauges.value(p1, Gauges.DRIVE)
+	check(drive < 60000 - CommonStates.PARRY_COST and drive > 50000, "activation cost plus drain (%d)" % drive)
+	play(sim, "5x3")
+	check_eq(p1.state_name(), "parry_end", "release ends the parry")
+	sim = adjacent_sim(400)
+	sim.fighters[0].gauges[Gauges.DRIVE] = 0
+	sim.fighters[0].burnout = 1
+	play(sim, "5MP+MKx5")
+	check(sim.fighters[0].state_name() != "parry", "no parry in burnout")
+
+
+func test_parry_absorbs_strikes_projectiles_and_impact() -> void:
+	var sim := adjacent_sim()
+	var p2 := sim.fighters[1]
+	play(sim, "5x10,5HP", "5MP+MKx40", 0)
+	check_eq(p2.health, DUMMY.max_health, "parried 5HP does no damage")
+	check_eq(p2.state_name(), "parry", "still parrying")
+	sim = adjacent_sim(300)
+	p2 = sim.fighters[1]
+	play(sim, "2,3,6LP", "5MP+MKx60", 0)
+	check_eq(p2.health, DUMMY.max_health, "parried fireball")
+	sim = adjacent_sim()
+	p2 = sim.fighters[1]
+	play(sim, "5HP+HK", "5MP+MKx60", 0)
+	check_eq(p2.health, DUMMY.max_health, "parried Drive Impact")
+	check(p2.state_name() != "crumple", "no crumple")
+
+
+func test_perfect_parry_freezes_and_halves_the_punish() -> void:
+	var sim := adjacent_sim()
+	var p1 := sim.fighters[0]
+	var p2 := sim.fighters[1]
+	play(sim, "5HP", "5x7,5MP+MKx2", 0)
+	check_eq(p1.pp_scale, 1, "perfect parry marks the attacker")
+	check(p1.hitstop >= Combat.PERFECT_PARRY_FREEZE - 2, "attacker frozen (%d)" % p1.hitstop)
+	check_eq(p2.state_name(), "stand", "parrier acts immediately")
+	play(sim, "5", "5HP", 12)
+	var hit: int = 800 * Combat.PERFECT_PARRY_PCT / 100 * Combat.COUNTER_DAMAGE_PCT / 100
+	check_eq(p1.health, DUMMY.max_health - hit, "punish after perfect parry deals 50%")
+
+
+func test_throwing_a_parry_is_a_punish_counter() -> void:
+	var sim := adjacent_sim()
+	play(sim, "5x5,5LP+LK", "5MP+MKx60", 0)
+	play(sim, "5", "", 60)
+	check_eq(sim.fighters[1].health, DUMMY.max_health - 1200 * Combat.PUNISH_THROW_DAMAGE_PCT / 100, "throw beats parry at 170%")

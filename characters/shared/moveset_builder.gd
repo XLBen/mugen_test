@@ -124,7 +124,7 @@ func throw(range_px := 60, damage := 1200, startup := 5) -> void:
 	command("throw", "throw", {"buttons": "LP+LK", "state": "throw"})
 
 
-## Drive 系统：Drive Impact（HP+HK）与 Drive Reversal（防御中 6HP+HK）。每个角色的 build() 都调用。
+## Drive 系统：Drive Impact（HP+HK）、Drive Reversal（防御中 6HP+HK）、Drive Parry（MP+MK）。每个角色的 build() 都调用。
 ## 系统招借用角色已有的动画（keep_boxes：攻击范围固定，不随借来的动画变化）。
 func drive_system() -> void:
 	var di := DRIVE_IMPACT
@@ -157,6 +157,8 @@ func drive_system() -> void:
 		"hurtboxes": [{"frames": [dr.startup, dr_total], "boxes": [[10, 50, 70, 100]]}],
 	}
 	command("6HP+HK", "drive", {"buttons": "HP+HK", "where": "guard", "stance": "forward", "state": "drive_reversal"})
+	# Drive Parry 是公共状态（common_states），这里只登记指令
+	command("MP+MK", "drive", {"buttons": "MP+MK", "state": "parry"})
 
 
 func dashes(forward_speed: int, forward_frames: int, forward_total: int,

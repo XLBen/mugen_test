@@ -42,7 +42,7 @@ Mac 上 F1–F12 默认是亮度、音量、播放等媒体键，所以每个功
 
 默认规则模板为街头霸王 6（见 [docs/decisions.md](docs/decisions.md)）。通用操作（面朝右）：LP+LK 投 · 66/44 冲刺 ·
 两键同按 = OD 版必杀（2 格 Drive）· 236236 + 键 = 超必杀（1 格超杀槽）。
-Drive 系统：HP+HK = Drive Impact（1 格，发生 26，两次霸体，命中崩溃 / 角落贴墙，Burnout 的对手在墙边防住会眩晕）· 防御中 6HP+HK = Drive Reversal（2 格，无敌反击，不能打死）。
+Drive 系统：HP+HK = Drive Impact（1 格，发生 26，两次霸体，命中崩溃 / 角落贴墙，Burnout 的对手在墙边防住会眩晕）· 防御中 6HP+HK = Drive Reversal（2 格，无敌反击，不能打死）· MP+MK 按住 = Drive Parry（开 0.5 格、按住持续消耗，招架打击 / 道具 / DI，成功回 Drive；开招架 2 帧内被打 = 完美招架：对手停顿 30 帧、反击伤害减半；招架中被投 = 确反投）。
 
 | 角色 | 定位 | 体格 | 招式 |
 |---|---|---|---|

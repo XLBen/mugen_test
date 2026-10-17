@@ -16,6 +16,11 @@ const COUNTER_DAMAGE_PCT := 120
 const PUNISH_THROW_DAMAGE_PCT := 170
 const COUNTER_DISPLAY := 45
 const PERFECT_PARRY_PCT := 50 ## 完美招架后的反击连段伤害比例
+## Drive Parry（数值未逐项核实）
+const PERFECT_PARRY_WINDOW := 2 ## 开始招架后几帧内被打算完美招架
+const PERFECT_PARRY_FREEZE := 30 ## 完美招架时攻击方的停顿（防御方立刻可以行动）
+const PARRY_GAIN := 5000 ## 招架成功回复的 Drive
+const PARRY_PUSH_PCT := 50 ## 招架时的后退 = 被防击退的这个比例
 
 ## 街霸风连段补正：第 1、2 击 100%，第 3 击 80%，之后每击再 -10%（70%、60%…），轻攻击起手从第 2 击起再 -10%，最低 10%
 const SCALE_STEP := 10
@@ -71,12 +76,16 @@ static func resolve(sim: MatchSim) -> void:
 	# 先做全部防御 / 打康判定，再统一应用（相打）
 	var decisions := []
 	for st: Array in strikes:
-		var blocked := can_block(sim, st[1], st[0].x, st[3])
-		decisions.append([blocked, Counter.NONE if blocked else counter_type(st[1])])
+		var parried := parrying(st[1])
+		var blocked := not parried and can_block(sim, st[1], st[0].x, st[3])
+		decisions.append([blocked, Counter.NONE if blocked or parried else counter_type(st[1]), parried])
 	for i in strikes.size():
 		var st: Array = strikes[i]
 		st[0].hit_mask |= 1 << st[2]
-		apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i][0], st[0], decisions[i][1], st[4])
+		if decisions[i][2]:
+			apply_parry(sim, st[0].x, st[1], st[3], st[0], st[4])
+		else:
+			apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i][0], st[0], decisions[i][1], st[4])
 
 	_resolve_projectiles(sim)
 
@@ -136,8 +145,11 @@ static func _start_throw(atk: Fighter, dfn: Fighter) -> void:
 
 
 ## 打康类型由被打者"当前招式所处阶段"决定：发生/持续 → Counter，收招 → Punish Counter。
+## 招架中被投算 Punish Counter（SF6）。
 static func counter_type(dfn: Fighter) -> int:
 	var s := dfn.sd()
+	if s.logic == "parry":
+		return Counter.PUNISH
 	if s.kind == "hurt" or s.kind == "guard":
 		return Counter.NONE
 	if s.punishable or (s.punishable_from >= 0 and dfn.state_frame >= s.punishable_from):
@@ -284,6 +296,43 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dfn.push_transfer = 1
 
 
+## 正在 Drive Parry：打击和道具都被招架（投除外，投由投判定处理）。
+static func parrying(f: Fighter) -> bool:
+	return f.sd().logic == "parry"
+
+
+## 招架成功：不受伤、回 Drive、双方顿帧（攻击方像被防一样可以取消）。
+## 开始招架后 PERFECT_PARRY_WINDOW 帧内被打 = 完美招架：攻击方停顿 30 帧，防御方立刻可以行动，之后的反击连段伤害减半。
+static func apply_parry(sim: MatchSim, source_x: int, dfn: Fighter, hd: HitDef, melee: Fighter,
+		point := PackedInt32Array()) -> void:
+	var dir := signi(dfn.x - source_x)
+	if dir == 0:
+		dir = -dfn.facing
+	if point.is_empty():
+		point = PackedInt32Array([dfn.x - dir * dfn.def.push_half_width / 2, dfn.y + dfn.push_height() * 2 / 3])
+	var perfect := dfn.state_frame < PERFECT_PARRY_WINDOW
+	sim.emit("perfect_parry" if perfect else "parry", point[0], point[1],
+		{"strength": hd.strength, "counter": 0, "dir": dir, "super": false, "target": dfn.index})
+	if dfn.burnout == 0:
+		Gauges.gain(dfn, Gauges.DRIVE, PARRY_GAIN)
+	dfn.facing = -dir
+	if perfect:
+		dfn.set_state("stand")
+		dfn.hitstop = 0
+		if melee != null:
+			melee.hitstop = PERFECT_PARRY_FREEZE
+			melee.contact = 1
+			melee.last_hitstop = 0
+			melee.pp_scale = 1
+		return
+	dfn.vx = hd.block_push * PARRY_PUSH_PCT / 100 * dir
+	dfn.hitstop = hd.hitstop
+	if melee != null:
+		melee.hitstop = hd.hitstop
+		melee.contact = 1
+		melee.last_hitstop = hd.hitstop
+
+
 ## 血量下限：训练模式的锁血，或不能打死的招式（Drive Reversal）。
 static func _floor(sim: MatchSim, dfn: Fighter, hd: HitDef) -> int:
 	return maxi(sim.health_floor, mini(1, dfn.health) if hd.no_ko else 0)
@@ -412,9 +461,12 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 			continue
 		if not Box.any_overlap([sim.projectile_box(p)], dfn.hurtboxes()):
 			continue
-		var blocked := can_block(sim, dfn, p.x, hd)
-		apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn),
-			PackedInt32Array([p.x + p.facing * 1500, p.y]))
+		var point := PackedInt32Array([p.x + p.facing * 1500, p.y])
+		if parrying(dfn):
+			apply_parry(sim, p.x, dfn, hd, null, point)
+		else:
+			var blocked := can_block(sim, dfn, p.x, hd)
+			apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn), point)
 		p.hits -= 1
 		p.cooldown = sim.projectile_def(p).hit_interval
 	var alive: Array[Projectile] = []
