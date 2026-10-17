@@ -15,6 +15,7 @@ const PUNISH_DRIVE_PCT := 100 ## 确反时防御方损失的 Drive = 该招被�
 const COUNTER_DAMAGE_PCT := 120
 const PUNISH_THROW_DAMAGE_PCT := 170
 const COUNTER_DISPLAY := 45
+const PERFECT_PARRY_PCT := 50 ## 完美招架后的反击连段伤害比例
 
 ## 街霸风连段补正：第 1、2 击 100%，第 3 击 80%，之后每击再 -10%（70%、60%…），轻攻击起手从第 2 击起再 -10%，最低 10%
 const SCALE_STEP := 10
@@ -26,6 +27,16 @@ const DEFENDER_METER := 10 ## 被打 / 防御时获得的超杀槽
 const BURNOUT_BLOCKSTUN := 4 ## Burnout 中防御硬直增加
 const CHIP_DIV := 4 ## 没有单独指定削血量时，削血 = 伤害 / 4（SF6 约 25%）
 const HIGH_HIT_PCT := 60 ## 受击动画：接触点高于身高的这个比例算上段
+
+## 受击反应
+const CRUMPLE_FRAMES := 50 ## 崩溃（慢慢瘫倒）多久后倒地；期间被打当作站立受击，可以继续完整连段
+const CRUMPLE_DOWN_EXTRA := 10 ## 崩溃没被追打、自己倒下时多躺几帧
+const FREE_COMBO := ["crumple", "dizzy"] ## 处于这些逻辑的状态时被打：当作站立受击（不浮空），可以接完整连段
+const JUGGLE_STATES := ["hit_air", "wall_splat"] ## 追打计数生效的受击状态
+const WALL_SPLAT_Y := 6000 ## 地面上被打到墙上时贴墙的高度
+const WALL_HITSTOP := 10 ## 撞墙瞬间的顿帧
+const WALL_BOUNCE_VX := 450 ## 弹墙后离墙的水平速度
+const WALL_BOUNCE_VY := 1000
 
 
 static func resolve(sim: MatchSim) -> void:
@@ -74,7 +85,7 @@ static func _find_strike(atk: Fighter, dfn: Fighter, s: StateDef) -> Array:
 	if dfn.sd().is_invuln(dfn.state_frame, false):
 		return []
 	var hurt := dfn.hurtboxes()
-	var juggled := dfn.state_name() == "hit_air"
+	var juggled := dfn.state_name() in JUGGLE_STATES
 	var i := 0
 	for h: Dictionary in s.hitboxes:
 		if atk.state_frame >= h.from and atk.state_frame <= h.to and not (atk.hit_mask & (1 << i)):
@@ -198,21 +209,25 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		return
 	sim.emit("block" if blocked else "hit", point[0], point[1], fx)
 	var crouching := dfn.input_at(sim.frame) & InputBits.DOWN != 0
-	var was_juggled := dfn.state_name() == "hit_air"
+	var was_juggled := dfn.state_name() in JUGGLE_STATES
+	var free := dfn.sd().logic in FREE_COMBO
 
 	var attacker := melee if melee != null else sim.opponent(dfn)
 	if blocked:
 		dfn.health = maxi(dfn.health - chip_damage(dfn, hd), sim.health_floor)
 		dfn.reset_combo()
+		dfn.wall_fx = HitDef.Wall.NONE
 		Gauges.gain(attacker, Gauges.SUPER, hd.meter / 2)
 		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)
-		Gauges.drain(dfn, Gauges.DRIVE, hd.drive)
+		Gauges.drain(dfn, Gauges.DRIVE, hd.drive_block)
 	else:
 		Gauges.gain(attacker, Gauges.SUPER, hd.meter)
 		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)
 		if attacker.burnout == 0:
 			Gauges.gain(attacker, Gauges.DRIVE, hd.drive / 2)
 		var damage := scaled_damage(dfn, hd.damage, hd.min_scale)
+		if dfn.pp_scale != 0:
+			damage = damage * PERFECT_PARRY_PCT / 100
 		if counter != Counter.NONE:
 			damage = damage * COUNTER_DAMAGE_PCT / 100
 		if dfn.combo_hits == 0:
@@ -231,19 +246,30 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dfn.stun = hd.blockstun + (BURNOUT_BLOCKSTUN if dfn.burnout != 0 else 0)
 		dfn.vx = hd.block_push * dir
 	else:
-		var effect := hd.effect
-		if counter != Counter.NONE and hd.counter_effect >= 0:
-			effect = hd.counter_effect
-		var launched := dfn.is_airborne() or effect != HitDef.Effect.NORMAL or dfn.health <= 0
+		var effect := hit_effect(hd, counter)
+		if effect == HitDef.Effect.CRUMPLE and dfn.is_airborne():
+			effect = HitDef.Effect.KNOCKDOWN
+		if dfn.wall_used == 0:
+			dfn.wall_fx = hd.wall
+		dfn.down_frames = hd.down
+		dfn.hard_kd = 1 if hd.hard_kd else 0
+		var launched := dfn.is_airborne() or effect == HitDef.Effect.KNOCKDOWN or effect == HitDef.Effect.LAUNCH \
+			or dfn.health <= 0
 		if launched:
 			dfn.juggle = dfn.juggle + hd.juggle_add if was_juggled else hd.juggle_start
+			# 已经在追打中的对手被普通招式打中仍然会倒地（不在空中重置）
+			var stays_down := was_juggled and dfn.knockdown != 0
 			dfn.set_state("hit_air")
 			dfn.vx = hd.air_vx * dir
 			dfn.vy = hd.air_vy if effect == HitDef.Effect.LAUNCH or dfn.is_airborne() else 500
 			dfn.y = maxi(dfn.y, 1)
-			dfn.knockdown = 1 if effect != HitDef.Effect.NORMAL or dfn.health <= 0 else 0
+			dfn.knockdown = 1 if effect != HitDef.Effect.NORMAL or dfn.health <= 0 or stays_down else 0
+		elif effect == HitDef.Effect.CRUMPLE:
+			dfn.set_state("crumple")
+			dfn.stun = CRUMPLE_FRAMES
+			dfn.vx = hd.push * dir
 		else:
-			var was_crouching := dfn.sd().type == "C"
+			var was_crouching := dfn.sd().type == "C" and not free
 			dfn.hit_var = hit_variant(dfn, hd, point, attacker)
 			dfn.set_state("hit_crouch" if was_crouching else "hit_stand")
 			dfn.stun = hd.hitstun + COUNTER_HITSTUN.get(counter, 0)
@@ -256,6 +282,49 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		melee.contact = 1 if blocked else 2
 		melee.last_hitstop = hitstop
 		dfn.push_transfer = 1
+
+
+## 实际的命中效果：确反替换 > 打康替换 > 本来的效果。
+static func hit_effect(hd: HitDef, counter: int) -> int:
+	if counter == Counter.PUNISH and hd.punish_effect >= 0:
+		return hd.punish_effect
+	if counter != Counter.NONE and hd.counter_effect >= 0:
+		return hd.counter_effect
+	return hd.effect
+
+
+## 受击方带着撞墙效果碰到舞台墙（不是屏幕墙）：贴墙或弹墙，每个连段一次。match_sim 在推挤后每帧调用。
+static func check_wall(sim: MatchSim, f: Fighter) -> void:
+	if f.wall_fx == HitDef.Wall.NONE or f.wall_used != 0 or f.sd().kind != "hurt":
+		return
+	var limit := sim.stage.half_width - f.def.push_half_width
+	if absi(f.x) < limit:
+		return
+	var side := signi(f.x)
+	f.wall_used = 1
+	var fx := f.wall_fx
+	f.wall_fx = HitDef.Wall.NONE
+	f.facing = side # 背对墙、面朝场内
+	if fx == HitDef.Wall.SPLAT:
+		f.set_state("wall_splat")
+		f.vx = 0
+		f.vy = 0
+		f.y = maxi(f.y, WALL_SPLAT_Y)
+		f.juggle = 0
+		f.knockdown = 1
+		sim.emit("wall_splat", f.x + side * f.def.push_half_width, f.y + f.push_height() / 2, {"target": f.index, "dir": side})
+	else:
+		if f.state_name() != "hit_air":
+			f.set_state("hit_air")
+		f.vx = -side * WALL_BOUNCE_VX
+		f.vy = WALL_BOUNCE_VY
+		f.y = maxi(f.y, 1)
+		f.juggle = 0
+		f.knockdown = 1
+		sim.emit("wall_bounce", f.x + side * f.def.push_half_width, f.y + f.push_height() / 2, {"target": f.index, "dir": side})
+	f.hitstop = WALL_HITSTOP
+	var opp := sim.opponent(f)
+	opp.hitstop = maxi(opp.hitstop, WALL_HITSTOP)
 
 
 ## 受击动画变体（纯表现，AnimClock.HIT_SUFFIX）：上下段 * 3 + 强度。
@@ -298,6 +367,9 @@ static func apply_throw_release(sim: MatchSim, atk: Fighter, dfn: Fighter, hd: H
 	dfn.vy = hd.air_vy
 	dfn.y = 1
 	dfn.knockdown = 1
+	dfn.down_frames = hd.down
+	dfn.hard_kd = 1 # 投总是硬倒地
+	dfn.wall_fx = hd.wall
 	dfn.juggle = 99 ## 投后不可追打
 	dfn.hitstop = hd.hitstop
 	atk.hitstop = hd.hitstop

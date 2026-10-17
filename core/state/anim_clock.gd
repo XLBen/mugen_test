@@ -21,6 +21,7 @@ const STRETCH_MAX := [3, 2] ## 动画比给它的帧数短时最多放慢到 3/2
 const JUMP_SUFFIX := ["_b", "", "_f"]
 const HIT_SUFFIX := ["_hi_l", "_hi_m", "_hi_h", "_lo_l", "_lo_m", "_lo_h"]
 const STRENGTH_SUFFIX := ["_l", "_m", "_h"]
+const HOLD_IMPACT := ["crumple", "dizzy"] ## 这些逻辑的状态借用受击动画时停在受击姿势
 
 
 # ---------------------------------------------------------------- 选动画
@@ -59,6 +60,8 @@ static func candidates(s: StateDef, v: int) -> PackedStringArray:
 				out.append(s.anim + HIT_SUFFIX[v])
 				out.append(s.anim + STRENGTH_SUFFIX[v % 3])
 	out.append(s.anim)
+	for alt: String in s.anim_fallback:
+		out.append(alt)
 	return out
 
 
@@ -109,6 +112,11 @@ static func frame(f: Fighter, s: StateDef, anim: AnimData) -> int:
 		return mini(0 if f.vy > UP_SPEED else (2 if f.vy < -UP_SPEED else 1), count - 1)
 	if s.first_active >= 0 and anim.has_phase(AnimData.Phase.ACTIVE):
 		return anim.index_at_time(attack_tick(s, anim, t, f.held))
+	if s.logic == "down":
+		return anim.index_at_time(_budget_tick(t, anim.length(), f.down_frames))
+	if s.logic in HOLD_IMPACT and anim.has_phase(AnimData.Phase.RECOVERY):
+		# 崩溃 / 眩晕：借用受击动画时只播受击段并停住，不播站回来的恢复段
+		return anim.index_at_time(mini(t, maxi(anim.segment(AnimData.Phase.RECOVERY).x - 1, 0)))
 	if s.logic == "hurt" and anim.has_phase(AnimData.Phase.RECOVERY):
 		return anim.index_at_time(_hurt_tick(anim, t, f.stun))
 	if anim.has_phase(AnimData.Phase.FALL):

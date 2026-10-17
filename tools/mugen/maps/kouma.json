@@ -241,6 +241,18 @@
 		"charge": 1100,
 		"hammer": 1200,
 		"super_grab": 3000,
-		"super_grab_hit": 3105
+		"super_grab_hit": 3105,
+		"crumple": {
+			"actions": [
+				5300
+			]
+		},
+		"dizzy": {
+			"actions": [
+				5300
+			],
+			"loop": true
+		},
+		"wakeup_back": 5121
 	}
 }

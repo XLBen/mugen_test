@@ -42,21 +42,28 @@ static func build(common: Dictionary, character: Dictionary) -> Moveset:
 ## 投判定和推挤盒属于规则数据，不受影响。
 func apply_anim_boxes(lib: Dictionary) -> void:
 	for s in states:
-		if not lib.has(s.anim):
-			continue
-		var anim: AnimData = lib[s.anim]
+		var anim_name := s.anim
+		if not lib.has(anim_name):
+			anim_name = ""
+			for alt: String in s.anim_fallback:
+				if lib.has(alt):
+					anim_name = alt
+					break
+			if anim_name == "":
+				continue
+		var anim: AnimData = lib[anim_name]
 		if not anim.has_boxes():
 			continue
 		s.anim_data = anim
 		if s.variants != "":
 			s.anim_alts = []
 			for v in AnimClock.variant_count(s):
-				for anim_name in AnimClock.candidates(s, v):
-					if lib.has(anim_name):
-						s.anim_alts.append(lib[anim_name])
+				for alt_name in AnimClock.candidates(s, v):
+					if lib.has(alt_name):
+						s.anim_alts.append(lib[alt_name])
 						break
 		s.hurtboxes = []
-		if anim.has_phase(AnimData.Phase.ACTIVE):
+		if anim.has_phase(AnimData.Phase.ACTIVE) and not s.keep_boxes:
 			for h: Dictionary in s.hitboxes:
 				var hits := _hits_between(s, anim, h.from, h.to)
 				if not hits.is_empty():

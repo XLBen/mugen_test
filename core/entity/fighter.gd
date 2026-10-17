@@ -47,6 +47,11 @@ var counter_timer := 0 ## 打康提示剩余显示帧
 var cmd_index := -1 ## 当前招式由出招表第几条指令发动（-1 = 不是指令发动的）
 var upgrade_until := -1 ## 这一帧之前，可以被更高优先级的指令"升级"（同时按宽容）
 var armor_used := 0 ## 当前状态已经吸收的打击次数
+var wall_fx := 0 ## 这次受击撞到舞台墙时的效果（HitDef.Wall），离开受击清零
+var wall_used := 0 ## 本连段已经撞过墙
+var down_frames := HitDef.DOWN_FRAMES ## 这次倒地躺多久
+var hard_kd := 0 ## 这次倒地不能后滚
+var pp_scale := 0 ## 被完美招架后的反击：本连段伤害减半
 var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
 var gauges := PackedInt32Array() ## 资源槽当前值（Gauges.DEFS 顺序）
 var gauge_delay := PackedInt32Array() ## 资源槽回复停顿剩余帧
@@ -79,6 +84,9 @@ func reset_state(keep_gauges := false) -> void:
 	knockdown = 0
 	throw_protect = 0
 	push_transfer = 0
+	wall_fx = 0
+	down_frames = HitDef.DOWN_FRAMES
+	hard_kd = 0
 	consumed = -1
 	contact = 0
 	last_hitstop = 0
@@ -134,6 +142,8 @@ func reset_combo() -> void:
 	combo_light = 0
 	juggle = 0
 	counter_type = 0
+	wall_used = 0
+	pp_scale = 0
 
 
 func is_airborne() -> bool:
@@ -214,7 +224,7 @@ const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh
 	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "held", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
 	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
-	"cmd_index", "upgrade_until", "armor_used"]
+	"cmd_index", "upgrade_until", "armor_used", "wall_fx", "wall_used", "down_frames", "hard_kd", "pp_scale"]
 
 
 func save_state() -> Dictionary:

@@ -118,6 +118,8 @@ func step(inputs: Array[int]) -> void:
 			other.x += f.x - desired
 			Pushbox.clamp_to_walls(other, wall_left, wall_right)
 	Pushbox.resolve(fighters[0], fighters[1], wall_left, wall_right)
+	for f in fighters:
+		Combat.check_wall(self, f)
 
 	Combat.resolve(self)
 	_update_camera()

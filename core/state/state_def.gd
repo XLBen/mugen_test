@@ -13,6 +13,8 @@ var guard_ok := false ## 可以防御
 var total := 0 ## >0 时到这一帧自动转入 next
 var next := "stand"
 var anim := ""
+var anim_fallback: Array = [] ## 动画不存在时依次尝试的动画名（系统招 / 新受击状态借用已有动画）
+var keep_boxes := false ## 不用动画的攻击框（借来的动画不该改变系统招的攻击范围），只取受击盒
 var physics := "ground" ## ground / air / none
 var friction := 0 ## 地面减速度（单位/帧²）
 var air_from := -1 ## 从第几帧起改用空中物理（升龙这类先在地面后起飞）
@@ -56,6 +58,8 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	s.total = d.get("total", s.total)
 	s.next = d.get("next", "crouch" if s.type == "C" else s.next)
 	s.anim = d.get("anim", state_name)
+	s.anim_fallback = d.get("anim_fallback", [])
+	s.keep_boxes = d.get("keep_boxes", false)
 	s.variants = d.get("variants", "")
 	s.tail_ok = d.get("tail_ok", false)
 	s.physics = d.get("physics", "air" if s.type == "A" else s.physics)

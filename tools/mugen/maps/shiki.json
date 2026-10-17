@@ -228,6 +228,18 @@
 		"step": 100,
 		"rising": 1200,
 		"dive": 610,
-		"super_k": 1300
+		"super_k": 1300,
+		"crumple": {
+			"actions": [
+				5300
+			]
+		},
+		"dizzy": {
+			"actions": [
+				5300
+			],
+			"loop": true
+		},
+		"wakeup_back": 5121
 	}
 }

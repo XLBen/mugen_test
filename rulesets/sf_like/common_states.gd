@@ -6,6 +6,9 @@ const HURT_FRICTION := 60
 const THROW_TECH_WINDOW := 7 ## 被抓后多少帧内可以拆投
 const THROW_TECH_PREBUFFER := 4 ## 被抓前几帧内按下的拆投也算（预输入）
 const WAKEUP_THROW_PROTECT := 1 ## 起身后的投无敌帧数（未核实）
+const BACK_RISE_WINDOW := 10 ## 软倒地时，躺地最后几帧里按过后方向就后滚起身
+const WALL_SPLAT_FRAMES := 26 ## 贴墙多久后滑落（期间可以追打）
+const DIZZY_FRAMES := 120 ## 眩晕（Burnout 时被 Drive Impact 打到墙上）持续帧数
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
 const PROXIMITY_PROJECTILE := 18000 ## 道具距离多近时触发近距离防御
@@ -41,8 +44,16 @@ static func states() -> Dictionary:
 			"anim": "block_crouch"},
 		"hit_air": {"type": "A", "kind": "hurt", "land": "@hurt", "anim": "hit_air"},
 		"land_recover": {"type": "S", "kind": "hurt", "total": 6, "anim": "land"},
-		"knockdown": {"type": "L", "kind": "hurt", "total": 34, "next": "wakeup", "logic": "down", "anim": "knockdown",
-			"invuln": [{"frames": [1, 34]}]},
+		"knockdown": {"type": "L", "kind": "hurt", "logic": "down", "anim": "knockdown", "invuln": [{"frames": [1, 99999]}]},
+		"wakeup_back": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup_back", "anim_fallback": ["wakeup"],
+			"invuln": [{"frames": [1, 18]}], "throw_protect": WAKEUP_THROW_PROTECT,
+			"events": [{"frame": 1, "vx": -700}, {"frame": 13, "vx": 0}]},
+		"crumple": {"type": "S", "kind": "hurt", "logic": "crumple", "friction": HURT_FRICTION, "anim": "crumple",
+			"anim_fallback": ["hit_stand_hi_h", "hit_stand"]},
+		"wall_splat": {"type": "A", "kind": "hurt", "physics": "none", "logic": "splat", "anim": "wall_splat",
+			"anim_fallback": ["hit_air"]},
+		"dizzy": {"type": "S", "kind": "hurt", "logic": "dizzy", "friction": HURT_FRICTION, "anim": "dizzy",
+			"anim_fallback": ["hit_stand_lo_l", "hit_stand"]},
 		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}],
 			"throw_protect": WAKEUP_THROW_PROTECT},
 		"ko": {"type": "L", "kind": "hurt", "anim": "knockdown", "invuln": [{"frames": [1, 99999]}]},
@@ -77,6 +88,23 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 		"down":
 			if f.health <= 0:
 				f.set_state("ko")
+			elif f.state_frame >= f.down_frames:
+				f.set_state("wakeup_back" if f.hard_kd == 0 and _held_back(f, sim, BACK_RISE_WINDOW) else "wakeup")
+		"crumple":
+			# 崩溃：慢慢瘫倒，没被追打就倒地（多躺几帧）
+			if f.state_frame >= f.stun:
+				f.down_frames += Combat.CRUMPLE_DOWN_EXTRA
+				f.set_state("knockdown")
+		"dizzy":
+			if f.state_frame >= DIZZY_FRAMES:
+				f.set_state("stand")
+		"splat":
+			# 贴墙：停一会儿再滑落，落地倒地
+			if f.state_frame >= WALL_SPLAT_FRAMES:
+				f.set_state("hit_air")
+				f.vx = 0
+				f.vy = 0
+				f.knockdown = 1
 		"thrown":
 			_thrown(f, sim)
 		"throwing":
@@ -216,6 +244,14 @@ static func _threatened(f: Fighter, sim: MatchSim) -> bool:
 			return true
 	for p in sim.projectiles:
 		if p.owner != f.index and absi(p.x - f.x) < PROXIMITY_PROJECTILE and signi(f.x - p.x) == signi(p.vx):
+			return true
+	return false
+
+
+## 最近 frames 帧里是否按过后方向（相对朝向）。
+static func _held_back(f: Fighter, sim: MatchSim, frames: int) -> bool:
+	for fr in range(sim.frame - frames + 1, sim.frame + 1):
+		if InputBits.horizontal(InputBits.to_numpad(f.input_at(fr), f.facing)) == -1:
 			return true
 	return false
 

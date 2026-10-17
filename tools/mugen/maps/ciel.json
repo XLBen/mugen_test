@@ -257,6 +257,18 @@
 			],
 			"dur": 3,
 			"loop": true
-		}
+		},
+		"crumple": {
+			"actions": [
+				5300
+			]
+		},
+		"dizzy": {
+			"actions": [
+				5300
+			],
+			"loop": true
+		},
+		"wakeup_back": 5121
 	}
 }

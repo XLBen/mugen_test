@@ -7,7 +7,8 @@ const STATES := {
 	"guard_stand": "防御姿势", "guard_crouch": "蹲防姿势", "block_stand": "站防", "block_crouch": "蹲防",
 	"hit_stand": "站立受击", "hit_crouch": "蹲受击", "hit_air": "浮空受击", "land_recover": "受身",
 	"knockdown": "倒地", "wakeup": "起身", "ko": "KO", "thrown": "被投", "throw_tech": "拆投",
-	"throw": "投", "throw_hit": "投（命中）",
+	"throw": "投", "throw_hit": "投（命中）", "wakeup_back": "后滚起身", "crumple": "崩溃", "wall_splat": "贴墙",
+	"dizzy": "眩晕",
 }
 const DUMMY_MODES := ["玩家操作", "站立", "蹲下", "跳跃", "录制中", "回放"]
 const DUMMY_GUARD := ["关", "全部"]

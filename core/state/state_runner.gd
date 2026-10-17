@@ -21,8 +21,10 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 		f.throw_protect -= 1
 
 	# 恢复可行动（不在受击/防御/被投中）即连段结束
-	if f.sd().kind != "hurt" and f.combo_hits + f.juggle > 0:
-		f.reset_combo()
+	if f.sd().kind != "hurt":
+		f.wall_fx = 0
+		if f.combo_hits + f.juggle + f.wall_used + f.pp_scale > 0:
+			f.reset_combo()
 
 	for i in MAX_CHAIN:
 		var s := f.sd()
