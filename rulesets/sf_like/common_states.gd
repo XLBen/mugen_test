@@ -7,7 +7,7 @@ const THROW_TECH_WINDOW := 7 ## 被抓后多少帧内可以拆投
 const THROW_TECH_PREBUFFER := 4 ## 被抓前几帧内按下的拆投也算（预输入）
 const WAKEUP_THROW_PROTECT := 1 ## 起身后的投无敌帧数（未核实）
 const BACK_RISE_WINDOW := 10 ## 软倒地时，躺地最后几帧里按过后方向就后滚起身
-const WALL_SPLAT_FRAMES := 26 ## 贴墙多久后滑落（期间可以追打）
+const WALL_SPLAT_FRAMES := 45 ## 贴墙多久后滑落（期间可以追打）
 const DIZZY_FRAMES := 120 ## 眩晕（Burnout 时被 Drive Impact 打到墙上）持续帧数
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
@@ -82,6 +82,9 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 				f.set_state("stand") # 先切状态：落地剩下的动画按跳跃方向交给尾巴
 				f.jump_dir = 0
 		"hurt":
+			# 防御硬直中可以出 Drive Reversal
+			if f.sd().guard_ok and try_commands(f, sim, "guard"):
+				return
 			if f.state_frame >= f.stun:
 				f.throw_protect = THROW_PROTECT
 				f.set_state("crouch" if f.sd().type == "C" else "stand")

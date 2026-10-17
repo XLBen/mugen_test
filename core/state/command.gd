@@ -16,8 +16,8 @@ var motion: Motion
 var buttons := 0 ## 按键位掩码；0 表示纯方向指令（冲刺）
 var all_buttons := false ## true：buttons 必须同时按住（投技）
 var min_buttons := 1 ## 至少同时按住几个（"PP" = 任意两个拳，EX 必杀）
-var where := "ground" ## ground / air / cancel（只能从取消窗口里出，如 Target Combo 后续）
-var stance := "any" ## any / stand / crouch（地面普攻按是否按下区分）
+var where := "ground" ## ground / air / cancel（只能从取消窗口里出，如 Target Combo 后续）/ guard（防御硬直中，Drive Reversal）
+var stance := "any" ## any / stand / crouch（地面普攻按是否按下区分）/ forward / back（按键那一帧按着前 / 后，且没按下）
 var state := "" ## 目标状态名
 var cond := "" ## 额外条件：no_projectile 等
 
@@ -50,11 +50,24 @@ func check(f: Fighter, frame: int, buffer := BUFFER) -> int:
 	var press := _press_frame(f, frame, buffer)
 	if press < 0:
 		return -1
-	if stance != "any" and InputBits.is_down(f.numpad_at(press)) != (stance == "crouch"):
+	if not stance_ok(f.numpad_at(press)):
 		return -1
 	if motion != null and not motion.matches(f, press):
 		return -1
 	return press
+
+
+func stance_ok(numpad: int) -> bool:
+	match stance:
+		"stand":
+			return not InputBits.is_down(numpad)
+		"crouch":
+			return InputBits.is_down(numpad)
+		"forward":
+			return not InputBits.is_down(numpad) and InputBits.horizontal(numpad) == 1
+		"back":
+			return not InputBits.is_down(numpad) and InputBits.horizontal(numpad) == -1
+	return true
 
 
 ## 在缓冲窗口内找最近一次满足条件的按键帧（且晚于已经被消耗的输入）。

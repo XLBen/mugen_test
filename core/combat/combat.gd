@@ -29,7 +29,7 @@ const CHIP_DIV := 4 ## 没有单独指定削血量时，削血 = 伤害 / 4（SF
 const HIGH_HIT_PCT := 60 ## 受击动画：接触点高于身高的这个比例算上段
 
 ## 受击反应
-const CRUMPLE_FRAMES := 50 ## 崩溃（慢慢瘫倒）多久后倒地；期间被打当作站立受击，可以继续完整连段
+const CRUMPLE_FRAMES := 70 ## 崩溃（慢慢瘫倒）多久后倒地；期间被打当作站立受击，可以继续完整连段
 const CRUMPLE_DOWN_EXTRA := 10 ## 崩溃没被追打、自己倒下时多躺几帧
 const FREE_COMBO := ["crumple", "dizzy"] ## 处于这些逻辑的状态时被打：当作站立受击（不浮空），可以接完整连段
 const JUGGLE_STATES := ["hit_air", "wall_splat"] ## 追打计数生效的受击状态
@@ -177,7 +177,7 @@ static func chip_damage(dfn: Fighter, hd: HitDef) -> int:
 	match hd.source:
 		"super":
 			return chip
-		"special":
+		"special", "drive":
 			return chip if dfn.burnout != 0 else 0
 	return 0
 
@@ -214,9 +214,9 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 
 	var attacker := melee if melee != null else sim.opponent(dfn)
 	if blocked:
-		dfn.health = maxi(dfn.health - chip_damage(dfn, hd), sim.health_floor)
+		dfn.health = maxi(dfn.health - chip_damage(dfn, hd), _floor(sim, dfn, hd))
 		dfn.reset_combo()
-		dfn.wall_fx = HitDef.Wall.NONE
+		dfn.wall_fx = HitDef.Wall.STUN if hd.burnout_stun and dfn.burnout != 0 else HitDef.Wall.NONE
 		Gauges.gain(attacker, Gauges.SUPER, hd.meter / 2)
 		Gauges.gain(dfn, Gauges.SUPER, DEFENDER_METER)
 		Gauges.drain(dfn, Gauges.DRIVE, hd.drive_block)
@@ -234,7 +234,7 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 			dfn.combo_light = 1 if hd.strength == 0 else 0
 		dfn.combo_hits += 1
 		dfn.combo_damage += damage
-		dfn.health = maxi(dfn.health - damage, sim.health_floor)
+		dfn.health = maxi(dfn.health - damage, _floor(sim, dfn, hd))
 		dfn.counter_type = counter
 		if counter != Counter.NONE:
 			dfn.counter_timer = COUNTER_DISPLAY
@@ -284,6 +284,11 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dfn.push_transfer = 1
 
 
+## 血量下限：训练模式的锁血，或不能打死的招式（Drive Reversal）。
+static func _floor(sim: MatchSim, dfn: Fighter, hd: HitDef) -> int:
+	return maxi(sim.health_floor, mini(1, dfn.health) if hd.no_ko else 0)
+
+
 ## 实际的命中效果：确反替换 > 打康替换 > 本来的效果。
 static func hit_effect(hd: HitDef, counter: int) -> int:
 	if counter == Counter.PUNISH and hd.punish_effect >= 0:
@@ -305,7 +310,12 @@ static func check_wall(sim: MatchSim, f: Fighter) -> void:
 	var fx := f.wall_fx
 	f.wall_fx = HitDef.Wall.NONE
 	f.facing = side # 背对墙、面朝场内
-	if fx == HitDef.Wall.SPLAT:
+	if fx == HitDef.Wall.STUN:
+		# Burnout 中防住 Drive Impact 被推到墙上：眩晕
+		f.set_state("dizzy")
+		f.vx = 0
+		sim.emit("stun", f.x, f.y + f.push_height(), {"target": f.index, "dir": side})
+	elif fx == HitDef.Wall.SPLAT:
 		f.set_state("wall_splat")
 		f.vx = 0
 		f.vy = 0

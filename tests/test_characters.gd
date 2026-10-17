@@ -197,7 +197,7 @@ func test_attack_boxes_come_from_animation_frames() -> void:
 	for def: FighterDef in [KAGURA, VOLK, MIO]:
 		var m := Moveset.for_def(def)
 		for s in m.states:
-			if s.hitboxes.is_empty() or s.anim_data == null:
+			if s.hitboxes.is_empty() or s.anim_data == null or s.keep_boxes:
 				continue
 			var anim := s.anim_data
 			if not anim.has_phase(AnimData.Phase.ACTIVE):

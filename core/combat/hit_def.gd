@@ -4,7 +4,7 @@ extends RefCounted
 
 enum Guard { MID, LOW, HIGH, UNBLOCKABLE }
 enum Effect { NORMAL, KNOCKDOWN, LAUNCH, CRUMPLE }
-enum Wall { NONE, SPLAT, BOUNCE }
+enum Wall { NONE, SPLAT, BOUNCE, STUN } ## STUN 只由 burnout_stun 产生
 
 const GUARD_NAMES := {"mid": Guard.MID, "low": Guard.LOW, "high": Guard.HIGH, "unblockable": Guard.UNBLOCKABLE}
 const EFFECT_NAMES := {"normal": Effect.NORMAL, "knockdown": Effect.KNOCKDOWN, "launch": Effect.LAUNCH,
@@ -33,10 +33,12 @@ var wall: int = Wall.NONE ## 被打方这次受击中撞到舞台墙时：贴墙
 var down := DOWN_FRAMES ## 击倒后躺地帧数（决定倒地后的有利帧）
 var hard_kd := false ## 硬倒地：不能后滚起身（投技总是硬倒地）
 var drive_block := -1 ## 被防时防御方损失的 Drive（-1 = 同 drive）
+var no_ko := false ## 不能打死（Drive Reversal）
+var burnout_stun := false ## Burnout 中的对手防住后被推到墙上会眩晕（Drive Impact）
 var meter := -1 ## 命中时攻击方获得的超杀槽（-1 = 按强度取默认值，被防减半）
 var drive := -1 ## 命中时攻击方获得 / 被防时防御方损失的 Drive（-1 = 按强度取默认值）
 var min_scale := 10 ## 连段补正的下限（超杀有保底）
-var source := "normal" ## 招式类别 normal / special / super（决定削血规则），构建时由状态填入
+var source := "normal" ## 招式类别 normal / special / super / drive（决定削血规则），构建时由状态填入
 
 
 static func from_dict(d: Dictionary) -> HitDef:
@@ -67,4 +69,6 @@ static func from_dict(d: Dictionary) -> HitDef:
 	h.down = d.get("down", h.down)
 	h.hard_kd = d.get("hard_kd", h.hard_kd)
 	h.drive_block = d.get("drive_block", h.drive)
+	h.no_ko = d.get("no_ko", h.no_ko)
+	h.burnout_stun = d.get("burnout_stun", h.burnout_stun)
 	return h

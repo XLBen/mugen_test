@@ -181,8 +181,8 @@ func cancel_allows(target: StateDef) -> bool:
 
 ## OD 招式（消耗 Drive 的招式），表现层用来画金身。
 func is_od() -> bool:
-	return cost.has("drive")
+	return cost.has("drive") and kind != "drive"
 
 
 func is_attack() -> bool:
-	return kind == "normal" or kind == "special" or kind == "super" or kind == "throw"
+	return kind == "normal" or kind == "special" or kind == "super" or kind == "throw" or kind == "drive"

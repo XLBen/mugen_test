@@ -5,14 +5,19 @@ extends RefCounted
 ## 普攻按格斗游戏常见的帧数据格式书写：发生 / 持续 / 收招 / 命中有利 / 防御有利，
 ## 受击与防御硬直由有利帧反推：硬直 = 有利帧 + (总帧数 - 发生帧)。
 ## 判定盒以像素书写：[x 向前, y 向上, 宽, 高]，相对脚底中心、面朝右。
-## 出招表顺序即优先级（SF6）：OD 必杀 > 超杀 > 普通必杀 > 投 > 普攻 > 冲刺。
+## 出招表顺序即优先级（SF6）：OD 必杀 > Drive 系统 > 超杀 > 普通必杀 > 投 > 指令普攻 > 普攻 > 冲刺。
 ## 登记顺序随意，data() 会按 priority 稳定排序。
 
 const L := {"damage": 300, "hitstop": 7, "push": 500, "block_push": 550, "strength": 0}
 const M := {"damage": 600, "hitstop": 9, "push": 600, "block_push": 650, "strength": 1}
 const H := {"damage": 800, "hitstop": 11, "push": 700, "block_push": 750, "strength": 2}
 
-const PRIORITY := {"od": 0, "super": 1, "special": 2, "throw": 3, "normal": 4, "move": 5}
+const PRIORITY := {"od": 0, "drive": 1, "super": 2, "special": 3, "throw": 4, "cmd_normal": 5, "normal": 6, "move": 7}
+
+## Drive 系统（SF6）：所有角色通用，数值见 drive_system()
+const DRIVE_IMPACT := {"startup": 26, "active": 2, "recovery": 35, "armor": 2, "cost": 10000, "on_block": -3,
+	"drive_block": 5000}
+const DRIVE_REVERSAL := {"startup": 20, "active": 3, "recovery": 26, "invuln": 22, "cost": 20000, "on_block": -6}
 
 var states := {}
 var commands := []
@@ -117,6 +122,41 @@ func throw(range_px := 60, damage := 1200, startup := 5) -> void:
 		"throw_hit": {"damage": damage, "hitstop": 6, "air_vx": 500, "air_vy": 700},
 	}
 	command("throw", "throw", {"buttons": "LP+LK", "state": "throw"})
+
+
+## Drive 系统：Drive Impact（HP+HK）与 Drive Reversal（防御中 6HP+HK）。每个角色的 build() 都调用。
+## 系统招借用角色已有的动画（keep_boxes：攻击范围固定，不随借来的动画变化）。
+func drive_system() -> void:
+	var di := DRIVE_IMPACT
+	var di_total: int = di.startup + di.active + di.recovery - 1
+	var impact := {
+		"type": "S", "kind": "drive", "total": di_total, "anim": "drive_impact", "anim_fallback": ["5hp", "5hk"],
+		"keep_boxes": true, "cost": {"drive": di.cost},
+		"armor": {"frames": [1, di.startup + 1], "hits": di.armor},
+		"hitboxes": [{"active": [di.startup, di.startup + di.active - 1], "boxes": [[20, 60, 90, 90]],
+			"hit": {"damage": 800, "hitstop": 18, "effect": "crumple", "wall": "splat", "push": 1400,
+				"blockstun": di.on_block + di_total - di.startup, "block_push": 1300, "drive": 0,
+				"drive_block": di.drive_block, "burnout_stun": true, "meter": 0, "strength": 2}}],
+		"hurtboxes": [{"frames": [di.startup, di_total], "boxes": [[10, 60, 75, 90]]}],
+	}
+	impact.merge(step(3, di.startup - 1, 50))
+	impact.events.append({"frame": 1, "fx": "drive_impact"})
+	states["drive_impact"] = impact
+	command("HP+HK", "drive", {"buttons": "HP+HK", "state": "drive_impact"})
+
+	var dr := DRIVE_REVERSAL
+	var dr_total: int = dr.startup + dr.active + dr.recovery - 1
+	states["drive_reversal"] = {
+		"type": "S", "kind": "drive", "total": dr_total, "anim": "drive_reversal", "anim_fallback": ["5hk", "5mk"],
+		"keep_boxes": true, "cost": {"drive": dr.cost}, "invuln": [{"frames": [1, dr.invuln]}],
+		"events": [{"frame": 1, "fx": "drive_reversal"}],
+		"hitboxes": [{"active": [dr.startup, dr.startup + dr.active - 1], "boxes": [[15, 50, 85, 100]],
+			"hit": {"damage": 500, "no_ko": true, "hitstop": 12, "effect": "knockdown", "air_vx": 500, "air_vy": 800,
+				"blockstun": dr.on_block + dr_total - dr.startup, "block_push": 900, "drive": 0, "meter": 0,
+				"strength": 2}}],
+		"hurtboxes": [{"frames": [dr.startup, dr_total], "boxes": [[10, 50, 70, 100]]}],
+	}
+	command("6HP+HK", "drive", {"buttons": "HP+HK", "where": "guard", "stance": "forward", "state": "drive_reversal"})
 
 
 func dashes(forward_speed: int, forward_frames: int, forward_total: int,

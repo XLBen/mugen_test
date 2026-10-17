@@ -13,6 +13,7 @@ func build() -> void:
 	_specials()
 	throw()
 	dash_commands()
+	drive_system()
 
 
 func _normals() -> void:

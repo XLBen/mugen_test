@@ -21,6 +21,7 @@ func build() -> void:
 	throw(70, 1300, 5)
 	dashes(800, 12, 22, 700, 14, 26, 8)
 	dash_commands()
+	drive_system()
 	_combos()
 
 
