@@ -40,7 +40,7 @@ func _draw() -> void:
 	_draw_meter(font)
 	_draw_logs(font)
 	_draw_trial(font)
-	var status := "假人：%s    自动防御：%s        [1] 假人模式    [2] 自动防御    [3] 录制 / 回放    [4] 连段挑战    [6] 判定框    [7] 演示连段" % [
+	var status := "假人：%s    自动防御：%s        [1] 假人模式    [2] 自动防御    [3] 录制 / 回放    [4] 连段挑战    [6] 判定框    [7] 演示连段    [8] [9] 换角色" % [
 		UiText.DUMMY_MODES[dummy.mode], UiText.DUMMY_GUARD[dummy.guard]]
 	if dummy.mode == TrainingDummy.Mode.RECORD:
 		status += "    ● 录制 %d 帧" % dummy.recording.size()

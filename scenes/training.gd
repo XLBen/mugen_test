@@ -1,10 +1,11 @@
 extends Node2D
 ## 训练场景：固定 60 帧推进仿真，表现层每帧读取状态绘制。
-## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
-## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
-## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
-## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  6 判定框
-##   7 电脑演示当前连段（Shift+7 依次演示全部，再按 7 或任意操作键停止）  Shift+F6 版边重置
+## 功能键（括号里是 Mac 上不会触发媒体键的替代键，两个都能用）：
+##   F1(6) 判定框  F2([) 存档  F3(]) 读档  F4(P) 暂停  F5(N) 单帧步进（暂停时）  F6(R) 重置（Shift 版边）
+##   F7(V) 精灵/白模  F8(8) 切换 P1 角色  F9(9) 切换 P2 角色
+##   F10(0) 训练/对战模式  F11(-) 资源常满（训练）  F12(=) 调试面板
+## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）
+##   7 电脑演示当前连段（Shift+7 依次演示全部，再按 7 或任意操作键停止）
 ## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
@@ -131,38 +132,38 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_fullscreen()
 		return
 	match key.keycode:
-		KEY_F1:
+		KEY_F1, KEY_6:
 			view.show_boxes = not view.show_boxes
-		KEY_F2:
+		KEY_F2, KEY_BRACKETLEFT:
 			saved_state = sim.save_state()
-		KEY_F3:
+		KEY_F3, KEY_BRACKETRIGHT:
 			if not saved_state.is_empty():
 				sim.load_state(saved_state)
-		KEY_F4:
+		KEY_F4, KEY_P:
 			paused = not paused
-		KEY_F5:
+		KEY_F5, KEY_N:
 			step_once = true
-		KEY_F6:
+		KEY_F6, KEY_R:
 			demo.stop()
 			sim.reset()
 			if key.shift_pressed:
 				var edge := sim.stage.half_width - sim.fighters[1].def.push_half_width
 				sim.place(edge - 9000, edge)
-		KEY_F7:
+		KEY_F7, KEY_V:
 			view.show_sprites = not view.show_sprites
-		KEY_F8:
+		KEY_F8, KEY_8:
 			_cycle_character(0)
-		KEY_F9:
+		KEY_F9, KEY_9:
 			_cycle_character(1)
-		KEY_F10:
+		KEY_F10, KEY_0:
 			demo.stop()
 			sim.versus = not sim.versus
 			sim.training = not sim.versus
 			sim.reset()
 			saved_state = {}
-		KEY_F11:
+		KEY_F11, KEY_MINUS:
 			sim.infinite_meter = not sim.infinite_meter
-		KEY_F12:
+		KEY_F12, KEY_EQUAL:
 			hud.visible = not hud.visible
 		KEY_1:
 			dummy.cycle_mode()
@@ -175,8 +176,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			trial.restart()
 		KEY_5:
 			trial.next(-1 if key.shift_pressed else 1)
-		KEY_6:
-			view.show_boxes = not view.show_boxes
 		KEY_7:
 			if demo.playing:
 				demo.stop()
