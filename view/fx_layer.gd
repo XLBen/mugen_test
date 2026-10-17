@@ -5,11 +5,17 @@ extends Node2D
 ## 火花用着色器（view/shaders/hit_spark.gdshader）画在子节点 Sparks 上（加色混合）；
 ## 受击闪光用剪影着色器画在子节点 Flashes 上；OD 招式的金身和金色残影画在子节点 OdGold 上；
 ## 扬尘用普通混合画在本节点上。
+## Drive 系统：招架时身上蓝色脉冲、成功是蓝色护盾火花（完美招架是白闪）；Drive Impact 发动时墨色剪影脉冲、命中大爆闪；
+## 撞墙在墙上留裂纹；眩晕时头上转星星。
 
 const DUST_LIFE := 16
 const FLASH_LIFE := 4
 const PART_LIFE := 18
 const PART_GRAVITY := 0.35 ## 火星下落加速度（像素/帧²）
+const CRACK_LIFE := 40
+const PARRY_PULSE := 6 ## 招架中每几帧闪一次蓝
+const C_PARRY := Color(0.4, 0.75, 1.0, 0.5)
+const C_INK := Color(0.08, 0.02, 0.18, 0.7) ## Drive Impact 发动时的墨色
 
 ## 配色编号，与 hit_spark.gdshader 的 PAL 对应
 enum Pal { HIT, COUNTER, PUNISH, SUPER, GUARD, ARMOR, CLASH, FLASH }
@@ -54,7 +60,25 @@ func consume(events: Array[Dictionary]) -> void:
 				shake = 12.0
 				_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 34, "size": 220.0, "pal": Pal.FLASH,
 					"seed": _seed(e)})
+			"parry":
+				_fx.append({"kind": "spark", "pos": pos, "born": sim.frame, "life": 14, "size": 80.0, "pal": Pal.GUARD,
+					"mode": Mode.GUARD, "power": 0.5, "dir": e.get("dir", 1), "seed": _seed(e),
+					"parts": _particles(_seed(e), 2, true)})
+				_flashes.append({"target": e.target, "born": sim.frame, "color": Color(0.55, 0.85, 1.0, 0.8)})
+			"perfect_parry":
+				shake = maxf(shake, 4.0)
+				_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 30, "size": 190.0, "pal": Pal.FLASH,
+					"seed": _seed(e)})
+				_flashes.append({"target": e.target, "born": sim.frame, "color": Color(1, 1, 1, 0.95)})
+			"drive_impact", "drive_reversal":
+				_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 20, "size": 130.0, "pal": Pal.ARMOR,
+					"seed": _seed(e)})
+			"wall_splat", "wall_bounce", "stun":
+				shake = maxf(shake, 8.0)
+				_fx.append({"kind": "crack", "pos": pos, "born": sim.frame, "life": CRACK_LIFE, "dir": e.get("dir", 1),
+					"seed": _seed(e)})
 	_spawn_dust()
+	_state_pulses()
 	_od.record()
 	shake = maxf(shake * 0.82 - 0.1, 0.0)
 	_fx = _fx.filter(func(fx: Dictionary) -> bool: return sim.frame - fx.born < fx.get("life", DUST_LIFE) + PART_LIFE)
@@ -95,7 +119,12 @@ func _add_spark(e: Dictionary, pos: Vector2) -> void:
 		"parts": _particles(seed, strength + (2 if counter or is_super else 0), mode == Mode.GUARD)}
 	_fx.append(fx)
 	if e.type == "hit":
-		shake = maxf(shake, [1.0, 2.5, 5.0][strength] + (3.0 if counter else 0.0) + (4.0 if is_super else 0.0))
+		shake = maxf(shake, [1.0, 2.5, 5.0][strength] + (3.0 if counter else 0.0) + (4.0 if is_super else 0.0)
+			+ (6.0 if e.get("drive", false) else 0.0))
+		if counter == Combat.Counter.PUNISH or e.get("drive", false):
+			# 确反 / Drive Impact 命中：再加一圈大的白闪
+			_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 16, "size": size * 1.6, "pal": Pal.FLASH,
+				"seed": fposmod(seed + 0.5, 1.0)})
 	if e.has("target"):
 		var c := Color(1, 1, 1, 0.85)
 		match e.type:
@@ -138,6 +167,17 @@ func shake_offset() -> Vector2:
 	return Vector2(s * shake, -s * shake * 0.5).round()
 
 
+## 状态持续中的闪光：招架中周期性蓝闪，Drive Impact 发动到出手之间墨色脉冲。
+func _state_pulses() -> void:
+	for i in 2:
+		var f := sim.fighters[i]
+		var s := f.sd()
+		if s.logic == "parry" and f.state_frame % PARRY_PULSE == 0:
+			_flashes.append({"target": i, "born": sim.frame, "color": C_PARRY})
+		elif s.name == "drive_impact" and f.state_frame < s.first_active and f.state_frame % 4 == 0:
+			_flashes.append({"target": i, "born": sim.frame, "color": C_INK})
+
+
 ## 落地、冲刺起步、倒地时在脚下扬尘。
 func _spawn_dust() -> void:
 	for i in 2:
@@ -160,6 +200,42 @@ func _draw() -> void:
 	for fx in _fx:
 		if fx.kind == "dust":
 			_draw_dust(fx, sim.frame - fx.born)
+		elif fx.kind == "crack":
+			_draw_crack(fx, sim.frame - fx.born)
+	for f in sim.fighters:
+		if f.sd().logic == "dizzy":
+			_draw_stars(f)
+
+
+## 撞墙裂纹：从撞击点放射出的折线，逐渐变淡。
+func _draw_crack(fx: Dictionary, age: int) -> void:
+	if age >= CRACK_LIFE:
+		return
+	var a := 0.8 * (1.0 - age / float(CRACK_LIFE))
+	var c := Color(0.05, 0.04, 0.08, a)
+	for k in 7:
+		var h := fposmod(sin((fx.seed * 31.0 + k) * 12.9898) * 43758.5453, 1.0)
+		var ang := PI / 2 + (k / 6.0 - 0.5) * 2.6 # 朝场内一侧的扇形
+		var dir := Vector2(-cos(ang) * fx.dir, sin(ang) - 0.5)
+		var p0: Vector2 = fx.pos
+		var length := 30.0 + h * 50.0
+		var p1 := p0 + dir * length * 0.5 + Vector2(0, (h - 0.5) * 10.0)
+		var p2 := p0 + dir * length
+		draw_polyline(PackedVector2Array([p0.round(), p1.round(), p2.round()]), c, 3.0)
+
+
+## 眩晕：头上三颗转圈的星星。
+func _draw_stars(f: Fighter) -> void:
+	var head := Vector2(SimConst.px(f.x), -SimConst.px(f.y + f.def.stand_height) - 14.0)
+	for k in 3:
+		var ang := sim.frame * 0.12 + k * TAU / 3.0
+		var p := head + Vector2(cos(ang) * 26.0, sin(ang) * 8.0)
+		var pts := PackedVector2Array()
+		for j in 10:
+			var r := 7.0 if j % 2 == 0 else 3.0
+			var a := j * PI / 5.0 - PI / 2
+			pts.append((p + Vector2(cos(a), sin(a)) * r).round())
+		draw_colored_polygon(pts, Color(1.0, 0.9, 0.3))
 
 
 func _draw_dust(fx: Dictionary, age: int) -> void:

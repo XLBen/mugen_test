@@ -30,6 +30,9 @@ var dummy := TrainingDummy.new()
 var logs := [InputLog.new(), InputLog.new()]
 var trial := ComboTrial.new()
 var demo := ComboDemo.new()
+var _slow := 0 ## KO 慢动作剩余的显示帧
+var _slow_tick := 0
+const KO_SLOW := [60, 2, 30, 3] ## 前 60 帧 1/2 速度，之后 30 帧 1/3 速度（仿真本身仍是逐帧确定的）
 
 @onready var view: MatchView = $MatchView
 @onready var hud: DebugPanel = $HUD/Info
@@ -80,6 +83,13 @@ func _physics_process(_delta: float) -> void:
 	if paused and not step_once:
 		return
 	step_once = false
+	if _slow > 0:
+		# KO 慢动作：每隔几个显示帧才推进一帧仿真
+		_slow -= 1
+		_slow_tick += 1
+		var div: int = KO_SLOW[1] if _slow >= KO_SLOW[2] else KO_SLOW[3]
+		if _slow_tick % div != 0:
+			return
 	advance([LocalInput.read(0), LocalInput.read(1)])
 
 
@@ -94,7 +104,15 @@ func advance(human: Array[int]) -> void:
 	sim.step(last_inputs)
 	view.fx.sim = sim
 	view.fx.consume(sim.events)
+	hud_view.consume(sim.events)
 	sfx.consume(sim.events, sim)
+	for e in sim.events:
+		match e.type:
+			"super":
+				view.super_focus = e.get("target", -1)
+				view.super_level = 3 if e.get("critical", false) else e.get("level", 1)
+			"ko":
+				_slow = KO_SLOW[0] + KO_SLOW[2]
 	meter.record(sim)
 	if sim.training:
 		trial.record(sim)
@@ -110,11 +128,9 @@ func _process(_delta: float) -> void:
 		combo_labels[i].text = _combo_text(sim.fighters[1 - i])
 
 
-## 攻击方一侧显示：连段数 / 连段伤害 / 打康提示（数据取自被打方）。
+## 攻击方一侧显示：连段数 / 连段伤害（数据取自被打方；打康提示由 HUD 横幅显示）。
 func _combo_text(victim: Fighter) -> String:
 	var lines := PackedStringArray()
-	if victim.counter_timer > 0:
-		lines.append("确反打康" if victim.counter_type == Combat.Counter.PUNISH else "打康")
 	if victim.combo_hits >= 2:
 		lines.append("%d 连击  伤害 %d" % [victim.combo_hits, victim.combo_damage])
 	return "\n".join(lines)

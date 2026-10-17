@@ -6,6 +6,8 @@ extends Node
 ##   重攻击再加饱和失真和短混响尾巴；Counter 额外叠一声清脆的"叮"。
 ## 防御是几个不成谐波的正弦叠成的金属"锵"；出招时按强度播放挥空的"呼"（扫频带通噪声）；
 ## OD 发动是刀锋出鞘的"锵"，打康是结实的"啪"，超杀发动是低沉的"轰"，放出飞行道具是飞刀破空的"嗖"。
+## Drive 系统：招架是清亮的金属"叮"（完美招架再叠一声"啪"），Drive Impact 发动是低沉的"轰"，撞墙 / 眩晕是重击加回响；
+## 倒地有沉闷的"咚"，回合开始有"轰"、开打有出鞘声。
 ## 每种声音生成几个音高略有不同的版本轮流播放，连打时不会像机关枪一样完全重复。
 
 const RATE := 44100
@@ -19,6 +21,7 @@ var _count := 0
 var _prev_state: Array[int] = [-1, -1]
 var _prev_frame: Array[int] = [0, 0]
 var _prev_projectiles := 0
+var _prev_round := -1
 
 
 func _ready() -> void:
@@ -39,6 +42,12 @@ func _ready() -> void:
 	_add("land", _thud(0.08, 0.35))
 	_add("od", _blade(0.28))
 	_add("throw", _knife(0.12))
+	_add("down", _thud(0.2, 0.7))
+	_add("parry", _metal(0.18, [2600.0, 3900.0, 5300.0], 0.45))
+	_add("di", _boom(0.45))
+	_add("wall", _hit(0.45, 0.4, 1.0))
+	_add("round", _boom(0.35))
+	_add("fight", _blade(0.35))
 	for i in VOICES:
 		var player := AudioStreamPlayer.new()
 		add_child(player)
@@ -54,10 +63,28 @@ func consume(events: Array[Dictionary], sim: MatchSim = null) -> void:
 				_play("hit%d" % strength, (3.0 if e.get("super", false) else 0.0))
 				if e.get("counter", 0):
 					_play("counter", -2.0)
-			"block", "armor", "clash", "super", "ko":
+			"block", "armor", "clash", "super", "ko", "parry":
 				_play(e.type)
+			"perfect_parry":
+				_play("parry", 2.0)
+				_play("counter", -1.0)
+			"drive_impact", "drive_reversal":
+				_play("di", -2.0)
+			"wall_splat", "wall_bounce", "stun":
+				_play("wall")
 	if sim != null:
 		_watch_moves(sim)
+		_watch_round(sim)
+
+
+## 回合开始 / 开打的提示音。
+func _watch_round(sim: MatchSim) -> void:
+	if sim.round_state != _prev_round and sim.versus:
+		if sim.round_state == MatchSim.Round.INTRO:
+			_play("round", -4.0)
+		elif sim.round_state == MatchSim.Round.FIGHT:
+			_play("fight", -2.0)
+	_prev_round = sim.round_state
 
 
 func _watch_moves(sim: MatchSim) -> void:
@@ -75,6 +102,8 @@ func _watch_moves(sim: MatchSim) -> void:
 				_play("whoosh%d" % strength, -6.0)
 			elif s.name in ["landing", "dash_f", "dash_b"]:
 				_play("land", -8.0)
+			elif s.name == "knockdown":
+				_play("down", -3.0)
 		_prev_state[i] = f.state
 		_prev_frame[i] = f.state_frame
 	# 新放出的飞行道具：飞刀破空声

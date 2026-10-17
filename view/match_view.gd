@@ -15,9 +15,15 @@ const GRID_COLOR := Color(1, 1, 1, 0.06)
 const FIREBALL_COLORS := [Color(0.5, 0.8, 1.0), Color(1.0, 0.6, 0.3)]
 const TRAIL_SPEED_PX := 8.0 ## 每帧移动超过这么多像素的道具画拖影
 const TRAIL_ALPHA := [0.5, 0.3, 0.15]
+const BURNOUT_TINT := Color(0.72, 0.72, 0.78) ## Burnout 中角色发灰
 
 ## 摄像机中心相对地面的高度（像素），让地面落在屏幕下方
 const CAMERA_HEIGHT_PX := 260.0
+## 镜头缩放（纯表现，不影响仿真里的屏幕墙）：两人靠近时略微拉近；超杀暂停时推近并偏向出招方
+const ZOOM_NEAR := 1.12
+const ZOOM_NEAR_FROM_PX := 520.0
+const ZOOM_SUPER := [1.0, 1.25, 1.3, 1.4] ## 按超杀等级
+const ZOOM_EASE := 0.15
 
 var sim: MatchSim
 var show_boxes := false ## 判定框显示（训练模式按 6 或 F1 切换）
@@ -28,6 +34,10 @@ var _sprites: Array = [null, null] ## 每名玩家的 SpriteSet（没有精灵�
 @onready var fx: FxLayer = $FxLayer
 
 var _camera_y := -CAMERA_HEIGHT_PX
+var _zoom := 1.0
+var _top := 1 ## 画在上层的角色（攻击方在前）
+var super_focus := -1 ## 超杀暂停中的出招方（场景根据事件设置，-1 = 没有）
+var super_level := 1
 
 
 ## 角色变更后调用。同角色镜像时 P2 用第二套配色。
@@ -45,9 +55,39 @@ func _process(_delta: float) -> void:
 	# 摄像机：水平跟随仿真里的摄像机，垂直方向在有人跳高时适度上移；加上震屏；对齐整数像素避免像素抖动
 	var top := maxf(SimConst.px(sim.fighters[0].y), SimConst.px(sim.fighters[1].y))
 	var target_y := -CAMERA_HEIGHT_PX - maxf(top - 140.0, 0.0) * 0.5
+	var focus := super_focus if sim.freeze > 0 else -1
+	var dist := absf(SimConst.px(sim.fighters[0].x - sim.fighters[1].x))
+	_zoom = lerpf(_zoom, zoom_for(dist, focus, super_level), ZOOM_EASE)
+	var cx := SimConst.px(sim.camera_x)
+	if focus >= 0:
+		# 超杀特写：镜头偏向出招方，并稍微压低到角色上半身
+		cx = lerpf(cx, SimConst.px(sim.fighters[focus].x), 0.5)
+		target_y += 40.0
 	_camera_y = lerpf(_camera_y, target_y, 0.2)
-	camera.position = (Vector2(SimConst.px(sim.camera_x), _camera_y) + fx.shake_offset()).round()
+	camera.zoom = Vector2(_zoom, _zoom)
+	camera.position = (Vector2(cx, _camera_y) + fx.shake_offset()).round()
+	_top = draw_order(sim, _top)
 	queue_redraw()
+
+
+## 镜头缩放：超杀暂停中按等级推近；否则两人越近越拉近一点（最多 ZOOM_NEAR）。
+static func zoom_for(distance_px: float, focus: int, level := 1) -> float:
+	if focus >= 0:
+		return ZOOM_SUPER[clampi(level, 1, 3)]
+	return clampf(1.0 + (ZOOM_NEAR_FROM_PX - distance_px) / 2000.0, 1.0, ZOOM_NEAR)
+
+
+## 谁画在上层：正在出招的一方在前（两人都在出招时保持原来的）；都没出招时被打的一方在后。
+static func draw_order(s: MatchSim, prev_top: int) -> int:
+	var a0 := s.fighters[0].sd().is_attack()
+	var a1 := s.fighters[1].sd().is_attack()
+	if a0 != a1:
+		return 0 if a0 else 1
+	var h0 := s.fighters[0].sd().kind == "hurt"
+	var h1 := s.fighters[1].sd().kind == "hurt"
+	if h0 != h1:
+		return 1 if h0 else 0
+	return prev_top
 
 
 func _draw() -> void:
@@ -59,9 +99,11 @@ func _draw() -> void:
 		# 超杀暂停：背景压暗，突出角色（纯表现）
 		draw_rect(Rect2(SimConst.px(sim.camera_x) - 2000, -2000, 4000, 2600), Color(0.02, 0.0, 0.08, 0.6))
 	for i in sim.fighters.size():
+		_draw_shadow(sim.fighters[i])
+	for i in [1 - _top, _top]:
 		var sprites: SpriteSet = _sprites[i]
 		if show_sprites and sprites != null:
-			_draw_sprite(sim.fighters[i], sprites)
+			draw_fighter_sprite(self, sim.fighters[i], BURNOUT_TINT if sim.fighters[i].burnout != 0 else Color.WHITE)
 		else:
 			_draw_whitebox(sim.fighters[i], P_COLORS[i])
 	for p in sim.projectiles:
@@ -105,11 +147,13 @@ func _draw_whitebox(f: Fighter, color: Color) -> void:
 	draw_line(Vector2(body.position.x, 2), Vector2(body.end.x, 2), Color(0, 0, 0, 0.6), 4.0)
 
 
-func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
-	var shadow_w := SimConst.px(f.def.push_half_width) * 1.4
-	var x := roundf(SimConst.px(f.x))
-	draw_line(Vector2(x - shadow_w, 2), Vector2(x + shadow_w, 2), Color(0, 0, 0, 0.45), 4.0)
-	draw_fighter_sprite(self, f)
+## 脚下的椭圆影子：离地越高越小越淡。
+func _draw_shadow(f: Fighter) -> void:
+	var lift := clampf(SimConst.px(f.y) / 300.0, 0.0, 0.6)
+	var r := SimConst.px(f.def.push_half_width) * 1.5 * (1.0 - lift)
+	draw_set_transform(Vector2(roundf(SimConst.px(f.x)), 2.0), 0.0, Vector2(1.0, 0.22))
+	draw_circle(Vector2.ZERO, r, Color(0, 0, 0, 0.4 * (1.0 - lift)))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## 把角色当前帧画到 canvas 上（受击闪光、OD 金身也用它画同一位置的剪影）。

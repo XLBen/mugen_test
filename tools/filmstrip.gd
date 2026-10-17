@@ -1,9 +1,11 @@
 extends SceneTree
 ## 逐帧截图自查：用脚本输入推进训练场景，从第 from 帧起每 step 帧截一次画面中部，拼成一张网格图。
-## godot --path . -s res://tools/filmstrip.gd -- <out.png> <p1 输入序列> [p2 输入序列] [from] [count] [step] [p1 角色号] [p2 角色号]
+## godot --path . -s res://tools/filmstrip.gd -- <out.png> <p1 输入序列> [p2 输入序列] [from] [count] [step] [p1 角色号] [p2 角色号] [full]
+## 最后一个参数写 full 时截整个画面（看 HUD 横幅、镜头缩放），否则只截两人周围。
 ## 输入序列格式见 tools/input_script.gd；角色号是训练场景 roster 的下标（F8/F9 的顺序）。
 
 const COLS := 6
+
 const CROP := Vector2i(560, 420) ## 截取的区域（视口像素，以两名角色中点为中心）
 
 var _scene: Node
@@ -15,6 +17,8 @@ var _step := 2
 var _tick := 0
 var _done := 0
 var _shots: Array[Image] = []
+var _crop := CROP
+var _full := false
 
 
 func _initialize() -> void:
@@ -26,6 +30,9 @@ func _initialize() -> void:
 	_from = int(args[3]) if args.size() > 3 else 0
 	_count = int(args[4]) if args.size() > 4 else _count
 	_step = int(args[5]) if args.size() > 5 else _step
+	_full = args.size() > 8 and args[8] == "full"
+	if _full:
+		_crop = Vector2i(1280, 720)
 	_scene = load("res://scenes/training.tscn").instantiate()
 	root.add_child(_scene)
 	if args.size() > 6:
@@ -53,10 +60,10 @@ func _process(_delta: float) -> bool:
 		var img := root.get_texture().get_image()
 		img.convert(Image.FORMAT_RGBA8)
 		var scale := img.get_width() / 1280.0
-		var size := Vector2i(Vector2(CROP) * scale)
-		var center := Vector2i(img.get_width() / 2, int(img.get_height() * 0.62))
+		var size := Vector2i(Vector2(_crop) * scale)
+		var center := Vector2i(img.get_width() / 2, img.get_height() / 2 if _full else int(img.get_height() * 0.62))
 		var shot := img.get_region(Rect2i(center - size / 2, size))
-		shot.resize(CROP.x / 2, CROP.y / 2)
+		shot.resize(_crop.x / 2, _crop.y / 2)
 		_shots.append(shot)
 		_done += 1
 		if _done >= _count:
@@ -77,8 +84,8 @@ func _at(p: int, i: int) -> int:
 
 
 func _save() -> void:
-	var w := CROP.x / 2
-	var h := CROP.y / 2
+	var w := _crop.x / 2
+	var h := _crop.y / 2
 	var rows := ceili(_shots.size() / float(COLS))
 	var sheet := Image.create(w * COLS, h * rows, false, Image.FORMAT_RGBA8)
 	for i in _shots.size():

@@ -217,7 +217,8 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dir = source_facing
 	if point.is_empty():
 		point = PackedInt32Array([dfn.x - dir * dfn.def.push_half_width / 2, dfn.y + dfn.push_height() * 2 / 3])
-	var fx := {"strength": hd.strength, "counter": counter, "dir": dir, "super": hd.source == "super", "target": dfn.index}
+	var fx := {"strength": hd.strength, "counter": counter, "dir": dir, "super": hd.source == "super",
+		"drive": hd.source == "drive", "target": dfn.index}
 	if not blocked and _absorbs(dfn, hd):
 		_armor_hit(sim, dfn, hd, melee)
 		sim.emit("armor", point[0], point[1], fx)
