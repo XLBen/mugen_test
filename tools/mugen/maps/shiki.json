@@ -9,7 +9,13 @@
 		"月姬格斗只有 A/B/C 三键，踢腿与部分招式借用外形相近的动作。"
 	],
 	"anims": {
-		"idle": 0,
+		"idle": {
+			"actions": [
+				0
+			],
+			"max_time": 8,
+			"loop": true
+		},
 		"walk_f": 20,
 		"walk_b": 21,
 		"crouch": [
@@ -39,123 +45,151 @@
 		"jump": 61,
 		"jump_f": 62,
 		"jump_b": 63,
-		"land": {
-			"frames": [
-				[
-					47,
-					1
-				],
-				[
-					47,
-					2
-				],
-				[
-					47,
-					4
-				]
-			]
-		},
-		"land_f": {
-			"frames": [
-				[
-					48,
-					1
-				],
-				[
-					48,
-					2
-				],
-				[
-					48,
-					4
-				]
-			]
-		},
-		"land_b": {
-			"frames": [
-				[
-					49,
-					1
-				],
-				[
-					49,
-					2
-				],
-				[
-					49,
-					4
-				]
-			]
-		},
+		"land": 47,
+		"land_f": 48,
+		"land_b": 49,
 		"block_stand": {
-			"frames": [
-				[
-					150,
-					0
-				]
-			]
+			"actions": [
+				150,
+				151
+			],
+			"recover": 151,
+			"max_time": 6
 		},
 		"block_crouch": {
-			"frames": [
-				[
-					152,
-					0
-				]
-			]
+			"actions": [
+				152,
+				153
+			],
+			"recover": 153,
+			"max_time": 6
 		},
 		"hit_stand": {
-			"frames": [
-				[
-					5000,
-					0
-				]
-			]
+			"actions": [
+				5001,
+				5006
+			],
+			"recover": 5006,
+			"max_time": 6
+		},
+		"hit_stand_hi_l": {
+			"actions": [
+				5000,
+				5005
+			],
+			"recover": 5005,
+			"max_time": 6
+		},
+		"hit_stand_lo_l": {
+			"actions": [
+				5010,
+				5015
+			],
+			"recover": 5015,
+			"max_time": 6
+		},
+		"hit_stand_hi_m": {
+			"actions": [
+				5001,
+				5006
+			],
+			"recover": 5006,
+			"max_time": 6
+		},
+		"hit_stand_lo_m": {
+			"actions": [
+				5011,
+				5016
+			],
+			"recover": 5016,
+			"max_time": 6
+		},
+		"hit_stand_hi_h": {
+			"actions": [
+				5002,
+				5007
+			],
+			"recover": 5007,
+			"max_time": 6
+		},
+		"hit_stand_lo_h": {
+			"actions": [
+				5012,
+				5017
+			],
+			"recover": 5017,
+			"max_time": 6
 		},
 		"hit_crouch": {
-			"frames": [
-				[
-					5020,
-					0
-				]
-			]
+			"actions": [
+				5021,
+				5026
+			],
+			"recover": 5026,
+			"max_time": 6
+		},
+		"hit_crouch_l": {
+			"actions": [
+				5020,
+				5025
+			],
+			"recover": 5025,
+			"max_time": 6
+		},
+		"hit_crouch_m": {
+			"actions": [
+				5021,
+				5026
+			],
+			"recover": 5026,
+			"max_time": 6
+		},
+		"hit_crouch_h": {
+			"actions": [
+				5022,
+				5027
+			],
+			"recover": 5027,
+			"max_time": 6
 		},
 		"hit_air": {
-			"frames": [
-				[
-					5030,
-					0
-				]
-			]
+			"actions": [
+				5030,
+				5035,
+				5050
+			],
+			"fall": 5050,
+			"max_time": 8
 		},
 		"knockdown": {
-			"frames": [
-				[
-					5110,
-					0
-				]
-			]
+			"actions": [
+				5100,
+				5101,
+				5110
+			],
+			"max_time": 8
 		},
 		"wakeup": 5120,
 		"throw": 800,
 		"throw_hit": 810,
 		"5lp": 210,
-		"5mp": 220,
-		"5hp": 215,
+		"5mp": 215,
+		"5hp": 220,
 		"5lk": 200,
 		"5mk": 200,
-		"5hk": 230,
+		"5hk": 1250,
 		"2lp": 400,
 		"2mp": 410,
-		"2hp": 215,
+		"2hp": 1100,
 		"2lk": 400,
-		"2mk": 410,
-		"2hk": 420,
+		"2mk": 420,
+		"2hk": 1050,
 		"j_lp": 600,
 		"j_mp": 600,
-		"j_hp": 630,
-		"j_lk": 610,
-		"j_mk": 610,
-		"j_hk": 620,
+		"j_hp": 610,
+		"j_lk": 620,
+		"j_mk": 620,
+		"j_hk": 630,
 		"slash": 1000,
 		"step": 100,
 		"rising": 1200,

@@ -39,127 +39,153 @@
 		"jump": 41,
 		"jump_f": 42,
 		"jump_b": 43,
-		"land": {
-			"frames": [
-				[
-					47,
-					1
-				],
-				[
-					47,
-					2
-				],
-				[
-					47,
-					3
-				]
-			]
-		},
-		"land_f": {
-			"frames": [
-				[
-					52,
-					1
-				],
-				[
-					52,
-					3
-				],
-				[
-					52,
-					5
-				]
-			]
-		},
-		"land_b": {
-			"frames": [
-				[
-					54,
-					2
-				],
-				[
-					54,
-					3
-				],
-				[
-					54,
-					4
-				]
-			]
-		},
+		"land": 47,
+		"land_f": 52,
+		"land_b": 54,
 		"block_stand": {
-			"frames": [
-				[
-					150,
-					0
-				]
-			]
+			"actions": [
+				150,
+				151
+			],
+			"recover": 151,
+			"max_time": 6
 		},
 		"block_crouch": {
-			"frames": [
-				[
-					152,
-					0
-				]
-			]
+			"actions": [
+				152
+			],
+			"max_time": 6
 		},
 		"hit_stand": {
-			"frames": [
-				[
-					5000,
-					0
-				]
-			]
+			"actions": [
+				5001,
+				5006
+			],
+			"recover": 5006,
+			"max_time": 6
+		},
+		"hit_stand_hi_l": {
+			"actions": [
+				5000,
+				5005
+			],
+			"recover": 5005,
+			"max_time": 6
+		},
+		"hit_stand_lo_l": {
+			"actions": [
+				5010,
+				5015
+			],
+			"recover": 5015,
+			"max_time": 6
+		},
+		"hit_stand_hi_m": {
+			"actions": [
+				5001,
+				5006
+			],
+			"recover": 5006,
+			"max_time": 6
+		},
+		"hit_stand_lo_m": {
+			"actions": [
+				5011,
+				5016
+			],
+			"recover": 5016,
+			"max_time": 6
+		},
+		"hit_stand_hi_h": {
+			"actions": [
+				5002,
+				5007
+			],
+			"recover": 5007,
+			"max_time": 6
+		},
+		"hit_stand_lo_h": {
+			"actions": [
+				5012,
+				5017
+			],
+			"recover": 5017,
+			"max_time": 6
 		},
 		"hit_crouch": {
-			"frames": [
-				[
-					5020,
-					0
-				]
-			]
+			"actions": [
+				5021,
+				5026
+			],
+			"recover": 5026,
+			"max_time": 6
+		},
+		"hit_crouch_l": {
+			"actions": [
+				5020,
+				5025
+			],
+			"recover": 5025,
+			"max_time": 6
+		},
+		"hit_crouch_m": {
+			"actions": [
+				5021,
+				5026
+			],
+			"recover": 5026,
+			"max_time": 6
+		},
+		"hit_crouch_h": {
+			"actions": [
+				5022,
+				5027
+			],
+			"recover": 5027,
+			"max_time": 6
 		},
 		"hit_air": {
-			"frames": [
-				[
-					5030,
-					0
-				]
-			]
+			"actions": [
+				5030,
+				5035,
+				5050
+			],
+			"fall": 5050,
+			"max_time": 8
 		},
 		"knockdown": {
-			"frames": [
-				[
-					5110,
-					0
-				]
-			]
+			"actions": [
+				5100,
+				5101,
+				5110
+			],
+			"max_time": 8
 		},
 		"wakeup": 5120,
 		"throw": 800,
 		"throw_hit": 900,
 		"5lp": 200,
-		"5mp": 210,
+		"5mp": 202,
 		"5hp": 220,
 		"5lk": 210,
-		"5mk": 210,
-		"5hk": 225,
+		"5mk": 201,
+		"5hk": 211,
 		"2lp": 400,
-		"2mp": 400,
+		"2mp": 411,
 		"2hp": 410,
 		"2lk": 400,
 		"2mk": 420,
-		"2hk": 420,
+		"2hk": 215,
 		"j_lp": 600,
-		"j_mp": 610,
+		"j_mp": 600,
 		"j_hp": 620,
 		"j_lk": 610,
-		"j_mk": 620,
+		"j_mk": 610,
 		"j_hk": 620,
 		"charm": 1200,
 		"air_charm": 621,
 		"seal": 1000,
-		"spin": 1300,
+		"spin": 421,
 		"storm": 3000
 	}
 }
