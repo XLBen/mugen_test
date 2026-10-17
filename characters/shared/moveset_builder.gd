@@ -46,7 +46,8 @@ func command(name: String, priority: String, d: Dictionary) -> void:
 ## 登记一条连段。
 ## notation：显示用的写法（> 目押 / 连打，xx 取消）；states：P1 依次进入的招式状态（挑战按它判定进度）；
 ## script：[[输入, 之后等待的帧数], ...]，输入写法同 InputScript（如 "2LK"、"2,3,6LK"），测试按它逐帧输入；
-## opts：gap 开始时的距离（像素）、p2 对手的输入脚本（打康起手）、meter 超杀槽全满、hits 至少的连段数、
+## opts：gap 开始时的距离（像素）、p2 对手的输入脚本（打康起手）、p2_recovery 开始时对手正在收招的招式
+##       （确反起手；要用所有角色都有的招式，如 5hk）、meter 超杀槽全满、hits 至少的连段数、
 ##       strict 不要求输入窗口的步骤、imported_only 只对导入人物成立（依赖其动画的攻击判定，内置占位美术够不到）。
 func combo(name: String, notation: String, states_: Array, script: Array, opts := {}) -> void:
 	var c := {"name": name, "notation": notation, "states": states_, "script": script}

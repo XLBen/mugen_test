@@ -172,6 +172,9 @@ func hurtboxes() -> Array:
 		local = anim.hurt[AnimClock.index(self, anim)]
 	if local.is_empty():
 		local = def.body_hurtbox(s.type) + s.extra_hurtboxes_at(state_frame)
+	elif s.kind == "hurt" and (s.type == "S" or s.type == "C"):
+		# 地面受击 / 防御中，受击盒至少包含身体盒：后仰的受击姿势不会让连段比 SF6 更容易断
+		local = local + def.body_hurtbox(s.type)
 	var out := []
 	for b: PackedInt32Array in local:
 		out.append(Box.to_world(x, y, facing, b))

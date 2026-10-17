@@ -145,7 +145,7 @@ func _combos() -> void:
 	combo("牵制确认", "2MK xx 236HP", ["2mk", "charm_h"],
 		[["2MK", 10], ["2,3,6HP", 0]], {"hits": 2, "gap": 110})
 	combo("升龙收尾", "5LP > 5LP xx 623K", ["5lp", "5lp", "spin"],
-		[["5LP", 8], ["5LP", 6], ["6,2,3MK", 0]], {"hits": 5, "imported_only": true})
+		[["5LP", 8], ["5LP", 6], ["6,2,3MK", 0]], {"hits": 3, "imported_only": true})
 	combo("跳入", "j.HP > 5MP xx 236HP", ["j_hp", "5mp", "charm_h"],
 		[["9", 33], ["5HP", 23], ["5MP", 10], ["2,3,6HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
 	combo("OD 纸符", "5HP xx 236PP", ["5hp", "charm_od"],

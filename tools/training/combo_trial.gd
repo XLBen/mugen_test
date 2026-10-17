@@ -70,6 +70,30 @@ func record(sim: MatchSim) -> void:
 		step = 0
 
 
+## 按连段的要求布置场面：站位（P1 在左、P2 在右，距离 gap）、超杀槽、对手开始时正在收招的招式。测试和演示共用。
+static func prepare(sim: MatchSim, c: Dictionary) -> void:
+	sim.place(0, c.get("gap", 75) * SimConst.UNITS_PER_PX)
+	if c.get("meter", false):
+		sim.fighters[0].gauges[Gauges.SUPER] = Gauges.DEFS[Gauges.SUPER].max
+	if c.has("p2_recovery"):
+		# 让对手正处于某招的收招中（打中就是 Punish Counter），所有角色都有的招式才能这样用
+		var p2 := sim.fighters[1]
+		p2.set_state(c.p2_recovery)
+		p2.state_frame = p2.sd().last_active + 1
+
+
+## 按连段脚本生成逐帧输入（InputScript 写法）。shift：[第几步, 等待帧数的改变量]（测试输入宽容度用）。
+static func build_script(c: Dictionary, shift := [-1, 0]) -> String:
+	var parts := PackedStringArray()
+	for k in c.script.size():
+		var step: Array = c.script[k]
+		parts.append(step[0])
+		var wait: int = step[1] + (shift[1] if shift[0] == k else 0)
+		if wait > 0:
+			parts.append("5x%d" % wait)
+	return ",".join(parts)
+
+
 ## 连段写法按 > 和 xx 拆成每一步（与 states 一一对应），给叠加层高亮用。
 static func notation_parts(c: Dictionary) -> PackedStringArray:
 	var parts := PackedStringArray()

@@ -29,7 +29,7 @@ func _normals() -> void:
 	normal("5lp", "S", "LP", 5, 2, 8, 3, -1, [25, 140, 58, 20], L, {}, LIGHT_CHAIN)
 	normal("5mp", "S", "MP", 7, 3, 14, 3, -1, [28, 130, 80, 24], with(M, {"damage": 700}), {}, SPECIAL)
 	normal("5hp", "S", "HP", 11, 4, 22, 2, -5, [28, 120, 100, 30], heavy,
-		{"counter_effect": "launch", "air_vy": 1100}, SPECIAL)
+		{"counter_effect": "launch", "air_vy": 1100, "push": 450}, SPECIAL)
 	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L)
 	normal("5mk", "S", "MK", 9, 3, 16, 2, -3, [28, 55, 95, 26], with(M, {"damage": 750}))
 	normal("5hk", "S", "HK", 13, 4, 22, 1, -6, [28, 95, 110, 34], with(heavy, {"damage": 1100}),

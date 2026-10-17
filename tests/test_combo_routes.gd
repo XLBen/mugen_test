@@ -15,25 +15,13 @@ static func roster() -> Array[FighterDef]:
 	return out
 
 
-## 按连段脚本生成逐帧输入。shift：[第几步, 改变的帧数]。
-static func build_script(c: Dictionary, shift := [-1, 0]) -> String:
-	var parts := PackedStringArray()
-	for k in c.script.size():
-		var step: Array = c.script[k]
-		parts.append(step[0])
-		var wait: int = step[1] + (shift[1] if shift[0] == k else 0)
-		if wait > 0:
-			parts.append("5x%d" % wait)
-	return ",".join(parts)
-
-
-## 打一遍连段，返回 [最大连段数, P1 依次进入过的招式状态]。
-static func run_combo(def: FighterDef, c: Dictionary, shift := [-1, 0]) -> Array:
-	var sim := MatchSim.new(load("res://stages/training_stage.tres"), def, load("res://characters/dummy/dummy.tres"))
-	sim.place(0, c.get("gap", 75) * SimConst.UNITS_PER_PX)
-	if c.get("meter", false):
-		sim.fighters[0].gauges[Gauges.SUPER] = Gauges.DEFS[Gauges.SUPER].max
-	var a := InputScript.parse(build_script(c, shift))
+## 打一遍连段，返回 [最大连段数, P1 依次进入过的招式状态]。opp：对手（默认 dummy）。
+static func run_combo(def: FighterDef, c: Dictionary, shift := [-1, 0], opp: FighterDef = null) -> Array:
+	if opp == null:
+		opp = load("res://characters/dummy/dummy.tres")
+	var sim := MatchSim.new(load("res://stages/training_stage.tres"), def, opp)
+	ComboTrial.prepare(sim, c)
+	var a := InputScript.parse(ComboTrial.build_script(c, shift))
 	var b := InputScript.parse(c.get("p2", ""), true)
 	var best := 0
 	var entered := []
@@ -51,6 +39,12 @@ static func run_combo(def: FighterDef, c: Dictionary, shift := [-1, 0]) -> Array
 	return [best, entered]
 
 
+static func opponents() -> Array[FighterDef]:
+	var out: Array[FighterDef] = [load("res://characters/dummy/dummy.tres")]
+	out.append_array(roster())
+	return out
+
+
 func test_every_designed_combo_connects() -> void:
 	for def: FighterDef in roster():
 		for c: Dictionary in def.moveset.new().data().combos:
@@ -58,11 +52,13 @@ func test_every_designed_combo_connects() -> void:
 				continue
 			check_eq(ComboTrial.notation_parts(c).size(), c.states.size(), "%s %s: one notation part per move" % [
 				def.display_name, c.name])
-			var r := run_combo(def, c)
-			var label := "%s %s (%s)" % [def.display_name, c.name, c.notation]
-			check(r[0] >= c.hits, "%s: %d hits, expected %d; moves %s" % [label, r[0], c.hits, r[1]])
-			for s: String in c.states:
-				check(s in r[1], "%s: %s came out (got %s)" % [label, s, r[1]])
+			# 对每个对手都要能连上（体型、受击盒不同；训练模式里演示时对手是当前选的 P2）
+			for opp: FighterDef in opponents():
+				var r := run_combo(def, c, [-1, 0], opp)
+				var label := "%s %s vs %s (%s)" % [def.display_name, c.name, opp.display_name, c.notation]
+				check(r[0] >= c.hits, "%s: %d hits, expected %d; moves %s" % [label, r[0], c.hits, r[1]])
+				for s: String in c.states:
+					check(s in r[1], "%s: %s came out (got %s)" % [label, s, r[1]])
 
 
 func test_combos_tolerate_input_timing() -> void:
