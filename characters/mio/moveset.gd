@@ -3,7 +3,7 @@ extends MovesetBuilder
 ##
 ## 特点：普攻距离最长但发生偏慢、体力略低（9500）、后退速度快；靠道具和设置物控场。
 ## 必杀技：
-##   236P   纸符       地面飞行道具（三种速度）
+##   236P   纸符       地面飞行道具（三种速度，飞得快，像飞刀）
 ##   空中 236P  落符   斜下方飞行道具
 ##   214P   封印       在前方放置符阵（P 越重越远），25 帧后启动，踩中浮空；同屏一个
 ##   623K   缎带旋     三段对空，1~6 帧无敌
@@ -52,7 +52,7 @@ func _air_normals() -> void:
 
 
 func _charms() -> void:
-	var hit := {"damage": 600, "chip": 150, "hitstun": 20, "blockstun": 17, "hitstop": 8,
+	var hit := {"damage": 600, "chip": 150, "hitstun": 20, "blockstun": 17, "hitstop": 10,
 		"push": 600, "block_push": 700, "strength": 1}
 	for k in ["h", "m", "l"]:
 		states["charm_" + k] = {
@@ -61,17 +61,17 @@ func _charms() -> void:
 		}
 		command("236" + k.to_upper() + "P", "special", {"motion": "236", "buttons": k.to_upper() + "P",
 			"state": "charm_" + k, "cond": "limit:fireball"})
-	projectiles["charm_l"] = {"speed": 400, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
-	projectiles["charm_m"] = {"speed": 550, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
-	projectiles["charm_h"] = {"speed": 700, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
+	projectiles["charm_l"] = {"speed": 900, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
+	projectiles["charm_m"] = {"speed": 1150, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
+	projectiles["charm_h"] = {"speed": 1400, "box": [-18, -22, 36, 44], "hit": hit, "anim": "charm"}
 
-	# OD 纸符：两段命中
+	# OD 纸符：两段命中，比普通版快得多
 	states["charm_od"] = {
 		"type": "S", "kind": "special", "total": 40, "anim": "charm", "active_hint": [10, 13], "cost": {"drive": 20000},
 		"events": [{"frame": 10, "spawn": "charm_od", "x": 65, "y": 125}],
 	}
 	command("236PP", "od", {"motion": "236", "buttons": "PP", "state": "charm_od", "cond": "limit:fireball"})
-	projectiles["charm_od"] = {"speed": 650, "box": [-24, -28, 48, 56], "hits": 2, "hit_interval": 8, "anim": "charm",
+	projectiles["charm_od"] = {"speed": 1800, "box": [-24, -28, 48, 56], "hits": 2, "hit_interval": 3, "anim": "charm",
 		"hit": {"damage": 500, "chip": 125, "hitstun": 24, "blockstun": 18, "hitstop": 7, "push": 200,
 			"block_push": 300, "strength": 1, "meter": 0, "juggle_limit": 3}}
 
@@ -82,7 +82,7 @@ func _charms() -> void:
 	}
 	command("j236P", "special", {"motion": "236", "buttons": "P", "where": "air", "state": "air_charm",
 		"cond": "limit:fireball"})
-	projectiles["air_charm"] = {"speed": 520, "speed_y": -480, "box": [-18, -22, 36, 44], "anim": "air_charm",
+	projectiles["air_charm"] = {"speed": 1000, "speed_y": -920, "box": [-18, -22, 36, 44], "anim": "air_charm",
 		"anim_fallback": "charm",
 		"hit": with(hit, {"guard": "high"})}
 
@@ -104,7 +104,8 @@ func _seals() -> void:
 
 
 func _spin() -> void:
-	# 缎带旋：623K。三段上升，1~6 帧无敌，最后一段浮空
+	# 缎带旋：623K。三段上升，1~6 帧无敌，最后一段浮空。像 SF6 的升龙一样高高飞起（峰值约 200 像素，前进约 90 像素），
+	# 落地硬直随之变长
 	var hits := []
 	for w in [[5, 6], [8, 9]]:
 		hits.append({"active": w, "boxes": [[0, 80, 60, 130]],
@@ -115,12 +116,13 @@ func _spin() -> void:
 			"blockstun": 18, "push": 600, "block_push": 800, "strength": 2}})
 	states["spin"] = {
 		"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "spin",
-		"invuln": [{"frames": [1, 6]}], "events": [{"frame": 5, "vx": 100, "vy": 1250}], "hitboxes": hits,
+		"invuln": [{"frames": [1, 6]}], "events": [{"frame": 5, "vx": 220, "vy": 1900}], "hitboxes": hits,
 	}
 	command("623K", "special", {"motion": "623", "buttons": "K", "state": "spin"})
 	var od: Dictionary = states["spin"].duplicate(true)
 	od["cost"] = {"drive": 20000}
 	od["invuln"] = [{"frames": [1, 13]}]
+	od["events"] = [{"frame": 5, "vx": 260, "vy": 2100}]
 	states["spin_od"] = od
 	command("623KK", "od", {"motion": "623", "buttons": "KK", "state": "spin_od"})
 

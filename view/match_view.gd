@@ -13,6 +13,8 @@ const STAGE_EDGE_COLOR := Color(1.0, 0.3, 0.3, 0.8)
 const GROUND_COLOR := Color(0.55, 0.55, 0.6)
 const GRID_COLOR := Color(1, 1, 1, 0.06)
 const FIREBALL_COLORS := [Color(0.5, 0.8, 1.0), Color(1.0, 0.6, 0.3)]
+const TRAIL_SPEED_PX := 8.0 ## 每帧移动超过这么多像素的道具画拖影
+const TRAIL_ALPHA := [0.5, 0.3, 0.15]
 
 ## 摄像机中心相对地面的高度（像素），让地面落在屏幕下方
 const CAMERA_HEIGHT_PX := 260.0
@@ -154,12 +156,22 @@ func _draw_projectile(p: Projectile) -> void:
 		fx = "fx_" + pd.anim_fallback
 	if show_sprites and sprites != null and sprites.has(fx):
 		var center := Vector2(SimConst.px(p.x), -SimConst.px(p.y))
-		draw_set_transform(center, 0.0, Vector2(sprites.scale * p.facing, sprites.scale))
 		# 未启动的设置物 / 多段间隔中的道具画得半透明
 		var alpha := 1.0 if sim.projectile_live(p) else 0.45
 		# OD 版放出的道具染成金色
 		var tint := Color(1.0, 0.82, 0.32, alpha) if pd.name.ends_with("_od") else Color(1, 1, 1, alpha)
-		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx), tint)
+		var tex := sprites.frame_at(fx, p.age)
+		var scale := Vector2(sprites.scale * p.facing, sprites.scale)
+		# 高速道具（飞刀）身后拖几道越来越淡的残影，按整数像素错开
+		var step := Vector2(SimConst.px(p.vx), -SimConst.px(p.vy))
+		if step.length() >= TRAIL_SPEED_PX:
+			for k in TRAIL_ALPHA.size():
+				var c := tint
+				c.a *= TRAIL_ALPHA[k]
+				draw_set_transform((center - step * (k + 1) * 0.9).round(), 0.0, scale)
+				draw_texture(tex, -sprites.anchor_of(fx), c)
+		draw_set_transform(center.round(), 0.0, scale)
+		draw_texture(tex, -sprites.anchor_of(fx), tint)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var r := _rect(sim.projectile_box(p))

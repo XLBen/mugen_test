@@ -4,7 +4,8 @@ extends Node
 ## 每种打击声由几层叠成：
 ##   起音"咔"（极短的高频噪声）+ 打肉的"啪"（带通滤波噪声）+ 下沉的低频"咚"（音高快速下滑的正弦），
 ##   重攻击再加饱和失真和短混响尾巴；Counter 额外叠一声清脆的"叮"。
-## 防御是几个不成谐波的正弦叠成的金属"锵"；出招时按强度播放挥空的"呼"（扫频带通噪声）。
+## 防御是几个不成谐波的正弦叠成的金属"锵"；出招时按强度播放挥空的"呼"（扫频带通噪声）；
+## OD 发动是刀锋出鞘的"锵"，打康是结实的"啪"，超杀发动是低沉的"轰"，放出飞行道具是飞刀破空的"嗖"。
 ## 每种声音生成几个音高略有不同的版本轮流播放，连打时不会像机关枪一样完全重复。
 
 const RATE := 44100
@@ -17,6 +18,7 @@ var _next := 0
 var _count := 0
 var _prev_state: Array[int] = [-1, -1]
 var _prev_frame: Array[int] = [0, 0]
+var _prev_projectiles := 0
 
 
 func _ready() -> void:
@@ -29,13 +31,14 @@ func _ready() -> void:
 		_add("whoosh0", _whoosh(0.10, 900.0 * p, 2600.0 * p, 0.28))
 		_add("whoosh1", _whoosh(0.15, 650.0 * p, 2000.0 * p, 0.34))
 		_add("whoosh2", _whoosh(0.22, 420.0 * p, 1500.0 * p, 0.42))
-	_add("counter", _metal(0.35, [2637.0, 3951.0, 5274.0], 0.45))
+	_add("counter", _crack(0.16))
 	_add("armor", _metal(0.30, [180.0, 271.0, 397.0], 0.8))
 	_add("clash", _metal(0.30, [1760.0, 2490.0, 3720.0], 0.7))
-	_add("super", _riser(0.55))
+	_add("super", _boom(0.6))
 	_add("ko", _hit(0.9, 0.35, 1.0))
 	_add("land", _thud(0.08, 0.35))
-	_add("od", _chime(0.32))
+	_add("od", _blade(0.28))
+	_add("throw", _knife(0.12))
 	for i in VOICES:
 		var player := AudioStreamPlayer.new()
 		add_child(player)
@@ -74,6 +77,10 @@ func _watch_moves(sim: MatchSim) -> void:
 				_play("land", -8.0)
 		_prev_state[i] = f.state
 		_prev_frame[i] = f.state_frame
+	# 新放出的飞行道具：飞刀破空声
+	if sim.projectiles.size() > _prev_projectiles:
+		_play("throw", -5.0)
+	_prev_projectiles = sim.projectiles.size()
 
 
 func _add(stream_name: String, s: AudioStreamWAV) -> void:
@@ -163,42 +170,85 @@ func _whoosh(length: float, f_from: float, f_to: float, gain: float) -> AudioStr
 	return _to_wav(out, 0.0)
 
 
-## 超杀：上扬的锯齿扫频 + 闪烁的高音。
-func _riser(length: float) -> AudioStreamWAV:
+## 刀锋出鞘 / 交击（OD 发动）：极短的金属起音 + 由低往高刮过的带通噪声 + 几个不成谐波、很快衰减的高频泛音，干净利落。
+func _blade(length: float) -> AudioStreamWAV:
 	var n := int(RATE * length)
 	var out := PackedFloat32Array()
 	out.resize(n)
-	var phase := 0.0
-	var phase2 := 0.0
-	var lp := 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var bp := _Svf.new(2500.0, 3.0)
 	for i in n:
+		var t := float(i) / RATE
 		var x := float(i) / n
-		var f := 120.0 * pow(8.0, x)
-		phase = fmod(phase + f / RATE, 1.0)
-		phase2 += TAU * (1800.0 + 1600.0 * x) / RATE
-		var saw := phase * 2.0 - 1.0
-		lp += (saw - lp) * 0.08
-		var shimmer := sin(phase2) * (0.5 + 0.5 * sin(x * 60.0)) * 0.25 * x
-		out[i] = (lp * 0.6 + shimmer) * sin(x * PI) * 0.9
-	_reverb(out, 0.041, 0.3)
+		bp.set_freq(2500.0 + 5000.0 * minf(x * 3.0, 1.0))
+		var scrape := bp.process(rng.randf_range(-1.0, 1.0)) * exp(-t * 16.0) * 1.3
+		var ring := 0.0
+		for f: float in [2930.0, 4370.0, 6110.0]:
+			ring += sin(TAU * f * t) * exp(-t * (14.0 + f / 600.0))
+		var click := rng.randf_range(-1.0, 1.0) * maxf(0.0, 1.0 - t / 0.003)
+		out[i] = tanh((scrape + ring * 0.45 + click) * 1.3) * 0.8
+	return _to_wav(out, 0.0005)
+
+
+## 打康的"啪"：宽频噪声爆音 + 高通的脆响 + 很短的低频，像结实地打在身上。
+func _crack(length: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var prev := 0.0
+	var phase := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var noise := rng.randf_range(-1.0, 1.0)
+		var snap := (noise - prev) * exp(-t * 90.0)
+		prev = noise
+		var body := noise * exp(-t * 45.0) * 0.6
+		phase += TAU * (140.0 + 200.0 * exp(-t * 60.0)) / RATE
+		var low := sin(phase) * exp(-t * 30.0) * 0.8
+		out[i] = tanh((snap + body + low) * 1.6) * 0.85
+	return _to_wav(out, 0.0005)
+
+
+## 超杀发动：低沉的蓄力"轰"——低通噪声由暗到亮扫过，加一个膨胀的超低频，最后一记重击。
+func _boom(length: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 13
+	var lp := 0.0
+	var phase := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var x := float(i) / n
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * (0.02 + 0.25 * x * x)
+		var swell := lp * sin(x * PI) * 2.2
+		phase += TAU * (48.0 + 30.0 * x) / RATE
+		var sub := sin(phase) * sin(x * PI) * 0.7
+		out[i] = tanh((swell + sub) * 1.5) * 0.85
+	_reverb(out, 0.037, 0.3)
 	return _to_wav(out, 0.01)
 
 
-## OD 发动：8-bit 方波上行琶音（复古游戏机的"叮叮叮"）。
-func _chime(length: float) -> AudioStreamWAV:
+## 飞刀出手：很短的高频破空声 + 一点刀身反光似的高音。
+func _knife(length: float) -> AudioStreamWAV:
 	var n := int(RATE * length)
 	var out := PackedFloat32Array()
 	out.resize(n)
-	var notes := [659.25, 987.77, 1318.5, 1975.5] ## E5 B5 E6 B6
-	var phase := 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var bp := _Svf.new(3000.0, 2.0)
 	for i in n:
+		var t := float(i) / RATE
 		var x := float(i) / n
-		var note: float = notes[mini(int(x * 6.0), notes.size() - 1)]
-		phase = fmod(phase + note / RATE, 1.0)
-		var square := 1.0 if phase < 0.25 else -1.0 ## 25% 占空比方波
-		var step_env := 1.0 - fmod(x * 6.0, 1.0) * 0.5
-		out[i] = square * step_env * pow(1.0 - x, 1.5) * 0.35
-	return _to_wav(out, 0.002)
+		bp.set_freq(lerpf(3200.0, 6500.0, x))
+		var air := bp.process(rng.randf_range(-1.0, 1.0)) * sin(x * PI) * 1.8
+		var glint := sin(TAU * 5300.0 * t) * exp(-t * 40.0) * 0.25
+		out[i] = (air + glint) * 0.8
+	return _to_wav(out, 0.001)
 
 
 ## 落地 / 冲刺的脚步闷响。
