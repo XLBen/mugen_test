@@ -43,15 +43,14 @@ static func build(d: Dictionary) -> Command:
 
 
 ## 返回触发它的按键帧（>= 0），不成立返回 -1。
+## 站 / 蹲普攻按"按键那一帧"有没有按下方向区分：缓冲中的 2LP 在顿帧后出招时，即使已经松开下也还是 2LP。
 func check(f: Fighter, frame: int, buffer := BUFFER) -> int:
-	if stance != "any":
-		var down := InputBits.is_down(f.numpad_at(frame))
-		if down != (stance == "crouch"):
-			return -1
 	if buttons == 0:
 		return frame if motion != null and motion.matches(f, frame) else -1
 	var press := _press_frame(f, frame, buffer)
 	if press < 0:
+		return -1
+	if stance != "any" and InputBits.is_down(f.numpad_at(press)) != (stance == "crouch"):
 		return -1
 	if motion != null and not motion.matches(f, press):
 		return -1
