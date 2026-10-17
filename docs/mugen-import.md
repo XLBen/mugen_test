@@ -50,6 +50,9 @@
      踢腿暂时借用同强度的拳；**以 `list` 的实际编号为准**。
    - 必杀技：`_todo_specials` 里列出了本工程的必杀动画名，把对应的动作号填进 `anims`。
    - 值的写法：`0`（一个动作）、`[10, 11]`（多个动作首尾相接）、`{"frames": [[41, 0], [41, -1]]}`（手动挑帧，-1 为最后一帧）。
+   - 跳跃：`jump` / `jump_f` / `jump_b` 分别是垂直 / 前 / 后跳的完整空中动作（按滞空进度播放），`land_f` / `land_b` 是前后跳落地，
+     没有就用 `jump` / `land`。空中动作号看 .cns 里 `[Statedef 50]` 的 ChangeAnim（很多月姬格斗人物是 60–63，不是 41–43；
+     41–44 常常是起跳下蹲）。
 4. 导入（可以把映射文件复制到 `local_assets/` 再改，避免改动仓库里的模板）：
    ```bash
    python3 tools/mugen/import_char.py import local_assets/mugen_src/<名字> tools/mugen/maps/shiki.json

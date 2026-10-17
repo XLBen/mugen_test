@@ -101,26 +101,37 @@ func _draw_whitebox(f: Fighter, color: Color) -> void:
 
 
 func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
+	var shadow_w := SimConst.px(f.def.push_half_width) * 1.4
+	var x := roundf(SimConst.px(f.x))
+	draw_line(Vector2(x - shadow_w, 2), Vector2(x + shadow_w, 2), Color(0, 0, 0, 0.45), 4.0)
+	draw_fighter_sprite(self, f)
+
+
+## 把角色当前帧画到 canvas 上（受击闪光层也用它画同一位置的剪影）。
+func draw_fighter_sprite(canvas: CanvasItem, f: Fighter, modulate := Color.WHITE) -> void:
+	var sprites: SpriteSet = _sprites[f.index]
+	if sprites == null or not show_sprites:
+		return
 	var tex := _sprite_frame(f, sprites)
 	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y)).round()
 	# 顿帧中的被打方左右抖动（打击感）
 	if f.hitstop > 0 and f.sd().kind == "hurt":
 		feet.x += 3.0 if sim.frame % 2 == 0 else -3.0
-	draw_set_transform(feet, 0.0, Vector2(sprites.scale * f.facing, sprites.scale))
-	draw_texture(tex, -sprites.anchor)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var shadow_w := SimConst.px(f.def.push_half_width) * 1.4
-	draw_line(Vector2(feet.x - shadow_w, 2), Vector2(feet.x + shadow_w, 2), Color(0, 0, 0, 0.45), 4.0)
+	canvas.draw_set_transform(feet, 0.0, Vector2(sprites.scale * f.facing, sprites.scale))
+	canvas.draw_texture(tex, -sprites.anchor, modulate)
+	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## 逻辑状态 → 动画帧：与仿真取判定盒用同一个 AnimClock，画面和判定逐帧一致。
 func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
 	var s := f.sd()
-	var anim := s.anim
+	var anim := AnimClock.anim_name(s, f.jump_dir)
+	if not sprites.has(anim):
+		anim = s.anim
 	if not sprites.has(anim):
 		anim = {"C": "crouch", "A": "jump", "L": "crouch"}.get(s.type, "idle")
 		return sprites.frame_index(anim, 1 if anim == "jump" else 0)
-	return sprites.frame_index(anim, AnimClock.frame(s, sprites.data(anim), f.state_frame, f.vy))
+	return sprites.frame_index(anim, AnimClock.frame(s, sprites.data(anim), f.state_frame, f.vy, f.def.jump_velocity))
 
 
 func _draw_projectile(p: Projectile) -> void:

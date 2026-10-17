@@ -83,6 +83,8 @@ static func _land(f: Fighter) -> void:
 	if target == "@hurt":
 		target = "knockdown" if f.knockdown != 0 or f.health <= 0 else "land_recover"
 	f.knockdown = 0
+	if target != "landing":
+		f.jump_dir = 0 # 不是普通跳跃的落地（升龙、被打落地）不用分方向的落地动画
 	f.set_state(target)
 	# 落地这一帧本身就是落地状态的第 0 帧
 	f.fresh = 0

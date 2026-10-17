@@ -25,9 +25,9 @@ static func states() -> Dictionary:
 		"dash_b": {"type": "S", "total": 22, "anim": "walk_b", "punishable_from": 8,
 			"invuln": [{"frames": [1, 7], "strike": true, "throw": true}],
 			"events": [{"frame": 1, "vx": -850}, {"frame": 13, "vx": 0}]},
-		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump"},
-		"air": {"type": "A", "logic": "air", "anim": "jump"},
-		"landing": {"type": "S", "guard_ok": true, "logic": "landing", "anim": "land"},
+		"prejump": {"type": "S", "logic": "prejump", "anim": "prejump", "anim_dir": true},
+		"air": {"type": "A", "logic": "air", "anim": "jump", "anim_dir": true},
+		"landing": {"type": "S", "guard_ok": true, "logic": "landing", "anim": "land", "anim_dir": true},
 		"landing_long": {"type": "S", "total": 16, "anim": "land", "punishable": true},
 		"hit_stand": {"type": "S", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_stand"},
 		"hit_crouch": {"type": "C", "kind": "hurt", "logic": "hurt", "friction": HURT_FRICTION, "anim": "hit_crouch"},
@@ -63,6 +63,7 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 				try_commands(f, sim, "air")
 		"landing":
 			if f.state_frame >= f.def.landing_frames:
+				f.jump_dir = 0
 				f.set_state("stand")
 		"hurt":
 			if f.state_frame >= f.stun:

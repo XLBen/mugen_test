@@ -90,3 +90,26 @@ func test_socd() -> void:
 	check_eq(InputBits.clean_socd(U | D), U, "up+down = up")
 	check(InputBits.to_numpad(R, 1) == 6 and InputBits.to_numpad(R, -1) == 4, "numpad flips with facing")
 	check(InputBits.to_numpad(D | L, 1) == 1 and InputBits.to_numpad(U | L, -1) == 9, "diagonals")
+
+
+## 月姬格斗式跳跃：前 / 中 / 后跳各一套完整空中动画，按 上升 → 顶点 → 下落 的进度播放。
+func test_jump_animation_by_direction_and_arc() -> void:
+	var sim := new_sim()
+	var p1 := sim.fighters[0]
+	hold(sim, U | R, 0, 1)
+	var air := p1.moveset.states[p1.moveset.id("air")]
+	check_eq(AnimClock.anim_name(air, p1.jump_dir), "jump_f", "forward jump uses jump_f")
+	check_eq(AnimClock.anim_name(air, -1), "jump_b", "back jump uses jump_b")
+	check_eq(AnimClock.anim_name(air, 0), "jump", "neutral jump uses jump")
+	var stand := p1.moveset.states[p1.moveset.id("stand")]
+	check_eq(AnimClock.anim_name(stand, 1), stand.anim, "other states ignore jump direction")
+	var arc := AnimData.from_meta({"frames": [["a", 2], ["b", 2], ["c", 2], ["d", 2], ["e", 2], ["f", 2]]})
+	var v0 := 2000
+	check_eq(AnimClock.frame(air, arc, 0, v0, v0), 0, "takeoff = first frame")
+	check_eq(AnimClock.frame(air, arc, 0, 0, v0), 3, "apex = middle of the animation")
+	check_eq(AnimClock.frame(air, arc, 0, -v0, v0), 5, "landing speed = last frame")
+	while p1.state_name() != "landing":
+		hold(sim, 0, 0, 1)
+	check_eq(p1.jump_dir, 1, "landing keeps the jump direction (land_f)")
+	hold(sim, 0, 0, DUMMY.landing_frames + 1)
+	check_eq(p1.jump_dir, 0, "direction cleared once standing")

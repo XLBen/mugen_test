@@ -48,6 +48,9 @@ func apply_anim_boxes(lib: Dictionary) -> void:
 		if not anim.has_boxes():
 			continue
 		s.anim_data = anim
+		if s.anim_dir:
+			for k in 3:
+				s.anim_alts[k] = lib.get(AnimClock.anim_name(s, k - 1), anim)
 		s.hurtboxes = []
 		for h: Dictionary in s.hitboxes:
 			var hits: Array = anim.hit[AnimClock.frame(s, anim, h.from, 0)]

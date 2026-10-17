@@ -146,8 +146,9 @@ func push_right() -> int:
 func hurtboxes() -> Array:
 	var s := sd()
 	var local: Array
-	if s.anim_data != null:
-		local = s.anim_data.hurt[AnimClock.frame(s, s.anim_data, state_frame, vy)]
+	var anim: AnimData = s.anim_alts[jump_dir + 1] if s.anim_dir else s.anim_data
+	if anim != null:
+		local = anim.hurt[AnimClock.frame(s, anim, state_frame, vy, def.jump_velocity)]
 	if local.is_empty():
 		local = def.body_hurtbox(s.type) + s.extra_hurtboxes_at(state_frame)
 	var out := []
