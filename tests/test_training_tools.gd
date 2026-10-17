@@ -101,3 +101,33 @@ func test_input_log_compresses() -> void:
 	check_eq(log.entries.size(), 4, "consecutive identical inputs merge")
 	check_eq(log.entries[3][1], 5, "held frames counted")
 	check_eq(InputLog.describe(log.entries[0][0], 1), "6 LP", "latest entry text")
+
+
+## 连段挑战：按设计脚本打出就判成功；只打第一招则停在第 1 步并在连段结束后归零。
+func test_combo_trial_tracks_progress() -> void:
+	var trial := ComboTrial.new()
+	trial.setup(KAGURA)
+	trial.enabled = true
+	var c := trial.current()
+	var routes: GDScript = load("res://tests/test_combo_routes.gd")
+	var sim := char_sim(KAGURA, DUMMY, c.get("gap", 75))
+	var inputs := InputScript.parse(routes.build_script(c))
+	var succeeded := false
+	for i in inputs.size() + 60:
+		sim.step([inputs[i] if i < inputs.size() else 0, 0])
+		trial.record(sim)
+		succeeded = succeeded or trial.success_timer > 0
+	check(succeeded, "designed input clears the trial")
+	check(trial.cleared.has(0), "marked as cleared")
+	sim = char_sim(KAGURA, DUMMY, c.get("gap", 75))
+	trial.restart()
+	var first: String = c.script[0][0]
+	inputs = InputScript.parse(first)
+	var peak := 0
+	for i in 80:
+		sim.step([inputs[i] if i < inputs.size() else 0, 0])
+		trial.record(sim)
+		peak = maxi(peak, trial.step)
+	check_eq(peak, 1, "first move counts as step 1")
+	check_eq(trial.step, 0, "dropping the combo resets the trial")
+	check_eq(ComboTrial.notation_parts(c).size(), c.states.size(), "notation splits into one part per move")

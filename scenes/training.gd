@@ -3,7 +3,7 @@ extends Node2D
 ## F1 判定框  F2 存档  F3 读档  F4 暂停  F5 单帧步进（暂停时）  F6 重置
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 ## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
-## 训练模式：1 假人模式  2 自动防御  3 录制/回放  Shift+F6 版边重置
+## 训练模式：1 假人模式  2 自动防御  3 录制/回放  4 连段挑战  5 下一条连段（Shift+5 上一条）  Shift+F6 版边重置
 ## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
@@ -26,6 +26,7 @@ var picks: Array[int] = [0, 1]
 var meter := FrameMeter.new()
 var dummy := TrainingDummy.new()
 var logs := [InputLog.new(), InputLog.new()]
+var trial := ComboTrial.new()
 
 @onready var view: MatchView = $MatchView
 @onready var hud: Label = $HUD/Info
@@ -53,6 +54,8 @@ func _ready() -> void:
 	overlay.meter = meter
 	overlay.dummy = dummy
 	overlay.logs = logs
+	overlay.trial = trial
+	trial.setup(roster[picks[0]])
 	view.load_sprites()
 
 
@@ -71,6 +74,8 @@ func advance(human: Array[int]) -> void:
 	view.fx.consume(sim.events)
 	sfx.consume(sim.events)
 	meter.record(sim)
+	if sim.training:
+		trial.record(sim)
 	for i in 2:
 		logs[i].record(InputBits.clean_socd(last_inputs[i]))
 
@@ -140,6 +145,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			dummy.guard = (dummy.guard + 1) % TrainingDummy.Guard.size()
 		KEY_3:
 			dummy.toggle_record()
+		KEY_4:
+			trial.enabled = not trial.enabled
+			trial.restart()
+		KEY_5:
+			trial.next(-1 if key.shift_pressed else 1)
 
 
 ## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
@@ -193,6 +203,8 @@ static func _local_order(dir_name: String) -> int:
 func _cycle_character(player: int) -> void:
 	picks[player] = (picks[player] + 1) % roster.size()
 	sim.fighters[player].set_def(roster[picks[player]])
+	if player == 0:
+		trial.setup(roster[picks[0]])
 	sim.reset()
 	saved_state = {}
 	view.load_sprites()

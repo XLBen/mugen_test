@@ -21,6 +21,7 @@ func build() -> void:
 	throw(70, 1300, 5)
 	dashes(800, 12, 22, 700, 14, 26, 8)
 	dash_commands()
+	_combos()
 
 
 func _normals() -> void:
@@ -113,3 +114,17 @@ func _specials() -> void:
 				"juggle_limit": 3, "blockstun": 18, "push": 600, "block_push": 800, "strength": 2}}],
 	}
 	command("623P", "special", {"motion": "623", "buttons": "P", "state": "hammer"})
+
+
+## 连段路线（投技型：连段短、伤害高；主要靠打康浮空和指令投二择，超杀是投技，不放进连段）。
+func _combos() -> void:
+	combo("Light confirm", "5LP > 5LP xx 623P", ["5lp", "5lp", "hammer"],
+		[["5LP", 8], ["5LP", 6], ["6,2,3HP", 0]], {"hits": 3, "imported_only": true})
+	combo("Low confirm", "2MK xx 214P", ["2mk", "charge"],
+		[["2MK", 10], ["2,1,4HP", 0]], {"hits": 2})
+	combo("Jump in", "j.HP > 5HP xx 214P", ["j_hp", "5hp", "charge"],
+		[["9", 34], ["5HP", 23], ["5HP", 12], ["2,1,4HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
+	combo("Counter launch", "CH 5HP xx 623P", ["5hp", "hammer"],
+		[["5HP", 12], ["6,2,3HP", 0]], {"hits": 2, "p2": "5x8,5LP", "gap": 110, "imported_only": true})
+	combo("Drive", "5MP xx 214PP", ["5mp", "charge_od"],
+		[["5MP", 10], ["2,1,4LP+MP", 0]], {"hits": 2})

@@ -19,6 +19,8 @@ var commands := []
 var projectiles := {}
 ## 普攻帧数据表（测试用）：名字 → {on_hit, on_block, knockdown}
 var frame_table := {}
+## 设计好的连段（训练模式连段挑战和 test_combo_routes 共用），见 combo()
+var combos := []
 
 
 ## 子类实现：登记全部招式。
@@ -30,7 +32,7 @@ func data() -> Dictionary:
 	build()
 	commands.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return PRIORITY[a.priority] < PRIORITY[b.priority] if a.priority != b.priority else a.order < b.order)
-	return {"states": states, "commands": commands, "projectiles": projectiles}
+	return {"states": states, "commands": commands, "projectiles": projectiles, "combos": combos}
 
 
 func command(name: String, priority: String, d: Dictionary) -> void:
@@ -39,6 +41,22 @@ func command(name: String, priority: String, d: Dictionary) -> void:
 	c.priority = priority
 	c.order = commands.size()
 	commands.append(c)
+
+
+## 登记一条连段。
+## notation：显示用的写法（> 目押 / 连打，xx 取消）；states：P1 依次进入的招式状态（挑战按它判定进度）；
+## script：[[输入, 之后等待的帧数], ...]，输入写法同 InputScript（如 "2LK"、"2,3,6LK"），测试按它逐帧输入；
+## opts：gap 开始时的距离（像素）、p2 对手的输入脚本（打康起手）、meter 超杀槽全满、hits 至少的连段数、
+##       strict 不要求输入窗口的步骤、imported_only 只对导入人物成立（依赖其动画的攻击判定，内置占位美术够不到）。
+func combo(name: String, notation: String, states_: Array, script: Array, opts := {}) -> void:
+	var c := {"name": name, "notation": notation, "states": states_, "script": script}
+	c.merge(opts)
+	combos.append(c)
+
+
+## 这条连段对某个角色是否适用（内置占位角色跳过 imported_only 的连段）。
+static func combo_applies(c: Dictionary, def: FighterDef) -> bool:
+	return not c.get("imported_only", false) or not def.sprite_dir.begins_with("res://characters/")
 
 
 ## 地面普攻。cancel：接触后可以取消到的目标（kind 名或状态名）。

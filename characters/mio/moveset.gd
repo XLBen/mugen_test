@@ -24,6 +24,7 @@ func build() -> void:
 	throw(58, 1100, 5)
 	dashes(900, 10, 20, 950, 13, 22, 8)
 	dash_commands()
+	_combos()
 
 
 func _normals() -> void:
@@ -135,3 +136,19 @@ func _super() -> void:
 		"anim": "storm", "lifetime": 120,
 		"hit": {"damage": 450, "chip": 110, "hitstun": 30, "blockstun": 20, "hitstop": 5, "push": 150, "block_push": 150,
 			"juggle_limit": 10, "min_scale": 30, "meter": 0, "strength": 1}}
+
+
+## 连段路线（远程型：中距离用 2MK / 5MP 取消纸符确认，近身才用轻攻击；623K 三段作收尾）。
+func _combos() -> void:
+	combo("Close confirm", "2LP > 5LP xx 236LP", ["2lp", "5lp", "charm_l"],
+		[["2LP", 8], ["5LP", 6], ["2,3,6LP", 0]], {"hits": 3})
+	combo("Poke confirm", "2MK xx 236HP", ["2mk", "charm_h"],
+		[["2MK", 10], ["2,3,6HP", 0]], {"hits": 2, "gap": 110})
+	combo("Anti-air finish", "5LP > 5LP xx 623K", ["5lp", "5lp", "spin"],
+		[["5LP", 8], ["5LP", 6], ["6,2,3MK", 0]], {"hits": 5, "imported_only": true})
+	combo("Jump in", "j.HP > 5MP xx 236HP", ["j_hp", "5mp", "charm_h"],
+		[["9", 33], ["5HP", 23], ["5MP", 10], ["2,3,6HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
+	combo("Drive", "5HP xx 236PP", ["5hp", "charm_od"],
+		[["5HP", 12], ["2,3,6LP+MP", 0]], {"hits": 3})
+	combo("Meter dump", "5MP xx 236236P", ["5mp", "storm"],
+		[["5MP", 10], ["2,3,6,2,3,6HP", 0]], {"hits": 5, "meter": true})
