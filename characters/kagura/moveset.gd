@@ -72,11 +72,11 @@ func _specials() -> void:
 		}
 		command("236" + k.to_upper() + "K", "special", {"motion": "236", "buttons": k.to_upper() + "K", "state": "slash_" + k})
 
-	# OD 裂空斩：两段，1~10 帧打击无敌，被防 -2
+	# OD 裂空斩：两段，1~10 帧打击无敌，被防 -2；冲得比普通版远（打空约 280 像素，命中时推着对手一起走）
 	states["slash_od"] = {
 		"type": "S", "kind": "special", "total": 10 + 8 + 18 - 1, "anim": "slash", "cost": {"drive": 20000},
-		"friction": 80, "invuln": [{"frames": [1, 10], "throw": false}],
-		"events": [{"frame": 3, "vx": 1400}, {"frame": 18, "vx": 0}],
+		"friction": 40, "invuln": [{"frames": [1, 10], "throw": false}],
+		"events": [{"frame": 3, "vx": 1900}, {"frame": 22, "vx": 0}],
 		"hitboxes": [
 			{"active": [10, 11], "boxes": [[10, 80, 70, 60]],
 				"hit": {"damage": 600, "hitstop": 8, "hitstun": 30, "blockstun": 20, "push": 100, "block_push": 100, "strength": 1}},
