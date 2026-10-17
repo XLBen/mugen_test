@@ -12,6 +12,10 @@ func _gap(def: FighterDef) -> int:
 	return (def.push_half_width + DUMMY.push_half_width) / SimConst.UNITS_PER_PX + 4
 
 
+func m_lib(def: FighterDef) -> Dictionary:
+	return AnimData.load_library(def.sprite_dir)
+
+
 func _press(normal: String) -> String:
 	return normal.substr(0, 1) + normal.substr(1).to_upper()
 
@@ -86,10 +90,11 @@ func test_random_play_all_pairings() -> void:
 
 # ---------------------------------------------------------------- Kagura
 
-func test_kagura_gatling() -> void:
+func test_kagura_target_combo_replaces_gatlings() -> void:
 	var sim := char_sim(KAGURA, DUMMY, _gap(KAGURA))
-	var best := max_combo(sim, "5LP,5x5,5MP,5x8,5HP", "", 40)
-	check_eq(best, 3, "5LP > 5MP > 5HP gatling")
+	check_eq(max_combo(sim, "5MP,5x8,5HP", "", 40), 2, "5MP > HP target combo")
+	sim = char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	check_eq(max_combo(sim, "5LP,5x5,5MP", "", 40), 1, "no light-into-medium gatling (SF6)")
 
 
 func test_kagura_step_passes_through() -> void:
@@ -197,7 +202,7 @@ func test_attack_boxes_come_from_animation_frames() -> void:
 	for def: FighterDef in [KAGURA, VOLK, MIO]:
 		var m := Moveset.for_def(def)
 		for s in m.states:
-			if s.hitboxes.is_empty() or s.anim_data == null or s.keep_boxes:
+			if s.hitboxes.is_empty() or s.anim_data == null or s.keep_boxes or s.anim_data != m_lib(def).get(s.anim):
 				continue
 			var anim := s.anim_data
 			if not anim.has_phase(AnimData.Phase.ACTIVE):
@@ -317,3 +322,48 @@ func test_imported_attacks_have_drawn_hits() -> void:
 			var anim := s.anim_data
 			check(anim != null and anim.has_phase(AnimData.Phase.ACTIVE) or s.kind == "super",
 				"%s %s: animation shows the strike" % [def.display_name, s.name])
+
+
+# ---------------------------------------------------------------- 指令普攻 / 目标连段 / 后投 / 升龙强度
+
+func test_command_normal_overhead() -> void:
+	var sim := char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "6MP")
+	check_eq(sim.fighters[0].state_name(), "6mp", "forward + MP is the command normal")
+	sim = char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "6MP", "1x30")
+	check(sim.fighters[1].health < DUMMY.max_health, "6MP overhead beats a crouching block")
+	sim = char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "6MP", "4x30")
+	check_eq(sim.fighters[1].health, DUMMY.max_health, "standing block stops it")
+	sim = char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "6LP,6LP+LK")
+	check(sim.fighters[1].is_in(["thrown"]) or sim.fighters[0].state_name() == "throw", "forward LP then LK still throws")
+
+
+func test_back_throw_switches_sides() -> void:
+	var sim := adjacent_sim()
+	var x1 := sim.fighters[0].x
+	play(sim, "4LP+LK", "", 60)
+	check(sim.fighters[1].x < x1, "back throw lands the opponent behind (x %d vs %d)" % [sim.fighters[1].x, x1])
+	check(sim.fighters[1].health < DUMMY.max_health, "back throw deals damage")
+
+
+func test_light_kicks_chain() -> void:
+	for def: FighterDef in [VOLK, MIO]:
+		var sim := char_sim(def, DUMMY, _gap(def))
+		check_eq(max_combo(sim, "2LK,5x5,2LP", "", 30), 2, "%s 2LK chains into 2LP" % def.display_name)
+
+
+func test_dp_strengths_differ() -> void:
+	var m := Moveset.for_def(KAGURA)
+	var l: StateDef = m.states[m.id("rising_l")]
+	var h: StateDef = m.states[m.id("rising_h")]
+	check(not l.is_invuln(1, true), "light DP is not throw invulnerable")
+	check(h.is_invuln(6, false) and not l.is_invuln(6, false), "heavy DP has longer invulnerability")
+	var sim := char_sim(KAGURA, DUMMY, 400)
+	play(sim, "6,2,3LK", "", 20)
+	var low := sim.fighters[0].y
+	sim = char_sim(KAGURA, DUMMY, 400)
+	play(sim, "6,2,3HK", "", 20)
+	check(sim.fighters[0].y > low, "heavy DP rises higher")

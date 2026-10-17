@@ -6,12 +6,13 @@ extends MovesetBuilder
 ##   236P   纸符       地面飞行道具（三种速度，飞得快，像飞刀）
 ##   空中 236P  落符   斜下方飞行道具
 ##   214P   封印       在前方放置符阵（P 越重越远），25 帧后启动，踩中浮空；同屏一个
-##   623K   缎带旋     三段对空，1~6 帧无敌
+##   623K   缎带旋     三段对空；L / M / H 无敌 4（只防打击）/ 6 / 8 帧，越重飞得越高
+## 指令普攻：6HK 远距离踢。目标连段：2MP > HP。
 ##   236PP / 623KK   OD 版本（两段纸符 / 更长无敌）
 ##   236236P 纸吹雪     超杀，慢速多段巨型道具
 
 const SPECIAL := ["special", "super"]
-const LIGHT_CHAIN := ["special", "super", "5lp", "2lp"]
+const LIGHT_CHAIN := ["special", "super", "5lp", "2lp", "2lk"]
 
 
 func build() -> void:
@@ -38,7 +39,13 @@ func _normals() -> void:
 	normal("2lp", "C", "LP", 4, 2, 8, 3, -1, [22, 85, 55, 18], L, {}, LIGHT_CHAIN)
 	normal("2mp", "C", "MP", 6, 3, 14, 2, -2, [25, 85, 80, 20], M, {}, SPECIAL)
 	normal("2hp", "C", "HP", 9, 5, 22, 1, -8, [0, 110, 70, 100], H, {"juggle_limit": 1})
-	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [22, 0, 60, 20], L, {"guard": "low"})
+	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [22, 0, 60, 20], L, {"guard": "low"}, LIGHT_CHAIN)
+	# 目标连段：2MP > HP（可必杀取消）
+	target_combo("tc_2mp_hp", "2mp", "HP", "5hp", 9, 3, 20, 1, -6, [30, 120, 115, 26], H, {"damage": 700,
+		"reach_cap": 145}, SPECIAL)
+	# 6HK：远距离踢，发生慢
+	command_normal("6hk", "6", "HK", 14, 3, 20, 1, -4, [30, 90, 125, 26], H, {"damage": 800, "step": [4, 13, 25]},
+		[], ["5hk"])
 	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [25, 0, 105, 20], M, {"guard": "low", "step": [4, 11, 15]}, SPECIAL)
 	normal("2hk", "C", "HK", 10, 3, 26, 0, -14, [25, 0, 110, 20], H, {"guard": "low", "effect": "knockdown",
 		"step": [4, 13, 45]})
@@ -116,12 +123,19 @@ func _spin() -> void:
 	hits.append({"active": [11, 13], "boxes": [[0, 90, 60, 130]],
 		"hit": {"damage": 600, "hitstop": 11, "effect": "launch", "air_vx": 300, "air_vy": 1300, "juggle_limit": 5,
 			"blockstun": 18, "push": 600, "block_push": 800, "strength": 2}})
-	states["spin"] = {
-		"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "spin",
-		"invuln": [{"frames": [1, 6]}], "events": [{"frame": 5, "vx": 220, "vy": 1900}], "hitboxes": hits,
+	var spin := {
+		"l": {"invuln": [{"frames": [1, 4], "throw": false}], "vx": 180, "vy": 1700},
+		"m": {"invuln": [{"frames": [1, 6]}], "vx": 220, "vy": 1900},
+		"h": {"invuln": [{"frames": [1, 8]}], "vx": 260, "vy": 2050},
 	}
-	command("623K", "special", {"motion": "623", "buttons": "K", "state": "spin"})
-	var od: Dictionary = states["spin"].duplicate(true)
+	for k in ["h", "m", "l"]:
+		var v: Dictionary = spin[k]
+		states["spin_" + k] = {
+			"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "spin",
+			"invuln": v.invuln, "events": [{"frame": 5, "vx": v.vx, "vy": v.vy}], "hitboxes": hits.duplicate(true),
+		}
+		command("623" + k.to_upper() + "K", "special", {"motion": "623", "buttons": k.to_upper() + "K", "state": "spin_" + k})
+	var od: Dictionary = states["spin_m"].duplicate(true)
 	od["cost"] = {"drive": 20000}
 	od["invuln"] = [{"frames": [1, 13]}]
 	od["events"] = [{"frame": 5, "vx": 260, "vy": 2100}]
@@ -149,11 +163,13 @@ func _combos() -> void:
 		[["2LP", 8], ["5LP", 6], ["2,3,6LP", 0]], {"hits": 3})
 	combo("牵制确认", "2MK xx 236HP", ["2mk", "charm_h"],
 		[["2MK", 10], ["2,3,6HP", 0]], {"hits": 2, "gap": 110})
-	combo("升龙收尾", "5LP > 5LP xx 623K", ["5lp", "5lp", "spin"],
+	combo("升龙收尾", "5LP > 5LP xx 623MK", ["5lp", "5lp", "spin_m"],
 		[["5LP", 8], ["5LP", 6], ["6,2,3MK", 0]], {"hits": 3, "imported_only": true})
 	combo("跳入", "j.HP > 5MP xx 236HP", ["j_hp", "5mp", "charm_h"],
 		[["9", 33], ["5HP", 23], ["5MP", 10], ["2,3,6HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
 	combo("OD 纸符", "5HP xx 236PP", ["5hp", "charm_od"],
 		[["5HP", 12], ["2,3,6LP+MP", 0]], {"hits": 3})
+	combo("目标连段", "2MP > HP xx 236HP", ["2mp", "tc_2mp_hp", "charm_h"],
+		[["2MP", 9], ["5HP", 10], ["2,3,6HP", 0]], {"hits": 3})
 	combo("超杀收尾", "5MP xx 236236P", ["5mp", "storm"],
 		[["5MP", 10], ["2,3,6,2,3,6HP", 0]], {"hits": 5, "meter": true})

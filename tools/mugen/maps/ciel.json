@@ -269,6 +269,15 @@
 			],
 			"loop": true
 		},
-		"wakeup_back": 5121
+		"wakeup_back": 5121,
+		"6hk": {
+			"actions": [
+				216
+			],
+			"active": [
+				6,
+				7
+			]
+		}
 	}
 }

@@ -136,8 +136,11 @@ static func _start_throw(atk: Fighter, dfn: Fighter) -> void:
 		return
 	var counter := counter_type(dfn)
 	var hold: String = atk.sd().name + "_hit"
+	var back := atk.state_name() == "throw_back"
 	atk.set_state(hold)
 	atk.vx = 0
+	if back:
+		atk.facing = -atk.facing # 后投：抓住后转身，把对手放到原来的身后
 	dfn.set_state("thrown")
 	dfn.vx = 0
 	dfn.vy = 0

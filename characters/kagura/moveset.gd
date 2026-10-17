@@ -2,18 +2,19 @@ extends MovesetBuilder
 ## Kagura —— 速攻型（短刀）。
 ##
 ## 特点：走速与冲刺最快、普攻发生快但距离短，没有飞行道具。
-## 连段路线（类 Gatling）：轻 → 中 → 重 逐级取消，普攻可必杀取消，突进斩可超杀取消。
+## 连段路线（SF6 式）：轻攻击互相连打，中攻击 / 重拳可必杀取消；目标连段 5MP > HP、5LK > MK；突进斩可超杀取消。
+## 指令普攻：6MP 中段（发生 20）。
 ## 必杀技：
 ##   236K  裂空斩     突进斩，K 越重距离越远，HK 命中击倒
 ##   214P  影步       快速前冲，可穿过对手（不参与推挤），前段打击无敌
-##   623K  月轮       对空翻踢，1~5 帧无敌
+##   623K  月轮       对空翻踢，L / M / H 无敌 4（只防打击）/ 5 / 7 帧，越重越高越痛
 ##   空中 214K  坠星  斜下俯冲踢，上段
 ##   236KK / 623KK   OD 版本
 ##   236236K 千刃     超必杀，突进五连斩
 
 const SPECIAL := ["special", "super"]
-const FROM_LIGHT := ["special", "super", "5lp", "2lp", "2lk", "5mp", "2mp", "5mk", "2mk"]
-const FROM_MEDIUM := ["special", "super", "5hp", "2hp", "5hk", "2hk"]
+const FROM_LIGHT := ["special", "super", "5lp", "2lp", "2lk"]
+const FROM_MEDIUM := ["special", "super"]
 
 
 func build() -> void:
@@ -29,20 +30,27 @@ func build() -> void:
 
 
 func _normals() -> void:
-	normal("5lp", "S", "LP", 4, 2, 6, 5, 1, [22, 135, 50, 18], L, {"step": [2, 5, 10]}, FROM_LIGHT)
+	normal("5lp", "S", "LP", 4, 2, 6, 5, -1, [22, 135, 50, 18], L, {"step": [2, 5, 10]}, FROM_LIGHT)
 	normal("5mp", "S", "MP", 5, 2, 11, 5, 1, [22, 128, 62, 20], M, {"step": [1, 6, 25]}, FROM_MEDIUM)
 	normal("5hp", "S", "HP", 8, 3, 16, 3, -2, [22, 120, 75, 24], H, {"push": 450, "step": [3, 10, 30]}, SPECIAL)
 	normal("5lk", "S", "LK", 4, 2, 8, 3, -1, [18, 70, 50, 22], L, {}, FROM_LIGHT)
 	normal("5mk", "S", "MK", 6, 3, 12, 3, -2, [22, 55, 70, 22], M, {}, FROM_MEDIUM)
 	normal("5hk", "S", "HK", 9, 3, 18, 2, -4, [22, 95, 85, 28], H, {"counter_effect": "launch", "air_vy": 1200,
 		"step": [2, 9, 20]})
-	normal("2lp", "C", "LP", 4, 2, 6, 4, 0, [22, 85, 45, 18], L, {}, FROM_LIGHT)
-	normal("2mp", "C", "MP", 5, 2, 10, 4, 1, [22, 85, 58, 20], M, {}, FROM_MEDIUM)
+	normal("2lp", "C", "LP", 4, 2, 6, 4, -1, [22, 85, 45, 18], L, {}, FROM_LIGHT)
+	normal("2mp", "C", "MP", 5, 2, 10, 4, -2, [22, 85, 58, 20], M, {}, FROM_MEDIUM)
 	normal("2hp", "C", "HP", 7, 4, 18, 1, -6, [8, 110, 48, 90], H, {"juggle_limit": 1, "step": [1, 8, 45]})
 	normal("2lk", "C", "LK", 4, 2, 7, 2, -1, [22, 0, 50, 20], L, {"guard": "low"}, FROM_LIGHT)
 	normal("2mk", "C", "MK", 7, 3, 14, 1, -3, [22, 0, 72, 20], M, {"guard": "low"}, FROM_MEDIUM)
 	normal("2hk", "C", "HK", 8, 3, 22, 0, -11, [22, 0, 85, 20], H, {"guard": "low", "effect": "knockdown",
 		"step": [3, 12, 80]})
+	# 目标连段：5MP > HP（命中可必杀取消）、5LK > MK
+	target_combo("tc_mp_hp", "5mp", "HP", "5hp", 8, 3, 18, 2, -5, [22, 120, 75, 24], H, {"damage": 700, "push": 450},
+		SPECIAL)
+	target_combo("tc_lk_mk", "5lk", "MK", "5mk", 6, 3, 13, 3, -3, [22, 55, 70, 22], M, {"damage": 500}, SPECIAL)
+	# 6MP：中段（站着才能防），发生慢
+	command_normal("6mp", "6", "MP", 20, 2, 16, 2, -2, [20, 70, 65, 70], M, {"guard": "high", "damage": 600,
+		"step": [6, 18, 30]}, [], ["5mp"])
 
 
 func _air_normals() -> void:
@@ -98,16 +106,23 @@ func _specials() -> void:
 	}
 	command("214P", "special", {"motion": "214", "buttons": "P", "state": "step"})
 
-	# 月轮：623K，对空翻踢
-	states["rising"] = {
-		"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "rising",
-		"invuln": [{"frames": [1, 5]}],
-		"events": [{"frame": 5, "vx": 150, "vy": 1450}],
-		"hitboxes": [{"active": [5, 12], "boxes": [[5, 90, 55, 110]],
-			"hit": {"damage": 1100, "hitstop": 11, "effect": "launch", "air_vx": 250, "air_vy": 1300,
-				"juggle_limit": 3, "blockstun": 18, "push": 600, "block_push": 800, "strength": 2}}],
+	# 月轮：623K，对空翻踢。L 只有打击无敌、飞得低；H 无敌最长、最高最痛
+	var rising := {
+		"l": {"invuln": [{"frames": [1, 4], "throw": false}], "vy": 1300, "active": [5, 11], "damage": 900},
+		"m": {"invuln": [{"frames": [1, 5]}], "vy": 1450, "active": [5, 12], "damage": 1000},
+		"h": {"invuln": [{"frames": [1, 7]}], "vy": 1600, "active": [5, 13], "damage": 1200},
 	}
-	command("623K", "special", {"motion": "623", "buttons": "K", "state": "rising"})
+	for k in ["h", "m", "l"]:
+		var v: Dictionary = rising[k]
+		states["rising_" + k] = {
+			"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "rising",
+			"invuln": v.invuln,
+			"events": [{"frame": 5, "vx": 150, "vy": v.vy}],
+			"hitboxes": [{"active": v.active, "boxes": [[5, 90, 55, 110]],
+				"hit": {"damage": v.damage, "hitstop": 11, "effect": "launch", "air_vx": 250, "air_vy": 1300,
+					"juggle_limit": 3, "blockstun": 18, "push": 600, "block_push": 800, "strength": 2}}],
+		}
+		command("623" + k.to_upper() + "K", "special", {"motion": "623", "buttons": k.to_upper() + "K", "state": "rising_" + k})
 	states["rising_od"] = {
 		"type": "S", "kind": "special", "air_from": 5, "land": "landing_long", "anim": "rising", "cost": {"drive": 20000},
 		"invuln": [{"frames": [1, 12]}],
@@ -153,13 +168,15 @@ func _super() -> void:
 func _combos() -> void:
 	combo("下段确认", "2LK > 2LP > 5LP xx 236LK", ["2lk", "2lp", "5lp", "slash_l"],
 		[["2LK", 7], ["2LP", 7], ["5LP", 6], ["2,3,6LK", 0]], {"hits": 4})
-	combo("Gatling 连续技", "5MP > 5HP xx 236HK", ["5mp", "5hp", "slash_h"],
+	combo("目标连段", "5MP > HP xx 236HK", ["5mp", "tc_mp_hp", "slash_h"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6HK", 0]], {"hits": 3})
 	combo("跳入", "j.HK > 5HP xx 236HK", ["j_hk", "5hp", "slash_h"],
 		[["9", 33], ["5HK", 19], ["5HP", 10], ["2,3,6HK", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
 	combo("确反", "PC 5HP > 5MP xx 236HK", ["5hp", "5mp", "slash_h"],
 		[["5HP", 40], ["5MP", 8], ["2,3,6HK", 0]], {"hits": 3, "gap": 95, "p2_recovery": "5hk"})
-	combo("超杀收尾", "5MP > 5HP xx 236MK xx 236236K", ["5mp", "5hp", "slash_m", "super_k"],
+	combo("超杀收尾", "5MP > HP xx 236MK xx 236236K", ["5mp", "tc_mp_hp", "slash_m", "super_k"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6MK", 22], ["2,3,6,2,3,6HK", 0]], {"hits": 8, "meter": true})
-	combo("OD 追加", "5MP > 5HP xx 236KK", ["5mp", "5hp", "slash_od"],
+	combo("OD 追加", "5MP > HP xx 236KK", ["5mp", "tc_mp_hp", "slash_od"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6LK+MK", 0]], {"hits": 4})
+	combo("目标连段（脚）", "5LK > MK xx 236LK", ["5lk", "tc_lk_mk", "slash_l"],
+		[["5LK", 6], ["5MK", 8], ["2,3,6LK", 0]], {"hits": 3})

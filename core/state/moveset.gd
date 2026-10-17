@@ -63,7 +63,8 @@ func apply_anim_boxes(lib: Dictionary) -> void:
 						s.anim_alts.append(lib[alt_name])
 						break
 		s.hurtboxes = []
-		if anim.has_phase(AnimData.Phase.ACTIVE) and not s.keep_boxes:
+		# 借来的动画（回退）只提供受击盒：它的攻击框属于别的招式
+		if anim.has_phase(AnimData.Phase.ACTIVE) and not s.keep_boxes and anim_name == s.anim:
 			for h: Dictionary in s.hitboxes:
 				var hits := _hits_between(s, anim, h.from, h.to)
 				if not hits.is_empty():

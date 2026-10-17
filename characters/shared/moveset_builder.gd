@@ -95,6 +95,28 @@ func normal(state_name: String, type: String, button: String, startup: int, acti
 		"state": state_name})
 
 
+## 指令普攻（6MP 中段、4HP 对空等）：按键那一帧按着前（dir "6"）或后（"4"）。参数同 normal()；
+## fallback：角色没有专门动画时借用的动画。
+func command_normal(state_name: String, dir: String, button: String, startup: int, active: int, recovery: int,
+		on_hit: int, on_block: int, box: Array, base: Dictionary, extra := {}, cancel := [], fallback := []) -> void:
+	normal(state_name, "S", button, startup, active, recovery, on_hit, on_block, box, base, extra, cancel)
+	commands.pop_back()
+	states[state_name].anim_fallback = fallback
+	command(state_name, "cmd_normal", {"buttons": button, "stance": "forward" if dir == "6" else "back", "state": state_name})
+
+
+## 目标连段（Target Combo）：from 接触对手后在取消窗口里按 button，出 state_name（只能这样出）。
+## anim：借用的动画（通常是同按键的普攻）。参数同 normal()，有利帧按单独出招计算（不进帧数表）。
+func target_combo(state_name: String, from: String, button: String, anim: String, startup: int, active: int,
+		recovery: int, on_hit: int, on_block: int, box: Array, base: Dictionary, extra := {}, cancel := []) -> void:
+	normal(state_name, "S", button, startup, active, recovery, on_hit, on_block, box, base, extra, cancel)
+	commands.pop_back()
+	frame_table.erase(state_name)
+	states[state_name].anim = anim
+	states[from].cancel = states[from].cancel + [state_name]
+	command(from + ">" + button, "normal", {"buttons": button, "where": "cancel", "state": state_name})
+
+
 ## 空中普攻：命中/防御硬直直接给定（有利帧取决于跳入高度），全部是上段。
 func air(state_name: String, button: String, startup: int, active: int, hitstun: int, blockstun: int,
 		box: Array, base: Dictionary, extra := {}) -> void:
@@ -110,7 +132,7 @@ func air(state_name: String, button: String, startup: int, active: int, hitstun:
 	command(state_name, "normal", {"buttons": button, "where": "air", "state": state_name})
 
 
-## 通用投（LP+LK）。range_px：投判定向前的长度。
+## 通用投（LP+LK）与后投（4LP+LK：抓住后转身，把对手扔到身后）。range_px：投判定向前的长度。
 func throw(range_px := 60, damage := 1200, startup := 5) -> void:
 	states["throw"] = {
 		"type": "S", "kind": "throw", "total": startup + 3 + 20 - 1, "anim": "throw",
@@ -121,6 +143,15 @@ func throw(range_px := 60, damage := 1200, startup := 5) -> void:
 		"throw_release": 30, "throw_offset": 72,
 		"throw_hit": {"damage": damage, "hitstop": 6, "air_vx": 500, "air_vy": 700},
 	}
+	var back: Dictionary = states["throw"].duplicate(true)
+	back.anim = "throw_back"
+	back.anim_fallback = ["throw"]
+	states["throw_back"] = back
+	var back_hit: Dictionary = states["throw_hit"].duplicate(true)
+	back_hit.anim = "throw_back_hit"
+	back_hit.anim_fallback = ["throw_hit"]
+	states["throw_back_hit"] = back_hit
+	command("throw_back", "throw", {"buttons": "LP+LK", "stance": "back", "state": "throw_back"})
 	command("throw", "throw", {"buttons": "LP+LK", "state": "throw"})
 
 

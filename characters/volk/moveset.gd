@@ -5,12 +5,13 @@ extends MovesetBuilder
 ## 必杀技：
 ##   360P   钢铁粉碎   指令投（不可拆），P 越轻范围越大、伤害越低；起跳预备中也能出
 ##   214P   野牛冲撞   带一次霸体的肩撞，命中击倒
-##   623P   铁锤       对空上勾拳，1~7 帧打击无敌，原地不起飞
+##   623P   铁锤       对空上勾拳，原地不起飞；L / M / H 打击无敌 4 / 6 / 8 帧，越重越痛、收招越长
+## 指令普攻：4HP 对空直拳（判定偏上，可打浮空）。目标连段：5MP > HK（击倒）。
 ##   360PP / 214PP   OD 版本（范围更大 / 两次霸体）
 ##   236236P 西伯利亚坠落  超杀指令投，范围很大
 
 const SPECIAL := ["special", "super"]
-const LIGHT_CHAIN := ["special", "super", "5lp", "2lp"]
+const LIGHT_CHAIN := ["special", "super", "5lp", "2lp", "2lk"]
 
 
 func build() -> void:
@@ -31,15 +32,21 @@ func _normals() -> void:
 	normal("5mp", "S", "MP", 7, 3, 14, 3, -1, [28, 130, 80, 24], with(M, {"damage": 700}), {"step": [3, 9, 30]}, SPECIAL)
 	normal("5hp", "S", "HP", 11, 4, 22, 2, -5, [28, 120, 100, 30], heavy,
 		{"counter_effect": "launch", "air_vy": 1100, "push": 450, "step": [4, 12, 40]}, SPECIAL)
-	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L, {"step": [3, 6, 20]})
+	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L, {"step": [3, 6, 20]}, LIGHT_CHAIN)
 	normal("5mk", "S", "MK", 9, 3, 16, 2, -3, [28, 55, 95, 26], with(M, {"damage": 750}), {"step": [3, 10, 30]})
 	normal("5hk", "S", "HK", 13, 4, 22, 1, -6, [28, 95, 110, 34], with(heavy, {"damage": 1100}),
 		{"armor": {"frames": [5, 12], "hits": 1}, "step": [5, 15, 50]})
 	normal("2lp", "C", "LP", 5, 2, 8, 3, 0, [25, 85, 52, 20], L, {}, LIGHT_CHAIN)
 	normal("2mp", "C", "MP", 7, 3, 13, 3, -1, [28, 85, 75, 22], with(M, {"damage": 700}), {"step": [2, 8, 25]}, SPECIAL)
 	normal("2hp", "C", "HP", 10, 4, 24, 1, -9, [10, 115, 58, 105], heavy, {"juggle_limit": 1})
-	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [25, 0, 58, 22], L, {"guard": "low"})
+	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [25, 0, 58, 22], L, {"guard": "low"}, LIGHT_CHAIN)
 	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [28, 0, 90, 22], with(M, {"damage": 700}), {"guard": "low", "step": [2, 10, 30]}, SPECIAL)
+	# 目标连段：5MP > HK，击倒
+	target_combo("tc_mp_hk", "5mp", "HK", "5hk", 10, 4, 22, 0, -7, [28, 95, 110, 34], with(heavy, {"damage": 900}),
+		{"effect": "knockdown"})
+	# 4HP：对空直拳，判定偏上，可以打中浮空的对手
+	command_normal("4hp", "4", "HP", 8, 4, 20, 1, -7, [10, 130, 70, 90], heavy, {"juggle_limit": 1, "damage": 900},
+		[], ["2hp"])
 	normal("2hk", "C", "HK", 11, 3, 26, 0, -14, [28, 0, 105, 24], with(heavy, {"damage": 1100}),
 		{"guard": "low", "effect": "knockdown", "step": [2, 12, 40]})
 
@@ -106,26 +113,30 @@ func _specials() -> void:
 	states["charge_od"] = od
 	command("214PP", "od", {"motion": "214", "buttons": "PP", "state": "charge_od"})
 
-	# 铁锤：623P。原地对空，1~7 帧打击无敌，收招长
-	states["hammer"] = {
-		"type": "S", "kind": "special", "total": 6 + 5 + 28 - 1, "anim": "hammer",
-		"invuln": [{"frames": [1, 7], "throw": false}],
-		"hitboxes": [{"active": [6, 10], "boxes": [[5, 110, 62, 115]],
-			"hit": {"damage": 1300, "hitstop": 12, "effect": "launch", "air_vx": 300, "air_vy": 1400,
-				"juggle_limit": 3, "blockstun": 18, "push": 600, "block_push": 800, "strength": 2}}],
-	}
-	command("623P", "special", {"motion": "623", "buttons": "P", "state": "hammer"})
+	# 铁锤：623P。原地对空，打击无敌（不防投），收招长；越重无敌越长、越痛、收招越长
+	var hammer := {"l": [4, 1100, 24], "m": [6, 1200, 26], "h": [8, 1300, 28]}
+	for k in ["h", "m", "l"]:
+		var v: Array = hammer[k]
+		states["hammer_" + k] = {
+			"type": "S", "kind": "special", "total": 6 + 5 + v[2] - 1, "anim": "hammer",
+			"invuln": [{"frames": [1, v[0]], "throw": false}],
+			"hitboxes": [{"active": [6, 10], "boxes": [[5, 110, 62, 115]],
+				"hit": {"damage": v[1], "hitstop": 12, "effect": "launch", "air_vx": 300, "air_vy": 1400,
+					"juggle_limit": 3, "blockstun": 18, "push": 600, "block_push": 800, "strength": 2}}],
+		}
+		command("623" + k.to_upper() + "P", "special", {"motion": "623", "buttons": k.to_upper() + "P", "state": "hammer_" + k})
 
 
 ## 连段路线（投技型：连段短、伤害高；主要靠打康浮空和指令投二择，超杀是投技，不放进连段）。
 func _combos() -> void:
-	combo("轻攻击确认", "5LP > 5LP xx 623P", ["5lp", "5lp", "hammer"],
+	combo("轻攻击确认", "5LP > 5LP xx 623HP", ["5lp", "5lp", "hammer_h"],
 		[["5LP", 8], ["5LP", 6], ["6,2,3HP", 0]], {"hits": 3, "imported_only": true})
 	combo("下段确认", "2MK xx 214P", ["2mk", "charge"],
 		[["2MK", 10], ["2,1,4HP", 0]], {"hits": 2})
 	combo("跳入", "j.HP > 5HP xx 214P", ["j_hp", "5hp", "charge"],
 		[["9", 34], ["5HP", 23], ["5HP", 12], ["2,1,4HP", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
-	combo("打康浮空", "CH 5HP xx 623P", ["5hp", "hammer"],
+	combo("打康浮空", "CH 5HP xx 623HP", ["5hp", "hammer_h"],
 		[["5HP", 12], ["6,2,3HP", 0]], {"hits": 2, "p2": "5x8,5LP", "gap": 110, "imported_only": true})
 	combo("OD 冲撞", "5MP xx 214PP", ["5mp", "charge_od"],
 		[["5MP", 10], ["2,1,4LP+MP", 0]], {"hits": 2})
+	combo("目标连段", "5MP > HK", ["5mp", "tc_mp_hk"], [["5MP", 9], ["5HK", 0]], {"hits": 2})
