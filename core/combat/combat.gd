@@ -62,7 +62,7 @@ static func resolve(sim: MatchSim) -> void:
 	for i in strikes.size():
 		var st: Array = strikes[i]
 		st[0].hit_mask |= 1 << st[2]
-		apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i][0], st[0], decisions[i][1])
+		apply_hit(sim, st[0].x, st[0].facing, st[1], st[3], decisions[i][0], st[0], decisions[i][1], st[4])
 
 	_resolve_projectiles(sim)
 
@@ -83,8 +83,9 @@ static func _find_strike(atk: Fighter, dfn: Fighter, s: StateDef) -> Array:
 			var world := []
 			for b: PackedInt32Array in h.boxes:
 				world.append(Box.to_world(atk.x, atk.y, atk.facing, b))
-			if Box.any_overlap(world, hurt):
-				return [atk, dfn, i, hd]
+			var point := Box.contact_point(world, hurt)
+			if not point.is_empty():
+				return [atk, dfn, i, hd, point]
 		i += 1
 	return []
 
@@ -174,14 +175,20 @@ static func scaled_damage(dfn: Fighter, base: int, min_scale := SCALE_MIN) -> in
 
 
 ## 应用一次命中/防御。melee 为 null 表示飞行道具（发射者不顿帧、不反推）。
+## point：接触点 [x, y]（火花位置），为空时取被打方身体中部。
 static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fighter, hd: HitDef,
-		blocked: bool, melee: Fighter, counter := Counter.NONE) -> void:
+		blocked: bool, melee: Fighter, counter := Counter.NONE, point := PackedInt32Array()) -> void:
 	var dir := signi(dfn.x - source_x)
 	if dir == 0:
 		dir = source_facing
+	if point.is_empty():
+		point = PackedInt32Array([dfn.x - dir * dfn.def.push_half_width / 2, dfn.y + dfn.push_height() * 2 / 3])
+	var fx := {"strength": hd.strength, "counter": counter, "dir": dir, "super": hd.source == "super"}
 	if not blocked and _absorbs(dfn, hd):
 		_armor_hit(sim, dfn, hd, melee)
+		sim.emit("armor", point[0], point[1], fx)
 		return
+	sim.emit("block" if blocked else "hit", point[0], point[1], fx)
 	var crouching := dfn.input_at(sim.frame) & InputBits.DOWN != 0
 	var was_juggled := dfn.state_name() == "hit_air"
 
@@ -256,6 +263,7 @@ static func _armor_hit(sim: MatchSim, dfn: Fighter, hd: HitDef, melee: Fighter) 
 
 
 static func apply_throw_release(sim: MatchSim, atk: Fighter, dfn: Fighter, hd: HitDef) -> void:
+	sim.emit("hit", dfn.x, dfn.y + 6000, {"strength": 2, "counter": dfn.counter_type, "dir": atk.facing, "super": false})
 	var damage := hd.damage
 	if dfn.counter_type == Counter.PUNISH:
 		damage = damage * PUNISH_THROW_DAMAGE_PCT / 100
@@ -287,6 +295,7 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 			if Box.overlap(sim.projectile_box(a), sim.projectile_box(b)):
 				a.hits -= 1
 				b.hits -= 1
+				sim.emit("clash", (a.x + b.x) / 2, (a.y + b.y) / 2, {"strength": 1, "counter": 0, "dir": 1, "super": false})
 	# 道具命中角色
 	for p in ps:
 		if p.hits <= 0 or not sim.projectile_live(p):
@@ -300,7 +309,8 @@ static func _resolve_projectiles(sim: MatchSim) -> void:
 		if not Box.any_overlap([sim.projectile_box(p)], dfn.hurtboxes()):
 			continue
 		var blocked := can_block(sim, dfn, p.x, hd)
-		apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn))
+		apply_hit(sim, p.x, p.facing, dfn, hd, blocked, null, Counter.NONE if blocked else counter_type(dfn),
+			PackedInt32Array([p.x + p.facing * 1500, p.y]))
 		p.hits -= 1
 		p.cooldown = sim.projectile_def(p).hit_interval
 	var alive: Array[Projectile] = []

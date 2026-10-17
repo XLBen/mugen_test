@@ -31,7 +31,7 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	_draw_meter(font)
 	_draw_logs(font)
-	var status := "dummy: %s   guard: %s   [1] mode  [2] guard  [3] record/playback  [Shift+F6] corner" % [
+	var status := "dummy: %s   guard: %s   [1] mode  [2] guard  [3] record/playback  [Shift+F6] corner  [F12] debug" % [
 		TrainingDummy.MODE_NAMES[dummy.mode], TrainingDummy.GUARD_NAMES[dummy.guard]]
 	if dummy.mode == TrainingDummy.Mode.RECORD:
 		status += "   ● REC %d" % dummy.recording.size()

@@ -24,3 +24,13 @@ static func any_overlap(list_a: Array, list_b: Array) -> bool:
 			if overlap(a, b):
 				return true
 	return false
+
+
+## 第一对相交盒子的交集中心 [x, y]；没有相交返回空数组。用来确定火花出现的位置。
+static func contact_point(list_a: Array, list_b: Array) -> PackedInt32Array:
+	for a: PackedInt32Array in list_a:
+		for b: PackedInt32Array in list_b:
+			if overlap(a, b):
+				return PackedInt32Array([(maxi(a[0], b[0]) + mini(a[2], b[2])) / 2,
+					(maxi(a[1], b[1]) + mini(a[3], b[3])) / 2])
+	return PackedInt32Array()

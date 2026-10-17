@@ -52,6 +52,7 @@ static func _events(f: Fighter, sim: MatchSim) -> void:
 			f.vy = e.vy
 		if e.has("freeze"):
 			sim.freeze = e.freeze
+			sim.emit("super", f.x, f.y + 12000)
 		if e.has("spawn"):
 			sim.spawn_projectile(f, e.spawn, e.get("x", 0) * SimConst.UNITS_PER_PX, e.get("y", 0) * SimConst.UNITS_PER_PX)
 

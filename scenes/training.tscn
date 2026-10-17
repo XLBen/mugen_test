@@ -4,6 +4,8 @@
 [ext_resource type="Script" path="res://view/match_view.gd" id="2_view"]
 [ext_resource type="Script" path="res://view/hud_view.gd" id="3_hud"]
 [ext_resource type="Script" path="res://view/training_overlay.gd" id="4_overlay"]
+[ext_resource type="Script" path="res://view/fx_layer.gd" id="5_fx"]
+[ext_resource type="Script" path="res://view/sfx.gd" id="6_sfx"]
 
 [node name="Training" type="Node2D"]
 script = ExtResource("1_training")
@@ -12,6 +14,12 @@ script = ExtResource("1_training")
 script = ExtResource("2_view")
 
 [node name="Camera2D" type="Camera2D" parent="MatchView"]
+
+[node name="FxLayer" type="Node2D" parent="MatchView"]
+script = ExtResource("5_fx")
+
+[node name="Sfx" type="Node" parent="."]
+script = ExtResource("6_sfx")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 

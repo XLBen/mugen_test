@@ -100,10 +100,13 @@ def air_pose(ch, **kw):
 
 
 def attack(start, active, recover=None):
-	"""攻击动画固定三帧：发生 / 持续 / 收招，显示层按状态阶段选帧。"""
+	"""攻击动画五帧：蓄力 / 出手 / 持续 / 收势 / 复原。显示层按状态阶段及阶段内进度选帧，
+	与具体帧数解耦（发生帧前半段显示蓄力，后半段显示出手，以此类推）。"""
 	if recover is None:
 		recover = lerp(active, start, 0.45)
-	return [(start, 1), (active, 1), (recover, 1)]
+	release = lerp(start, active, 0.6)
+	follow = lerp(active, recover, 0.35)
+	return [(start, 1), (release, 1), (active, 1), (follow, 1), (recover, 1)]
 
 
 def stand_attack(ch, start_kw, active_kw):

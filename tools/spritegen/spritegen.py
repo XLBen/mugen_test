@@ -632,8 +632,8 @@ def preview(path, scale=3):
 			for name, anim in anims_for(cid, ch).items():
 				frames = anim["frames"](ch)
 				if name in ("idle", "walk_f", "crouch", "jump", "5hp", "5hk", "2hk", "hit_air", "knockdown") \
-						or name not in ("walk_b", "prejump", "land") and len(frames) == 3 and name[0] not in "25j":
-					row.append(render(ch, outfit, frames[1 if len(frames) == 3 else 0][0]))
+						or name not in ("walk_b", "prejump", "land") and len(frames) == 5 and name[0] not in "25j":
+					row.append(render(ch, outfit, frames[2 if len(frames) == 5 else 0][0]))
 			rows.append(row)
 	cols = max(len(r) for r in rows)
 	sheet = Image.new("RGBA", (cols * CANVAS_W, len(rows) * CANVAS_H), (70, 72, 82, 255))

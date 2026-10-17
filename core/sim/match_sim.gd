@@ -22,6 +22,10 @@ var training := false ## 训练模式：不会 KO、恢复可行动后回满血
 var infinite_meter := false ## 训练模式：资源槽常满
 var health_floor := 0 ## 体力下限（训练模式为 1）
 
+## 表现事件（命中、防御、霸体、道具相杀、KO……）：每帧开头清空，只给表现层（火花、震屏、音效）读取，
+## 不属于仿真状态，不进存档也不影响确定性。
+var events: Array[Dictionary] = []
+
 ## 可变状态
 var frame := 0
 var camera_x := 0 ## 摄像机中心（逻辑单位），屏幕墙由它推导
@@ -74,6 +78,12 @@ func place(p1_x: int, p2_x: int) -> void:
 	camera_x = clampi((p1_x + p2_x) / 2, -_camera_limit(), _camera_limit())
 
 
+func emit(type: String, x: int, y: int, extra := {}) -> void:
+	var e := {"type": type, "x": x, "y": y, "frame": frame}
+	e.merge(extra)
+	events.append(e)
+
+
 func opponent(f: Fighter) -> Fighter:
 	return fighters[1 - f.index]
 
@@ -81,6 +91,7 @@ func opponent(f: Fighter) -> Fighter:
 ## inputs[i] 是第 i 名玩家本帧的 InputBits（会在此做 SOCD 清理）。
 func step(inputs: Array[int]) -> void:
 	frame += 1
+	events.clear()
 	var accept_input := round_state == Round.FIGHT
 	for i in 2:
 		fighters[i].record_input(frame, InputBits.clean_socd(inputs[i]) if accept_input else 0)
@@ -139,6 +150,9 @@ func _update_round() -> void:
 func _end_round() -> void:
 	var h0 := fighters[0].health
 	var h1 := fighters[1].health
+	if fighters[0].health <= 0 or fighters[1].health <= 0:
+		var loser := fighters[0] if h0 <= h1 else fighters[1]
+		emit("ko", loser.x, loser.y + 10000)
 	if h0 >= h1:
 		wins[0] += 1
 	if h1 >= h0:

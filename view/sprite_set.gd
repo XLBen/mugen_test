@@ -54,6 +54,10 @@ func frame_at(anim_name: String, t: int) -> Texture2D:
 	return anim.textures[-1]
 
 
+func frame_count(anim_name: String) -> int:
+	return _anims[anim_name].textures.size() if _anims.has(anim_name) else 0
+
+
 ## 按索引直接取帧（空中动画按速度选帧用）。
 func frame_index(anim_name: String, i: int) -> Texture2D:
 	var textures: Array[Texture2D] = _anims[anim_name].textures

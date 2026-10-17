@@ -27,6 +27,7 @@ var logs := [InputLog.new(), InputLog.new()]
 @onready var hud: Label = $HUD/Info
 @onready var hud_view: HudView = $HUD/HudView
 @onready var overlay: TrainingOverlay = $HUD/TrainingOverlay
+@onready var sfx: Sfx = $Sfx
 @onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
 
 
@@ -38,6 +39,7 @@ func _ready() -> void:
 	sim.reset()
 	view.sim = sim
 	hud_view.sim = sim
+	hud.visible = false
 	overlay.sim = sim
 	overlay.meter = meter
 	overlay.dummy = dummy
@@ -56,6 +58,9 @@ func _physics_process(_delta: float) -> void:
 func advance(human: Array[int]) -> void:
 	last_inputs = dummy.inputs_for(sim, human) if sim.training else human
 	sim.step(last_inputs)
+	view.fx.sim = sim
+	view.fx.consume(sim.events)
+	sfx.consume(sim.events)
 	meter.record(sim)
 	for i in 2:
 		logs[i].record(InputBits.clean_socd(last_inputs[i]))

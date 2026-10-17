@@ -23,6 +23,9 @@ var show_sprites := true
 var _sprites: Array = [null, null] ## 每名玩家的 SpriteSet（没有精灵时为 null）
 
 @onready var camera: Camera2D = $Camera2D
+@onready var fx: FxLayer = $FxLayer
+
+var _camera_y := -CAMERA_HEIGHT_PX
 
 
 ## 角色变更后调用。同角色镜像时 P2 用第二套配色。
@@ -36,7 +39,12 @@ func load_sprites() -> void:
 func _process(_delta: float) -> void:
 	if sim == null:
 		return
-	camera.position = Vector2(SimConst.px(sim.camera_x), -CAMERA_HEIGHT_PX)
+	fx.sim = sim
+	# 摄像机：水平跟随仿真里的摄像机，垂直方向在有人跳高时适度上移；加上震屏；对齐整数像素避免像素抖动
+	var top := maxf(SimConst.px(sim.fighters[0].y), SimConst.px(sim.fighters[1].y))
+	var target_y := -CAMERA_HEIGHT_PX - maxf(top - 140.0, 0.0) * 0.5
+	_camera_y = lerpf(_camera_y, target_y, 0.2)
+	camera.position = (Vector2(SimConst.px(sim.camera_x), _camera_y) + fx.shake_offset()).round()
 	queue_redraw()
 
 
@@ -60,8 +68,9 @@ func _draw() -> void:
 		var wr := SimConst.px(sim.screen_wall_right())
 		draw_line(Vector2(wl, -720), Vector2(wl, 40), WALL_COLOR, 2.0)
 		draw_line(Vector2(wr, -720), Vector2(wr, 40), WALL_COLOR, 2.0)
-	for i in sim.fighters.size():
-		_draw_label(sim.fighters[i], P_COLORS[i], "P%d" % (i + 1), font)
+	if show_boxes:
+		for i in sim.fighters.size():
+			_draw_label(sim.fighters[i], P_COLORS[i], "P%d" % (i + 1), font)
 
 
 func _draw_stage() -> void:
@@ -91,7 +100,10 @@ func _draw_whitebox(f: Fighter, color: Color) -> void:
 
 func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
 	var tex := _sprite_frame(f, sprites)
-	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y))
+	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y)).round()
+	# 顿帧中的被打方左右抖动（打击感）
+	if f.hitstop > 0 and f.sd().kind == "hurt":
+		feet.x += 3.0 if sim.frame % 2 == 0 else -3.0
 	draw_set_transform(feet, 0.0, Vector2(sprites.scale * f.facing, sprites.scale))
 	draw_texture(tex, -sprites.anchor)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -112,10 +124,24 @@ func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
 			return sprites.frame_index("jump", 1)
 	var phase := s.phase_at(f.state_frame)
 	if phase != StateDef.Phase.NONE and s.anim == anim:
-		return sprites.frame_index(anim, phase - 1)
+		return sprites.frame_index(anim, _attack_frame(f, s, phase, sprites.frame_count(anim)))
 	if anim == "idle":
 		return sprites.frame_at(anim, sim.frame)
 	return sprites.frame_at(anim, f.state_frame)
+
+
+## 攻击动画选帧：3 帧 = 发生/持续/收招；5 帧 = 蓄力、出手、持续、收势、复原，按阶段内进度切换。
+func _attack_frame(f: Fighter, s: StateDef, phase: int, count: int) -> int:
+	if count < 5:
+		return phase - 1
+	match phase:
+		StateDef.Phase.STARTUP:
+			return 0 if f.state_frame * 2 < s.first_active else 1
+		StateDef.Phase.ACTIVE:
+			return 2
+	var into := f.state_frame - s.last_active - 1
+	var length := s.total - s.last_active - 1 if s.total > 0 else 12
+	return 3 if into * 2 < length else 4
 
 
 func _draw_projectile(p: Projectile) -> void:
@@ -157,7 +183,10 @@ func _draw_boxes(f: Fighter) -> void:
 
 
 func _draw_label(f: Fighter, color: Color, label: String, font: Font) -> void:
-	var top := -SimConst.px(f.y + f.def.stand_height) - 30.0
+	var top := 1e9
+	for b: PackedInt32Array in f.hurtboxes():
+		top = minf(top, -SimConst.px(b[3]))
+	top = minf(top, -SimConst.px(f.pushbox_world()[3])) - 12.0
 	var text := "%s  %s" % [label, f.state_name()]
 	draw_string(font, Vector2(SimConst.px(f.x) - 40, top), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, color)
 
