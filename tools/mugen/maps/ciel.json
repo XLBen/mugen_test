@@ -278,6 +278,41 @@
 				6,
 				7
 			]
-		}
+		},
+		"teleport": {
+			"actions": [
+				1000,
+				1011
+			],
+			"max_time": 4
+		},
+		"slide": {
+			"actions": [
+				1202
+			],
+			"active": [
+				4,
+				6
+			]
+		},
+		"charm_up": {
+			"actions": [
+				1203
+			],
+			"active": [
+				5,
+				5
+			]
+		},
+		"air_spread": {
+			"actions": [
+				1302
+			],
+			"active": [
+				5,
+				6
+			]
+		},
+		"4hp": 225
 	}
 }

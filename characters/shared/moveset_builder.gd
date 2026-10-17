@@ -67,7 +67,7 @@ static func combo_applies(c: Dictionary, def: FighterDef) -> bool:
 
 ## 地面普攻。cancel：接触后可以取消到的目标（kind 名或状态名）。
 ## extra 里除了攻击属性还可以写状态属性：armor 霸体；step [第几帧, 到第几帧, 像素] 出招时向前踏步；
-## reach_cap 像素：导入人物的攻击框向前最远到这里。
+## reach_cap 像素：导入人物的攻击框向前最远到这里；keep_boxes：不用动画的攻击框（借来的动画判定位置不合适时）。
 func normal(state_name: String, type: String, button: String, startup: int, active: int, recovery: int,
 		on_hit: int, on_block: int, box: Array, base: Dictionary, extra := {}, cancel := []) -> void:
 	var total := startup + active + recovery - 1
@@ -81,7 +81,7 @@ func normal(state_name: String, type: String, button: String, startup: int, acti
 		"hurtboxes": [{"frames": [startup, total], "boxes": [limb(box)]}],
 		"cancel": cancel,
 	}
-	for key in ["armor", "reach_cap"]:
+	for key in ["armor", "reach_cap", "keep_boxes"]:
 		if extra.has(key):
 			state[key] = extra[key]
 			hit.erase(key)

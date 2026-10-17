@@ -394,3 +394,31 @@ func test_volk_new_specials() -> void:
 	var sim := char_sim(VOLK, DUMMY, _gap(VOLK))
 	play(sim, "2,1,4HK", "4x40", 0)
 	check(sim.fighters[1].health < DUMMY.max_health, "214K sweep is low (beats standing block)")
+
+
+func test_mio_teleport() -> void:
+	var sim := char_sim(MIO, DUMMY, 300)
+	play(sim, "2,1,4MK", "", 40)
+	check(sim.fighters[0].x > sim.fighters[1].x, "MK teleport appears behind the opponent")
+	check_eq(sim.fighters[0].facing, -1, "and faces them")
+	sim = char_sim(MIO, DUMMY, 300)
+	play(sim, "2,1,4LK", "", 40)
+	check(sim.fighters[0].x < sim.fighters[1].x and sim.fighters[1].x - sim.fighters[0].x < 15000,
+		"LK teleport appears in front, close")
+
+
+func test_mio_new_specials() -> void:
+	var sim := char_sim(MIO, DUMMY, _gap(MIO))
+	play(sim, "2,3,6LK", "4x40", 0)
+	check(sim.fighters[1].health < DUMMY.max_health, "236K slide is low")
+	sim = char_sim(MIO, DUMMY, 200)
+	play(sim, "2,5,2HP", "", 0)
+	play(sim, "5x14")
+	var up := false
+	for p in sim.projectiles:
+		up = up or p.vy > 0
+	check(up, "22P throws a key upward")
+	sim = char_sim(MIO, DUMMY, 250)
+	play(sim, "9x12,2,1,4LP", "", 2)
+	play(sim, "5x14")
+	check_eq(sim.projectiles.size(), 2, "air 214P throws two keys")

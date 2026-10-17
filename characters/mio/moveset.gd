@@ -9,6 +9,12 @@ extends MovesetBuilder
 ##   623K   缎带旋     三段对空；L / M / H 无敌 4（只防打击）/ 6 / 8 帧，越重飞得越高
 ## 指令普攻：6HK 远距离踢。目标连段：2MP > HP。
 ##   236PP / 623KK   OD 版本（两段纸符 / 更长无敌）
+##   214K   幻影步     瞬移：LK 出现在对手面前、MK 绕到对手身后、HK 绕得更远；消失期间无敌；214KK 更快、全程无敌
+##   236K   滑步斩     贴地前冲的下段，L / M / H 越来越远，H 击倒
+##   22P    天之黑键   斜上方飞出的对空道具
+##   空中 214P  散射     空中同时斜下方、平飞两把黑键
+##   214PP  OD 封印，一次放两个、启动更快
+## 指令普攻：4HP 对空上挑。目标连段：5MK > HK（击倒）。
 ##   236236P 纸吹雪     SA1，慢速多段巨型道具
 ##   214214P 缎带天舞   SA2，无敌的多段上升（对空）
 ##   236236K 纸吹雪·终   SA3（体力 25% 以下为 Critical Art），更大更多段的道具
@@ -23,6 +29,7 @@ func build() -> void:
 	_charms()
 	_seals()
 	_spin()
+	_more_specials()
 	_super()
 	throw(58, 1100, 5)
 	dashes(900, 10, 20, 950, 13, 22, 8)
@@ -174,6 +181,85 @@ func _super() -> void:
 	projectiles["storm3_ca"] = _storm(10, 460, 50, [-95, -100, 190, 200])
 
 
+## SF6 式扩充：幻影步、滑步斩、天之黑键、空中散射、OD 封印、4HP、目标连段 5MK > HK。
+func _more_specials() -> void:
+	# 幻影步：214K。沉入地面、在对手附近出现；消失期间（4~16 帧）无敌，出现后转向对手
+	var tele := {"l": -85, "m": 85, "h": 160}
+	for k in ["h", "m", "l"]:
+		states["teleport_" + k] = {
+			"type": "S", "kind": "special", "total": 34, "anim": "teleport", "anim_fallback": ["crouch"],
+			"invuln": [{"frames": [4, 16]}], "no_push": [4, 16], "punishable_from": 26,
+			"events": [{"frame": 12, "teleport": tele[k]}, {"frame": 13, "face": true}],
+		}
+		command("214" + k.to_upper() + "K", "special", {"motion": "214", "buttons": k.to_upper() + "K",
+			"state": "teleport_" + k})
+	states["teleport_od"] = {
+		"type": "S", "kind": "special", "total": 26, "anim": "teleport", "anim_fallback": ["crouch"],
+		"cost": {"drive": 20000}, "invuln": [{"frames": [1, 14]}], "no_push": [1, 14],
+		"events": [{"frame": 8, "teleport": 85}, {"frame": 9, "face": true}],
+	}
+	command("214KK", "od", {"motion": "214", "buttons": "KK", "state": "teleport_od"})
+
+	# 滑步斩：236K。贴地前冲的下段
+	var slide := {"l": [10, 70, 850, -8], "m": [14, 110, 1000, -10], "h": [16, 150, 1100, -12]}
+	for k in ["h", "m", "l"]:
+		var v: Array = slide[k]
+		var total: int = v[0] + 3 + 22 - 1
+		var s := {
+			"type": "S", "kind": "special", "total": total, "anim": "slide", "anim_fallback": ["2mk"],
+			"keep_boxes": true,
+			"hitboxes": [{"active": [v[0], v[0] + 2], "boxes": [[20, 0, 95, 35]],
+				"hit": {"damage": v[2], "hitstop": 11, "guard": "low", "effect": "knockdown" if k == "h" else "normal",
+					"hitstun": 20, "blockstun": v[3] + total - v[0], "push": 700, "block_push": 800, "strength": 2}}],
+			"cancel": ["super"],
+		}
+		s.merge(step(2, v[0], v[1]))
+		states["slide_" + k] = s
+		command("236" + k.to_upper() + "K", "special", {"motion": "236", "buttons": k.to_upper() + "K", "state": "slide_" + k})
+
+	# 天之黑键：22P。斜上方飞出的对空道具
+	var hit := {"damage": 700, "chip": 170, "hitstun": 20, "blockstun": 16, "hitstop": 10, "push": 500, "block_push": 600,
+		"strength": 1, "juggle_limit": 2, "effect": "launch", "air_vx": 200, "air_vy": 900}
+	states["charm_up"] = {
+		"type": "S", "kind": "special", "total": 38, "anim": "charm_up", "anim_fallback": ["charm"], "active_hint": [10, 13],
+		"events": [{"frame": 10, "spawn": "charm_up", "x": 40, "y": 150}],
+	}
+	command("22P", "special", {"motion": "22", "buttons": "P", "state": "charm_up", "cond": "limit:fireball"})
+	projectiles["charm_up"] = {"speed": 650, "speed_y": 950, "box": [-22, -22, 44, 44], "hit": hit, "anim": "charm",
+		"lifetime": 50}
+
+	# 空中散射：空中 214P。斜下方 + 平飞两把黑键
+	states["air_spread"] = {
+		"type": "A", "kind": "special", "total": 30, "next": "air", "anim": "air_spread", "anim_fallback": ["air_charm"],
+		"active_hint": [9, 12],
+		"events": [{"frame": 1, "vx": 0, "vy": 200}, {"frame": 9, "spawn": "air_charm", "x": 40, "y": 60},
+			{"frame": 9, "spawn": "air_flat", "x": 45, "y": 90}],
+	}
+	command("j214P", "special", {"motion": "214", "buttons": "P", "where": "air", "state": "air_spread",
+		"cond": "limit:fireball"})
+	projectiles["air_flat"] = {"speed": 1100, "speed_y": -300, "box": [-18, -22, 36, 44], "anim": "charm",
+		"hit": {"damage": 500, "chip": 120, "hitstun": 18, "blockstun": 15, "hitstop": 9, "push": 500, "block_push": 600,
+			"strength": 1, "guard": "high"}}
+
+	# OD 封印：214PP。一次放两个（近、远），12 帧就启动
+	states["seal_od"] = {
+		"type": "S", "kind": "special", "total": 32, "anim": "seal", "active_hint": [14, 16], "cost": {"drive": 20000},
+		"events": [{"frame": 14, "spawn": "seal_od", "x": 140, "y": 0}, {"frame": 14, "spawn": "seal_od", "x": 280, "y": 0}],
+	}
+	command("214PP", "od", {"motion": "214", "buttons": "PP", "state": "seal_od", "cond": "limit:trap"})
+	var seal_od: Dictionary = projectiles["seal"].duplicate(true)
+	seal_od.arm = 12
+	projectiles["seal_od"] = seal_od
+
+	# 4HP：对空上挑
+	command_normal("4hp", "4", "HP", 7, 4, 18, 1, -6, [10, 120, 70, 95], H, {"juggle_limit": 1, "damage": 800,
+		"keep_boxes": true}, [],
+		["2hp"])
+	# 目标连段：5MK > HK，击倒
+	target_combo("tc_mk_hk", "5mk", "HK", "5hk", 10, 3, 20, 0, -6, [20, 110, 95, 45], H,
+		{"damage": 700, "effect": "knockdown"})
+
+
 ## 纸吹雪道具：hits 段、每段 each 伤害、补正保底 min_scale%、判定 box。
 func _storm(hits: int, each: int, min_scale: int, box: Array) -> Dictionary:
 	return {"speed": 550, "box": box, "hits": hits, "hit_interval": 4, "kind": "super", "anim": "storm", "lifetime": 140,
@@ -195,6 +281,10 @@ func _combos() -> void:
 		[["5HP", 12], ["2,3,6LP+MP", 0]], {"hits": 3})
 	combo("目标连段", "2MP > HP xx 236HP", ["2mp", "tc_2mp_hp", "charm_h"],
 		[["2MP", 9], ["5HP", 10], ["2,3,6HP", 0]], {"hits": 3})
+	combo("下段滑步", "2MK xx 236LK", ["2mk", "slide_l"], [["2MK", 10], ["2,3,6LK", 0]], {"hits": 2, "gap": 110})
+	combo("轻攻击滑步", "2LP > 2LK xx 236LK", ["2lp", "2lk", "slide_l"],
+		[["2LP", 7], ["2LK", 7], ["2,3,6LK", 0]], {"hits": 3})
+	combo("目标连段（脚）", "5MK > HK", ["5mk", "tc_mk_hk"], [["5MK", 10], ["5HK", 0]], {"hits": 2})
 	combo("超杀收尾", "5MP xx 236236P", ["5mp", "storm"],
 		[["5MP", 10], ["2,3,6,2,3,6HP", 0]], {"hits": 5, "meter": true})
 	combo("3 格收尾", "5MP xx 236236K", ["5mp", "super3_m"],
