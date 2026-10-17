@@ -40,6 +40,11 @@
    python3 tools/mugen/import_char.py list local_assets/mugen_src/<名字>
    ```
    输出每个动作号的帧数、总时长、攻击帧范围，标准动作（0 站立、20/21 走、40-47 跳、150/152 防御、5000 系受击……）会标注名字。
+   再看出招表和动作画面，确认每个动作是什么招：
+   ```bash
+   python3 tools/mugen/import_char.py moves local_assets/mugen_src/<名字>          # 按键指令 → 状态 → 动作号
+   python3 tools/mugen/import_char.py sheet local_assets/mugen_src/<名字> out.png 200 210 220 1000   # 逐帧画出（带 Clsn 框）
+   ```
 3. 打开对应的映射文件（如 `tools/mugen/maps/shiki.json`），按 `list` 的结果修改：
    - 普攻：月姬格斗是 A/B/C 三键，模板按常见编号 200/210/220（站）、400/410/420（蹲）、600/610/620（空中）填写，
      踢腿暂时借用同强度的拳；**以 `list` 的实际编号为准**。
@@ -51,6 +56,18 @@
    ```
    输出到 `local_assets/mugen/shiki/`：`sprites/`（PNG + anims.json）和 `fighter.tres`。
 5. 用 Godot 打开工程（会自动导入新 PNG），训练场景里按 F8 / F9 切换到导入的角色。按 F1 看判定框是否贴合。
+
+## 已核实的版本
+
+仓库里的三个映射文件已经对照下面这些版本核实过动作号（2026-10-17），用同样的版本可以直接导入：
+
+| 映射 | 人物包 | 作者 | 格式 |
+|---|---|---|---|
+| `shiki.json` | ShikiTohno.AC | 9（2002） | SFF v1 + 12 套 .act |
+| `kouma.json` | KoumaKishima.AC | 9（2002） | SFF v1 + 12 套 .act |
+| `ciel.json` | Ciel[Sumi]（显示名 Eleicia） | SUMI（2003） | SFF v1 + 4 套 .act |
+
+这三个都是 320×240 的老 WinMUGEN 人物，映射里固定 `"scale": 2`。
 
 ## 转换规则
 

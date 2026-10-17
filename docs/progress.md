@@ -66,3 +66,6 @@
   修正了与判定不符的姿势（上勾拳、Mio 的袖带、Kagura 的短刀弧线）。
 - **MUGEN 导入器**（`tools/mugen/`）：SFF v1/v2、AIR（含 Clsn）、DEF、ACT 调色板；`list` 查看动作、`import` 按映射转换；
   Shiki / Kouma / Ciel 映射模板；本地导入的人物自动出现在训练场景的角色列表。见 docs/mugen-import.md。
+- **导入月姬格斗人物**：志贵（ShikiTohno.AC）、翽马（KoumaKishima.AC）、希尔（Ciel by SUMI）三个人物包已在本地导入
+  （素材在 local_assets/，不入库）。导入器新增 `moves`（读 .cmd/.cns 列出按键 → 状态 → 动作号）和 `sheet`（逐帧画出动作与 Clsn 框）；
+  三个映射文件改为按实际人物包核实过的动作号，并支持固定整数缩放。三人两两随机对打确定性正常。

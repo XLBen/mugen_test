@@ -3,12 +3,15 @@
 
 用法：
     python3 tools/mugen/import_char.py list   <人物目录>                 # 看 .def 信息和全部动作（哪些带攻击判定）
+    python3 tools/mugen/import_char.py moves  <人物目录>                 # 出招表：按键指令 → 状态 → 动作号（读 .cmd/.cns）
+    python3 tools/mugen/import_char.py sheet  <人物目录> <out.png> <动作号...>   # 把动作逐帧画出来（带 Clsn 框）
     python3 tools/mugen/import_char.py import <人物目录> <映射.json>    # 按映射导出到 local_assets/mugen/<id>/
 
 映射文件（见 tools/mugen/maps/*.json）把本工程的动画名对应到 MUGEN 动作号：
     "idle": 0                              一个动作，按原时长播放
     "crouch": [10, 11]                     多个动作首尾相接
     "jump": {"frames": [[41, 0], [41, -1], [44, 0]]}   手动挑帧（-1 = 最后一帧）
+另外可写 "scale": 2 固定显示倍数（低分辨率 320x240 人物用整数倍更清晰），否则按 target_height 计算。
 带 Clsn1（攻击判定）的动作会自动压成本工程的五帧攻击动画（蓄力 / 出手 / 持续 / 收势 / 复原），
 持续帧的攻击盒取所有攻击帧 Clsn1 的并集；每帧受击盒取 Clsn2。招式的发生 / 持续 / 收招帧数仍以本工程招式表为准。
 
@@ -95,6 +98,112 @@ def cmd_list(char_dir: Path) -> None:
 		hits = [i for i, f in enumerate(a.frames) if f.clsn1]
 		hit_txt = f"{hits[0]}-{hits[-1]}" if hits else ""
 		print(f"{n:6d}  {len(a.frames):6d}  {total:4d}  {hit_txt:13s}  {STANDARD.get(n, '')}")
+
+
+# ---------------------------------------------------------------- sheet
+
+def cmd_sheet(char_dir: Path, out: Path, numbers: list[int], max_frames: int = 14) -> None:
+	"""每个动作一行，逐帧画出（脚底对齐），Clsn2 蓝框、Clsn1 红框，方便辨认招式。"""
+	from PIL import ImageDraw
+	d, sff, actions, acts = load_char(char_dir)
+	pal = (lambda spr: acts[0]) if acts and sff.version == 1 else (lambda spr: spr.palette)
+	cell_w, cell_h, label = 170, 190, 54
+	rows = [n for n in numbers if n in actions]
+	sheet = Image.new("RGBA", (label + cell_w * max_frames, cell_h * len(rows)), (60, 62, 72, 255))
+	draw = ImageDraw.Draw(sheet)
+	for r, n in enumerate(rows):
+		draw.text((4, r * cell_h + 8), str(n), fill=(255, 255, 255, 255))
+		for c, f in enumerate(actions[n].frames[:max_frames]):
+			spr = sprite_for(sff, f)
+			if spr is None or spr.image is None:
+				continue
+			img = sff_mod.to_rgba(spr.image, pal(spr))
+			if "H" in f.flip:
+				img = img.transpose(Image.FLIP_LEFT_RIGHT)
+			l, t, _, _ = frame_rect(spr, f)
+			feet = (label + c * cell_w + 60, r * cell_h + cell_h - 14)
+			sheet.alpha_composite(img, (feet[0] + l, feet[1] + t))
+			for boxes, color in ((f.clsn2, (90, 150, 255, 255)), (f.clsn1, (255, 70, 70, 255))):
+				for x1, y1, x2, y2 in boxes:
+					draw.rectangle([feet[0] + min(x1, x2), feet[1] + min(y1, y2), feet[0] + max(x1, x2),
+						feet[1] + max(y1, y2)], outline=color)
+			draw.text((feet[0] - 55, r * cell_h + cell_h - 12), f"{c}:{f.time}", fill=(200, 200, 200, 255))
+	sheet = sheet.resize((sheet.width * 2 // 2, sheet.height * 2 // 2), Image.NEAREST)
+	sheet.save(out)
+	print("saved", out, len(rows), "actions")
+
+
+# ---------------------------------------------------------------- moves
+
+def _read_text(path: Path) -> str:
+	raw = path.read_bytes()
+	for enc in ("utf-8", "shift_jis", "gbk"):
+		try:
+			return raw.decode(enc).replace("\r", "")
+		except UnicodeDecodeError:
+			continue
+	return raw.decode("latin-1").replace("\r", "")
+
+
+def _blocks(text: str):
+	"""按 [Section] 切分，返回 [(标题, {键: [值...]})]，键名小写，去掉注释。"""
+	out = []
+	head, body = None, {}
+	for raw in text.splitlines():
+		line = raw.split(";", 1)[0].strip()
+		if not line:
+			continue
+		m = re.match(r"\[(.+)\]", line)
+		if m:
+			if head is not None:
+				out.append((head, body))
+			head, body = m.group(1).strip(), {}
+			continue
+		if "=" in line and head is not None:
+			k, v = line.split("=", 1)
+			body.setdefault(k.strip().lower(), []).append(v.strip())
+	if head is not None:
+		out.append((head, body))
+	return out
+
+
+def cmd_moves(char_dir: Path) -> list:
+	"""读 .cmd 的 [Command] 与 [State -1]，再从各 .cns 的 [Statedef] 取 anim，列出出招表。"""
+	d = parse_def(find_def(char_dir))
+	files = d.get("files", {})
+	cmd_text = _read_text(char_dir / files["cmd"])
+	commands = {}
+	for head, body in _blocks(cmd_text):
+		if head.lower() == "command" and "name" in body:
+			name = body["name"][0].strip('"')
+			commands.setdefault(name, []).append(body.get("command", [""])[0])
+	anims = {}
+	state_files = [v for k, v in files.items() if k in ("cns", "st", "stcommon") or re.fullmatch(r"st\d+", k)]
+	for sf in state_files:
+		path = char_dir / sf
+		if not path.exists():
+			continue
+		for head, body in _blocks(_read_text(path)):
+			m = re.match(r"statedef\s+(-?\d+)", head, re.I)
+			if m and "anim" in body:
+				anims.setdefault(int(m.group(1)), body["anim"][0])
+	rows = []
+	for head, body in _blocks(cmd_text):
+		if not re.match(r"state\s+-1", head, re.I):
+			continue
+		value = body.get("value", [""])[0]
+		triggers = " ".join(v for k, vs in body.items() if k.startswith("trigger") for v in vs)
+		used = re.findall(r'command\s*=\s*"([^"]+)"', triggers, re.I)
+		stance = re.findall(r"statetype\s*!?=\s*([sca])", triggers, re.I)
+		title = head.split(",", 1)[1].strip() if "," in head else ""
+		state = int(value) if re.fullmatch(r"-?\d+", value) else None
+		anim = anims.get(state, "") if state is not None else ""
+		motions = "; ".join(f"{c}: {' | '.join(commands.get(c, ['?']))}" for c in dict.fromkeys(used))
+		rows.append((title, value, anim, "".join(dict.fromkeys(s.upper() for s in stance)), motions))
+	print("state   anim    stance  name / command")
+	for title, value, anim, stance, motions in rows:
+		print(f"{value:7s} {str(anim):7s} {stance:6s}  {title}  ->  {motions}")
+	return rows
 
 
 # ---------------------------------------------------------------- import
@@ -186,7 +295,7 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 	# 3. 缩放：让站立高度接近目标高度
 	stand = sprite_for(sff, anims["idle"]["frames"][0][0]) if "idle" in anims else None
 	height = stand.image.size[1] if stand else canvas[1]
-	scale = round(mapping.get("target_height", 230) / max(height, 1), 2)
+	scale = mapping.get("scale") or round(mapping.get("target_height", 230) / max(height, 1), 2)
 
 	# 4. 调色板：第二套给同角色镜像用
 	palettes = _palettes(sff, acts)
@@ -256,6 +365,10 @@ def _palettes(sff, acts):
 def main(argv):
 	if len(argv) >= 2 and argv[0] == "list":
 		cmd_list(Path(argv[1]))
+	elif len(argv) >= 2 and argv[0] == "moves":
+		cmd_moves(Path(argv[1]))
+	elif len(argv) >= 4 and argv[0] == "sheet":
+		cmd_sheet(Path(argv[1]), Path(argv[2]), [int(a) for a in argv[3:]])
 	elif len(argv) >= 3 and argv[0] == "import":
 		out_root = Path(argv[3]) if len(argv) > 3 else ROOT / "local_assets" / "mugen"
 		cmd_import(Path(argv[1]), Path(argv[2]), out_root)

@@ -5,3 +5,7 @@
 
 # 本地导入的第三方素材（MUGEN 人物等），只在本机使用，不提交
 local_assets/
+
+# 其他工具的本地状态 / 下载缓存（含第三方素材压缩包），不提交
+.playwright-mcp/
+.opencode/

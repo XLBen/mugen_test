@@ -209,6 +209,24 @@ class AirTests(unittest.TestCase):
 		self.assertEqual(import_char.convert_box((-10, -80, 10, 0), 1.5), [-15, 0, 30, 120])
 
 
+class MovesTests(unittest.TestCase):
+	def test_moves_joins_cmd_and_cns(self):
+		work = ROOT / "local_assets" / "_test_moves"
+		shutil.rmtree(work, ignore_errors=True)
+		work.mkdir(parents=True)
+		try:
+			(work / "t.def").write_bytes("[Files]\r\ncmd = t.cmd\r\ncns = t.cns\r\nst = t.cns\r\nsprite = t.sff\r\nanim = t.air\r\n".encode())
+			(work / "t.cmd").write_bytes(("[Command]\r\nname = \"236a\"\r\ncommand = ~D, DF, F, a\r\n\r\n"
+				"[Statedef -1]\r\n\r\n[State -1, 波動]\r\ntype = ChangeState\r\nvalue = 1000\r\n"
+				"triggerall = command = \"236a\"\r\ntrigger1 = statetype != A\r\n").encode("shift_jis"))
+			(work / "t.cns").write_bytes("[Statedef 1000]\r\ntype = S\r\nanim = 1005\r\n".encode())
+			rows = import_char.cmd_moves(work)
+			self.assertEqual(rows[0][1:4], ("1000", "1005", "A"))
+			self.assertIn("~D, DF, F, a", rows[0][4])
+		finally:
+			shutil.rmtree(work, ignore_errors=True)
+
+
 class ImportTests(unittest.TestCase):
 	def test_end_to_end(self):
 		work = ROOT / "local_assets" / "_test_char"
