@@ -41,6 +41,7 @@ var untechable := false ## 投技：被投方不能拆（指令投）
 var no_push: Array = [] ## [from, to]：这段帧数不参与推挤（可以穿过对手）
 var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
 var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
+var throw_protect := 0 ## 按总帧数结束时给的投无敌帧数（起身）
 var freeze_len := 0 ## 发生前的超杀暂停总帧数（暂停期间出招动画继续播预备动作）
 var reach_cap := 0 ## >0：动画攻击盒向前最远到这里（单位），原作攻击框太长时收回到招式表的范围
 
@@ -93,6 +94,7 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 		s.cancel_until = d.get("cancel_until", s.last_active + 1 + 3) - 1
 	s.punishable = d.get("punishable", false)
 	s.punishable_from = d.get("punishable_from", 0) - 1
+	s.throw_protect = d.get("throw_protect", 0)
 	s.cost = d.get("cost", {})
 	if d.has("armor"):
 		s.armor = {"from": d.armor.frames[0] - 1, "to": d.armor.frames[1] - 1, "hits": d.armor.get("hits", 1)}

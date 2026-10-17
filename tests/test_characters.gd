@@ -29,7 +29,8 @@ func max_combo(sim: MatchSim, p1_script: String, p2_script := "", extra := 0) ->
 # ---------------------------------------------------------------- 通用
 
 func test_attributes_differ() -> void:
-	check(KAGURA.max_health < MIO.max_health and MIO.max_health < VOLK.max_health, "health: Kagura < Mio < Volk")
+	for def: FighterDef in [KAGURA, VOLK, MIO]:
+		check_eq(def.max_health, 10000, "%s health is the SF6 standard" % def.display_name)
 	var dist := {}
 	for def: FighterDef in [KAGURA, VOLK, MIO]:
 		var sim := char_sim(def, DUMMY, 600)

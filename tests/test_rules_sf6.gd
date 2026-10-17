@@ -58,3 +58,55 @@ func test_quarter_circle_window() -> void:
 	sim = _far_sim()
 	play(sim, "2,5x7,3,5x3,6LP")
 	check(sim.fighters[0].state_name() != "fireball_l", "236 slower than 11 frames fails")
+
+
+## 确反（Punish Counter）：防御方损失 Drive，双方多顿 4 帧；普通打康不扣 Drive。
+func test_punish_counter_drains_drive_and_adds_hitstop() -> void:
+	var sim := adjacent_sim(150)
+	var p2 := sim.fighters[1]
+	var a := InputScript.parse("5x9,5HP")
+	var b := InputScript.parse("5HK", true)
+	for i in 30:
+		sim.step([a[i] if i < a.size() else 0, b[i] if i < b.size() else 0])
+		if p2.sd().kind == "hurt":
+			break
+	check_eq(p2.counter_type, Combat.Counter.PUNISH, "punish counter")
+	check_eq(p2.hitstop, 11 + Combat.COUNTER_HITSTOP[Combat.Counter.PUNISH], "punish counter hitstop")
+	check_eq(sim.fighters[0].hitstop, p2.hitstop, "attacker freezes as long")
+	check_eq(Gauges.value(p2, Gauges.DRIVE), 60000 - 1500, "heavy punish counter drains the defender's drive")
+	sim = adjacent_sim()
+	play(sim, "5HK", "5HK", 12)
+	check_eq(Gauges.value(sim.fighters[1], Gauges.DRIVE), 60000, "plain counter hit does not drain drive")
+
+
+## 拆投可以预输入：被抓前几帧按下 LP+LK 并按住也能拆。
+func test_throw_tech_prebuffered() -> void:
+	var sim := adjacent_sim()
+	sim.fighters[1].set_state("landing_long") # 收招中不能自己出投
+	play(sim, "5LP+LK", "5x2,5LP+LK", 6)
+	check_eq(sim.fighters[1].state_name(), "throw_tech", "tech pressed 2 frames before the grab")
+	sim = adjacent_sim()
+	sim.fighters[1].set_state("landing_long")
+	play(sim, "5x6,5LP+LK,5x10", "5LP+LK", 0)
+	check(sim.fighters[1].state_name() != "throw_tech", "a press long before the grab does not tech")
+
+
+## 晚几帧按投：被抓时自己的投还在发生中，也算拆投。
+func test_late_throw_techs() -> void:
+	var sim := adjacent_sim()
+	play(sim, "5LP+LK", "5x2,5LP+LK", 6)
+	check_eq(sim.fighters[1].state_name(), "throw_tech", "own throw in startup techs")
+
+
+## 起身后有短暂投无敌。
+func test_throw_protect_after_wakeup() -> void:
+	var sim := adjacent_sim()
+	var p2 := sim.fighters[1]
+	p2.set_state("wakeup")
+	for i in 30:
+		sim.step([0, 0])
+		if not p2.is_in(["wakeup"]):
+			break
+	check(not Combat.throwable(p2), "first frame after wakeup is throw invulnerable")
+	sim.step([0, 0])
+	check(Combat.throwable(p2), "then throwable again")

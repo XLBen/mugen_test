@@ -4,6 +4,8 @@ class_name CommonStates
 
 const HURT_FRICTION := 60
 const THROW_TECH_WINDOW := 7 ## 被抓后多少帧内可以拆投
+const THROW_TECH_PREBUFFER := 4 ## 被抓前几帧内按下的拆投也算（预输入）
+const WAKEUP_THROW_PROTECT := 1 ## 起身后的投无敌帧数（未核实）
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
 const PROXIMITY_PROJECTILE := 18000 ## 道具距离多近时触发近距离防御
@@ -41,7 +43,8 @@ static func states() -> Dictionary:
 		"land_recover": {"type": "S", "kind": "hurt", "total": 6, "anim": "land"},
 		"knockdown": {"type": "L", "kind": "hurt", "total": 34, "next": "wakeup", "logic": "down", "anim": "knockdown",
 			"invuln": [{"frames": [1, 34]}]},
-		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}]},
+		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}],
+			"throw_protect": WAKEUP_THROW_PROTECT},
 		"ko": {"type": "L", "kind": "hurt", "anim": "knockdown", "invuln": [{"frames": [1, 99999]}]},
 		"thrown": {"type": "S", "kind": "hurt", "physics": "none", "logic": "thrown", "anim": "hit_stand",
 			"invuln": [{"frames": [1, 99999], "strike": true, "throw": true}]},
@@ -231,12 +234,17 @@ static func _launch_jump(f: Fighter) -> void:
 	f.set_state("air")
 
 
-## 被抓住的前几帧内同时按 LP+LK（任一刚按下）即可拆投。
+## 被抓后 THROW_TECH_WINDOW 帧内、或被抓前 THROW_TECH_PREBUFFER 帧内，有一帧同时按着 LP+LK 且其中一个是刚按下的，即可拆投。
 static func _thrown(f: Fighter, sim: MatchSim) -> void:
 	if f.state_frame >= THROW_TECH_WINDOW or sim.opponent(f).sd().untechable:
 		return
 	var tech := InputBits.B0 | InputBits.B3
-	if f.input_at(sim.frame) & tech == tech and f.pressed_at(sim.frame) & tech:
+	var fresh := false
+	for fr in range(maxi(sim.frame - f.state_frame - THROW_TECH_PREBUFFER, f.consumed + 1), sim.frame + 1):
+		if f.input_at(fr) & tech == tech and f.pressed_at(fr) & tech:
+			fresh = true
+			break
+	if fresh:
 		var opp := sim.opponent(f)
 		f.set_state("throw_tech")
 		opp.set_state("throw_tech")

@@ -32,6 +32,7 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 			pass
 		elif s.total > 0 and f.state_frame >= s.total:
 			f.set_state(s.next)
+			f.throw_protect = maxi(f.throw_protect, s.throw_protect)
 		elif s.logic != "":
 			CommonStates.run(s.logic, f, sim)
 		if f.fresh == 0:

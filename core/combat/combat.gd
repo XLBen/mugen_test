@@ -10,11 +10,13 @@ enum Counter { NONE, COUNTER, PUNISH }
 
 ## 街霸风打康参数
 const COUNTER_HITSTUN := {Counter.COUNTER: 2, Counter.PUNISH: 4}
+const COUNTER_HITSTOP := {Counter.COUNTER: 0, Counter.PUNISH: 4} ## 确反额外顿帧（双方相同，不改变有利帧）
+const PUNISH_DRIVE_PCT := 100 ## 确反时防御方损失的 Drive = 该招被防时削的量 × 这个比例（SF6 确反削 Drive，具体量未核实）
 const COUNTER_DAMAGE_PCT := 120
 const PUNISH_THROW_DAMAGE_PCT := 170
 const COUNTER_DISPLAY := 45
 
-## 街霸风连段补正：第 1、2 击 100%，第 3 击起每击 -10%，轻攻击起手再 -10%，最低 10%
+## 街霸风连段补正：第 1、2 击 100%，第 3 击 80%，之后每击再 -10%（70%、60%…），轻攻击起手从第 2 击起再 -10%，最低 10%
 const SCALE_STEP := 10
 const SCALE_MIN := 10
 const LIGHT_STARTER_PENALTY := 10
@@ -107,6 +109,11 @@ static func throwable(f: Fighter) -> bool:
 
 
 static func _start_throw(atk: Fighter, dfn: Fighter) -> void:
+	# 被抓时自己的投正在发生中（晚几帧按了投）也算拆投
+	if dfn.sd().kind == "throw" and dfn.state_frame < dfn.sd().first_active and not atk.sd().untechable:
+		atk.set_state("throw_tech")
+		dfn.set_state("throw_tech")
+		return
 	var counter := counter_type(dfn)
 	var hold: String = atk.sd().name + "_hit"
 	atk.set_state(hold)
@@ -216,6 +223,8 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 		dfn.counter_type = counter
 		if counter != Counter.NONE:
 			dfn.counter_timer = COUNTER_DISPLAY
+		if counter == Counter.PUNISH:
+			Gauges.drain(dfn, Gauges.DRIVE, hd.drive * PUNISH_DRIVE_PCT / 100)
 
 	if blocked and dfn.health > 0:
 		dfn.set_state("block_crouch" if crouching else "block_stand")
@@ -240,11 +249,12 @@ static func apply_hit(sim: MatchSim, source_x: int, source_facing: int, dfn: Fig
 			dfn.stun = hd.hitstun + COUNTER_HITSTUN.get(counter, 0)
 			dfn.vx = hd.push * dir
 	dfn.facing = -dir
-	dfn.hitstop = hd.hitstop
+	var hitstop: int = hd.hitstop + COUNTER_HITSTOP.get(counter, 0)
+	dfn.hitstop = hitstop
 	if melee != null:
-		melee.hitstop = hd.hitstop
+		melee.hitstop = hitstop
 		melee.contact = 1 if blocked else 2
-		melee.last_hitstop = hd.hitstop
+		melee.last_hitstop = hitstop
 		dfn.push_transfer = 1
 
 

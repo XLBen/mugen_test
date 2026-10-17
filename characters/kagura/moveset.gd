@@ -1,7 +1,7 @@
 extends MovesetBuilder
 ## Kagura —— 速攻型（短刀）。
 ##
-## 特点：走速与冲刺最快、普攻发生快但距离短、体力低（9000），没有飞行道具。
+## 特点：走速与冲刺最快、普攻发生快但距离短，没有飞行道具。
 ## 连段路线（类 Gatling）：轻 → 中 → 重 逐级取消，普攻可必杀取消，突进斩可超杀取消。
 ## 必杀技：
 ##   236K  裂空斩     突进斩，K 越重距离越远，HK 命中击倒
@@ -157,7 +157,7 @@ func _combos() -> void:
 	combo("跳入", "j.HK > 5HP xx 236HK", ["j_hk", "5hp", "slash_h"],
 		[["9", 33], ["5HK", 19], ["5HP", 10], ["2,3,6HK", 0]], {"hits": 3, "gap": 210, "strict": [0, 1]})
 	combo("确反", "PC 5HP > 5MP xx 236HK", ["5hp", "5mp", "slash_h"],
-		[["5HP", 36], ["5MP", 8], ["2,3,6HK", 0]], {"hits": 3, "gap": 95, "p2_recovery": "5hk"})
+		[["5HP", 40], ["5MP", 8], ["2,3,6HK", 0]], {"hits": 3, "gap": 95, "p2_recovery": "5hk"})
 	combo("超杀收尾", "5MP > 5HP xx 236MK xx 236236K", ["5mp", "5hp", "slash_m", "super_k"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6MK", 22], ["2,3,6,2,3,6HK", 0]], {"hits": 8, "meter": true})
 	combo("OD 追加", "5MP > 5HP xx 236KK", ["5mp", "5hp", "slash_od"],
