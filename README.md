@@ -12,13 +12,16 @@
 ![characters](docs/img/characters.png)
 
 ## 运行
-用 Godot 4.7 打开工程，运行主场景 `scenes/training.tscn`。
+用 Godot 4.7 打开工程，运行主场景（标题画面 `scenes/title.tscn`）：对战电脑 / 双人对战 / 训练模式 → 选人 → 开打。
+对局中按 Esc（手柄 Start）打开暂停菜单（继续 / 重新开始 / 重新选人 / 回到标题），比赛结束后弹出结算菜单（再来一局 / 重新选人 / 回到标题）。
+直接运行 `scenes/training.tscn` 就是训练模式。
 
 | 操作 | P1 | P2 |
 |---|---|---|
 | 移动 | WASD | 方向键 |
-| LP MP HP | U I O | 小键盘 7 8 9 |
-| LK MK HK | J K L | 小键盘 4 5 6 |
+| LP MP HP | U I O | 小键盘 7 8 9（没有小键盘：; ' \） |
+| LK MK HK | J K L | 小键盘 4 5 6（没有小键盘：, . /） |
+| 菜单确定 / 返回 | U / J（或 Enter / Esc） | 小键盘 7 / 4（或 ; / ,） |
 
 Mac 上 F1–F12 默认是亮度、音量、播放等媒体键，所以每个功能键都有一个替代键（第二列），两个都能用。
 

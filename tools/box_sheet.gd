@@ -1,6 +1,6 @@
 extends SceneTree
 ## 判定框对照表：把一个角色的各个状态（取攻击持续帧）连同判定框渲染成一张网格图，用来检查精灵与判定是否对得上。
-## godot --path . -s res://tools/box_sheet.gd -- <out.png> <角色序号（见 training.gd ROSTER）>
+## godot --path . -s res://tools/box_sheet.gd -- <out.png> <角色序号（见 Roster.load_all()）>
 
 const CELL := Vector2i(300, 330)
 const COLS := 8

@@ -1,5 +1,7 @@
 extends Node2D
-## 训练场景：固定 60 帧推进仿真，表现层每帧读取状态绘制。
+## 对局场景（训练 / 对战共用）：固定 60 帧推进仿真，表现层每帧读取状态绘制。
+## 从标题 → 选人进来时按 Session 的模式和角色开局；直接运行时是训练模式。
+## Esc / 手柄 Start 打开暂停菜单（继续 / 重新开始 / 重新选人 / 回到标题）；对战结束后弹出结算菜单（再来一局 / 重新选人 / 回到标题）。
 ## 功能键（括号里是 Mac 上不会触发媒体键的替代键，两个都能用）：
 ##   F1(6) 判定框  F2([) 存档  F3(]) 读档  F4(P) 暂停  F5(N) 单帧步进（暂停时）  F6(R) 重置（Shift 版边）
 ##   F7(V) 精灵/白模  F8(8) 切换 P1 角色  F9(9) 切换 P2 角色
@@ -9,15 +11,10 @@ extends Node2D
 ## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
-const ROSTER: Array[FighterDef] = [
-	preload("res://characters/kagura/kagura.tres"),
-	preload("res://characters/volk/volk.tres"),
-	preload("res://characters/mio/mio.tres"),
-	preload("res://characters/dummy/dummy.tres"),
-]
+const RESULT_DELAY := 90 ## 比赛结束后多久弹出结算菜单
+const PAUSE_ITEMS := ["继续", "重新开始", "重新选人", "回到标题"]
+const RESULT_ITEMS := ["再来一局", "重新选人", "回到标题"]
 
-## 实际可选角色：有本地导入的 MUGEN 人物（local_assets/mugen/*/fighter.tres，不入库）时只用它们；
-## 没有时（例如刚从仓库拉下来）退回内置的占位角色 ROSTER。
 var roster: Array[FighterDef] = []
 var sim: MatchSim
 var paused := false
@@ -30,6 +27,9 @@ var dummy := TrainingDummy.new()
 var logs := [InputLog.new(), InputLog.new()]
 var trial := ComboTrial.new()
 var demo := ComboDemo.new()
+var pause_menu: MenuPanel
+var result_menu: MenuPanel
+var _over := 0 ## 比赛结束后经过的帧数
 var _slow := 0 ## KO 慢动作剩余的显示帧
 var _slow_tick := 0
 const KO_SLOW := [60, 2, 30, 3] ## 前 60 帧 1/2 速度，之后 30 帧 1/3 速度（仿真本身仍是逐帧确定的）
@@ -42,29 +42,26 @@ const KO_SLOW := [60, 2, 30, 3] ## 前 60 帧 1/2 速度，之后 30 帧 1/3 速
 @onready var combo_labels: Array[Label] = [$HUD/ComboP1, $HUD/ComboP2]
 
 
-## 默认字体没有中文，系统自动回退可能选到繁体字体（macOS 上 "PingFang SC" 会解析成 PingFang HK，"杀"显示成方框），
-## 这里显式指定简体中文字体作为后备。
-## 在 _enter_tree 里设置，子节点画字之前就生效。
 func _enter_tree() -> void:
-	var cjk := SystemFont.new()
-	cjk.font_names = PackedStringArray(["Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Heiti SC",
-		"Source Han Sans SC", "WenQuanYi Micro Hei", "Arial Unicode MS"])
-	var font: Font = ThemeDB.fallback_font.duplicate()
-	font.fallbacks = [cjk]
-	ThemeDB.fallback_font = font
+	UiFont.setup()
 
 
 func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
 	_fit_window_to_screen()
 	LocalInput.register_actions()
-	roster = local_fighters()
-	if roster.is_empty():
-		roster = ROSTER.duplicate()
-	picks = [0, mini(1, roster.size() - 1)]
+	roster = Roster.load_all()
+	var setup := session_setup(roster.size())
+	picks = setup[0]
+	var versus: bool = setup[1]
 	sim = MatchSim.new(STAGE, roster[picks[0]], roster[picks[1]])
-	sim.training = true
+	sim.versus = versus
+	sim.training = not versus
 	sim.reset()
+	pause_menu = _make_menu()
+	pause_menu.chosen.connect(_on_pause_menu)
+	result_menu = _make_menu()
+	result_menu.chosen.connect(_on_result_menu)
 	view.sim = sim
 	hud_view.sim = sim
 	hud.visible = false
@@ -80,6 +77,8 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if pause_menu.visible or result_menu.visible:
+		return
 	if paused and not step_once:
 		return
 	step_once = false
@@ -118,6 +117,12 @@ func advance(human: Array[int]) -> void:
 		trial.record(sim)
 	for i in 2:
 		logs[i].record(InputBits.clean_socd(last_inputs[i]))
+	if sim.round_state == MatchSim.Round.MATCH_OVER:
+		_over += 1
+		if _over == RESULT_DELAY and result_menu != null:
+			result_menu.open("比赛结束", PackedStringArray(RESULT_ITEMS), false)
+	else:
+		_over = 0
 
 
 func _process(_delta: float) -> void:
@@ -141,6 +146,13 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	for m in [pause_menu, result_menu]:
+		if m.handle(event):
+			get_viewport().set_input_as_handled()
+			return
+	if MenuInput.pause(event):
+		pause_menu.open("暂停", PackedStringArray(PAUSE_ITEMS))
+		return
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
 		return
@@ -200,6 +212,54 @@ func _unhandled_input(event: InputEvent) -> void:
 				demo.start(trial, key.shift_pressed)
 
 
+## 开局设置 [picks, versus]：从选人进来时按 Session，否则训练模式、前两个角色。
+static func session_setup(roster_size: int) -> Array:
+	var out: Array[int] = [0, mini(1, roster_size - 1)]
+	if not Session.from_menu:
+		return [out, false]
+	for i in 2:
+		out[i] = clampi(Session.picks[i], 0, roster_size - 1)
+	return [out, Session.mode != Session.Mode.TRAINING]
+
+
+func _make_menu() -> MenuPanel:
+	var m := MenuPanel.new()
+	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.visible = false
+	$HUD.add_child(m)
+	return m
+
+
+func _on_pause_menu(i: int) -> void:
+	match i:
+		1:
+			rematch()
+		2:
+			get_tree().change_scene_to_file("res://scenes/char_select.tscn")
+		3:
+			get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+func _on_result_menu(i: int) -> void:
+	match i:
+		0:
+			rematch()
+		1:
+			get_tree().change_scene_to_file("res://scenes/char_select.tscn")
+		2:
+			get_tree().change_scene_to_file("res://scenes/title.tscn")
+
+
+## 同样的角色重新开一局（对战回到第 1 回合）。
+func rematch() -> void:
+	demo.stop()
+	sim.reset()
+	saved_state = {}
+	_over = 0
+	_slow = 0
+
+
 ## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
 func _fit_window_to_screen() -> void:
 	# 在编辑器的 Game 面板里内嵌运行时，窗口大小由编辑器决定，这里改不了（画面上会提示）
@@ -224,27 +284,9 @@ func _toggle_fullscreen() -> void:
 		_fit_window_to_screen.call_deferred()
 
 
+## 本地导入人物（测试用；实际选人走 Roster.load_all()）。
 static func local_fighters() -> Array[FighterDef]:
-	var out: Array[FighterDef] = []
-	var base := "res://local_assets/mugen"
-	if not DirAccess.dir_exists_absolute(base):
-		return out
-	var dirs := Array(DirAccess.get_directories_at(base))
-	dirs.sort_custom(func(a: String, b: String) -> bool:
-		return _local_order(a) < _local_order(b) if _local_order(a) != _local_order(b) else a < b)
-	for d: String in dirs:
-		var path := base.path_join(d).path_join("fighter.tres")
-		if not d.begins_with("_") and ResourceLoader.exists(path):
-			var def: FighterDef = load(path)
-			if def != null:
-				out.append(def)
-	return out
-
-
-## 选人顺序：志贵、翽马、希尔在前，其余按名字排。
-static func _local_order(dir_name: String) -> int:
-	var i := ["shiki", "kouma", "ciel"].find(dir_name)
-	return i if i >= 0 else 99
+	return Roster.local_fighters()
 
 
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。

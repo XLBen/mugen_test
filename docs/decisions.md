@@ -42,6 +42,7 @@
 | 35 | 角色内容（对照 SF6） | 去掉 Kagura 的通用 Gatling（SF6 只有轻攻击互相连打，其余靠目标连段）；Kagura 被防有利收紧（5LP / 2LP -1、2MP -2，只留 5MP +1）；Volk / Mio 的 2LK 可以连打和取消；每人目标连段（Kagura 5MP>HP、5LK>MK，Volk 5MP>HK，Mio 2MP>HP）和指令普攻（Kagura 6MP 中段、Volk 4HP 对空、Mio 6HK 远踢，优先级高于普攻）；升龙分 L/M/H（无敌与高度递增，L 不防投）；全员后投（4LP+LK）。借用的回退动画只提供受击盒、不提供攻击框 | 2026-10-17 自省 |
 | 36 | 超杀等级 | SA1 1 格（约 2000，暂停 40，保底 30%）/ SA2 2 格（约 2600，暂停 45，保底 40%）/ SA3 3 格（约 4000，暂停 50，保底 50%）；体力 ≤25% 时 SA3 变成 Critical Art（伤害约 ×1.15，同指令，优先）；原 1 格超杀伤害 2600–3600 降到 2000–2200 | 2026-10-17 自省；伤害为 SF6 常见量级，未逐角色核实 |
 | 37 | 表现（对照 SF6） | 镜头两人靠近时最多拉近 1.12 倍，超杀暂停推近（SA1 1.25 / SA2 1.3 / SA3·CA 1.4）并偏向出招方；KO 慢动作（先 1/2 速 60 帧、再 1/3 速 30 帧，只在场景层减慢推进，仿真仍逐帧确定）；横幅 COUNTER / PUNISH COUNTER / PERFECT PARRY / DRIVE IMPACT / DRIVE REVERSAL / WALL SPLAT / STUN / CRITICAL ART；体力条红色延迟扣血；出招方画在前面；随高度变化的椭圆影子；Burnout 角色发灰；招架蓝色脉冲、DI 墨色脉冲、撞墙裂纹、眩晕星星；新增倒地 / 招架 / DI / 撞墙 / 回合开始音效。背景音乐和角色语音未做（没有素材） | 2026-10-17 自省 |
+| 38 | 游戏流程 | 主场景改为标题画面 → 选人（双人各自选；对战电脑 / 训练用一个光标先选自己再选对手，对战电脑再选等级 1–8）→ 对局；对局场景训练 / 对战共用（`scenes/training.tscn`），跨场景设置放在静态类 `Session`（不用 autoload，无头测试也能用）；Esc 暂停菜单、比赛结束弹结算菜单（修复对战结束后卡住）；菜单键不用 F 键；P2 增加非小键盘按键 | 2026-10-17 自省 |
 
 参考：[SRK SF6 Offense](https://srk.shib.live/w/Street_Fighter_6/Offense)、
 [SRK SF6 Game Data](https://srk.shib.live/w/Street_Fighter_6/Game_Data)、
