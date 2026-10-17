@@ -13,7 +13,8 @@ const ROSTER: Array[FighterDef] = [
 	preload("res://characters/dummy/dummy.tres"),
 ]
 
-## 实际可选角色 = 内置 ROSTER + 本地导入的 MUGEN 人物（local_assets/mugen/*/fighter.tres，不入库）
+## 实际可选角色：有本地导入的 MUGEN 人物（local_assets/mugen/*/fighter.tres，不入库）时只用它们；
+## 没有时（例如刚从仓库拉下来）退回内置的占位角色 ROSTER。
 var roster: Array[FighterDef] = []
 var sim: MatchSim
 var paused := false
@@ -36,8 +37,10 @@ var logs := [InputLog.new(), InputLog.new()]
 func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
 	LocalInput.register_actions()
-	roster = ROSTER.duplicate()
-	roster.append_array(local_fighters())
+	roster = local_fighters()
+	if roster.is_empty():
+		roster = ROSTER.duplicate()
+	picks = [0, mini(1, roster.size() - 1)]
 	sim = MatchSim.new(STAGE, roster[picks[0]], roster[picks[1]])
 	sim.training = true
 	sim.reset()
@@ -139,15 +142,22 @@ static func local_fighters() -> Array[FighterDef]:
 	var base := "res://local_assets/mugen"
 	if not DirAccess.dir_exists_absolute(base):
 		return out
-	var dirs := DirAccess.get_directories_at(base)
-	dirs.sort()
-	for d in dirs:
+	var dirs := Array(DirAccess.get_directories_at(base))
+	dirs.sort_custom(func(a: String, b: String) -> bool:
+		return _local_order(a) < _local_order(b) if _local_order(a) != _local_order(b) else a < b)
+	for d: String in dirs:
 		var path := base.path_join(d).path_join("fighter.tres")
 		if not d.begins_with("_") and ResourceLoader.exists(path):
 			var def: FighterDef = load(path)
 			if def != null:
 				out.append(def)
 	return out
+
+
+## 选人顺序：志贵、翽马、希尔在前，其余按名字排。
+static func _local_order(dir_name: String) -> int:
+	var i := ["shiki", "kouma", "ciel"].find(dir_name)
+	return i if i >= 0 else 99
 
 
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。
