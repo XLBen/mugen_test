@@ -25,6 +25,7 @@ var tail_var := 0 ## 那个状态当时的变体
 var tail_from := 0 ## 从动画的哪个时刻开始
 var tail_ticks := 0 ## 剩余动画时长
 var tail_len := 0 ## 用几帧播完（0 = 没有尾巴）
+var held := 0 ## 当前状态里已经过的超杀暂停帧数（暂停期间动画照播，见 AnimClock.attack_tick）
 var health := 0
 var stun := 0 ## 当前受击/防御硬直的长度
 var hitstop := 0 ## 剩余顿帧
@@ -118,6 +119,7 @@ func set_state(state_name_: String) -> void:
 		tail_ticks = tail[1]
 		tail_len = tail[2]
 	state_frame = 0
+	held = 0
 	fresh = 1
 	hit_mask = 0
 	push_transfer = 0
@@ -209,7 +211,7 @@ func numpad_at(frame: int) -> int:
 # ---------------------------------------------------------------- 存档
 
 const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "hit_var",
-	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "health",
+	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "held", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
 	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
 	"cmd_index", "upgrade_until", "armor_used"]

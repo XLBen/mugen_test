@@ -41,6 +41,8 @@ var untechable := false ## 投技：被投方不能拆（指令投）
 var no_push: Array = [] ## [from, to]：这段帧数不参与推挤（可以穿过对手）
 var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
 var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
+var freeze_len := 0 ## 发生前的超杀暂停总帧数（暂停期间出招动画继续播预备动作）
+var reach_cap := 0 ## >0：动画攻击盒向前最远到这里（单位），原作攻击框太长时收回到招式表的范围
 
 
 static func build(state_name: String, d: Dictionary) -> StateDef:
@@ -104,6 +106,9 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 		var ev := e.duplicate()
 		ev.frame = e.frame - 1
 		s.events.append(ev)
+		if e.has("freeze") and (s.first_active < 0 or ev.frame < s.first_active):
+			s.freeze_len += e.freeze
+	s.reach_cap = d.get("reach_cap", 0) * SimConst.UNITS_PER_PX
 	return s
 
 

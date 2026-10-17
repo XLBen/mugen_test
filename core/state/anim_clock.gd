@@ -4,7 +4,9 @@ class_name AnimClock
 ## - 动画名：状态的基础动画 + 变体后缀（跳跃方向 _f/_b；受击的上下段 / 强度 _hi_l … _lo_h），没有这套就退回基础动画
 ## - jump：三帧的按垂直速度选 上升 / 顶点 / 下落；更多帧的是完整空中弧线，按 起跳速度 → 0 → 下落 的进度铺满
 ## - 攻击：动画的 发生 / 持续 / 收招 段分别对齐到招式的发生帧、持续帧、收招帧（持续帧必定显示有攻击盒的帧）；
-##   收招段按原速播放，太长时才加速，播不完的部分在下一个可行动状态里作为"尾巴"继续播
+##   发生段按原速播到预备姿势后停住等出手（蓄势），比发生帧长时加速、最多 2 倍速，再长就只播后面一段；
+##   超杀暂停期间预备动作照播（暂停帧数算进发生段）；
+##   收招段按原速播放，太长时才加速、太短时稍微放慢，播不完的部分在下一个可行动状态里作为"尾巴"继续播
 ## - 受击 / 防御：受击段从顿帧开始按原速播放并停住，恢复段放在硬直的最后几帧
 ## - 浮空受击：上升时按时长播放，下落时按下落速度播放下落段
 ## - 其他：按时长播放；有固定总帧数的状态太长时同样加速并把剩余部分交给尾巴
@@ -13,6 +15,8 @@ class_name AnimClock
 
 const UP_SPEED := 600
 const TAIL_MAX := 12 ## 尾巴最长帧数
+const STARTUP_MAX_SPEED := 2 ## 发生段最多按 2 倍速播放：预备动作更长时只播后面一段（开头的起势直接跳过），免得像快进
+const STRETCH_MAX := [3, 2] ## 动画比给它的帧数短时最多放慢到 3/2，再短就停在最后一帧（免得一下播完然后定住）
 ## 变体后缀表（按 Fighter 上的变体值索引）
 const JUMP_SUFFIX := ["_b", "", "_f"]
 const HIT_SUFFIX := ["_hi_l", "_hi_m", "_hi_h", "_lo_l", "_lo_m", "_lo_h"]
@@ -104,7 +108,7 @@ static func frame(f: Fighter, s: StateDef, anim: AnimData) -> int:
 			return anim.index_at_time(clampi((vy0 - f.vy) * length / (2 * vy0), 0, length - 1))
 		return mini(0 if f.vy > UP_SPEED else (2 if f.vy < -UP_SPEED else 1), count - 1)
 	if s.first_active >= 0 and anim.has_phase(AnimData.Phase.ACTIVE):
-		return anim.index_at_time(attack_tick(s, anim, t))
+		return anim.index_at_time(attack_tick(s, anim, t, f.held))
 	if s.logic == "hurt" and anim.has_phase(AnimData.Phase.RECOVERY):
 		return anim.index_at_time(_hurt_tick(anim, t, f.stun))
 	if anim.has_phase(AnimData.Phase.FALL):
@@ -115,13 +119,19 @@ static func frame(f: Fighter, s: StateDef, anim: AnimData) -> int:
 
 
 ## 攻击动画在招式第 t 帧时的动画时刻（不需要 Fighter，判定盒预处理也用它）。
-static func attack_tick(s: StateDef, anim: AnimData, t: int) -> int:
+## held：已经过的超杀暂停帧数（只影响发生段；暂停期间 t 不走，靠它推进预备动作）。
+static func attack_tick(s: StateDef, anim: AnimData, t: int, held := 0) -> int:
 	var startup := anim.segment(AnimData.Phase.STARTUP)
 	var active := anim.segment(AnimData.Phase.ACTIVE)
 	if t < s.first_active:
 		if startup.y == 0:
 			return active.x
-		return startup.x + t * startup.y / maxi(s.first_active, 1)
+		var span := maxi(s.first_active + s.freeze_len, 1)
+		var v := mini(t + held, span - 1)
+		if startup.y <= span:
+			return startup.x + mini(v, startup.y - 1) # 按原速播到预备姿势，停在那里等出手
+		var length := mini(startup.y, span * STARTUP_MAX_SPEED)
+		return startup.x + startup.y - length + v * length / span
 	if t <= s.last_active:
 		var span := s.last_active - s.first_active + 1
 		return active.x + (t - s.first_active) * active.y / span
@@ -133,10 +143,15 @@ static func attack_tick(s: StateDef, anim: AnimData, t: int) -> int:
 	return rec_start + _budget_tick(into, rec_len, s.total - s.last_active - 1)
 
 
-## 动画段长 length、状态给它 frames 帧：不超过 frames + TAIL_MAX 时按原速，否则按比例加速。
+## 动画段长 length、状态给它 frames 帧：超过 frames + TAIL_MAX 时按比例加速；比 frames 短时放慢（最多 STRETCH_MAX）；
+## 其余按原速。
 static func _budget_tick(into: int, length: int, frames: int) -> int:
 	var budget := frames + TAIL_MAX
-	return into if length <= budget else into * length / budget
+	if length > budget:
+		return into * length / budget
+	if length < frames:
+		return into * length / mini(frames, length * STRETCH_MAX[0] / STRETCH_MAX[1])
+	return into
 
 
 ## 受击 / 防御：恢复段占硬直最后 rec 帧（最多一半），之前播受击段并停在最后一帧。

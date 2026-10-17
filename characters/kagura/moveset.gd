@@ -28,18 +28,20 @@ func build() -> void:
 
 
 func _normals() -> void:
-	normal("5lp", "S", "LP", 4, 2, 6, 5, 1, [22, 135, 50, 18], L, {}, FROM_LIGHT)
-	normal("5mp", "S", "MP", 5, 2, 11, 5, 1, [22, 128, 62, 20], M, {}, FROM_MEDIUM)
-	normal("5hp", "S", "HP", 8, 3, 16, 3, -2, [22, 120, 75, 24], H, {"push": 450}, SPECIAL)
+	normal("5lp", "S", "LP", 4, 2, 6, 5, 1, [22, 135, 50, 18], L, {"step": [2, 5, 10]}, FROM_LIGHT)
+	normal("5mp", "S", "MP", 5, 2, 11, 5, 1, [22, 128, 62, 20], M, {"step": [1, 6, 25]}, FROM_MEDIUM)
+	normal("5hp", "S", "HP", 8, 3, 16, 3, -2, [22, 120, 75, 24], H, {"push": 450, "step": [3, 10, 30]}, SPECIAL)
 	normal("5lk", "S", "LK", 4, 2, 8, 3, -1, [18, 70, 50, 22], L, {}, FROM_LIGHT)
 	normal("5mk", "S", "MK", 6, 3, 12, 3, -2, [22, 55, 70, 22], M, {}, FROM_MEDIUM)
-	normal("5hk", "S", "HK", 9, 3, 18, 2, -4, [22, 95, 85, 28], H, {"counter_effect": "launch", "air_vy": 1200})
+	normal("5hk", "S", "HK", 9, 3, 18, 2, -4, [22, 95, 85, 28], H, {"counter_effect": "launch", "air_vy": 1200,
+		"step": [2, 9, 20]})
 	normal("2lp", "C", "LP", 4, 2, 6, 4, 0, [22, 85, 45, 18], L, {}, FROM_LIGHT)
 	normal("2mp", "C", "MP", 5, 2, 10, 4, 1, [22, 85, 58, 20], M, {}, FROM_MEDIUM)
-	normal("2hp", "C", "HP", 7, 4, 18, 1, -6, [8, 110, 48, 90], H, {"juggle_limit": 1})
+	normal("2hp", "C", "HP", 7, 4, 18, 1, -6, [8, 110, 48, 90], H, {"juggle_limit": 1, "step": [1, 8, 45]})
 	normal("2lk", "C", "LK", 4, 2, 7, 2, -1, [22, 0, 50, 20], L, {"guard": "low"}, FROM_LIGHT)
 	normal("2mk", "C", "MK", 7, 3, 14, 1, -3, [22, 0, 72, 20], M, {"guard": "low"}, FROM_MEDIUM)
-	normal("2hk", "C", "HK", 8, 3, 22, 0, -11, [22, 0, 85, 20], H, {"guard": "low", "effect": "knockdown"})
+	normal("2hk", "C", "HK", 8, 3, 22, 0, -11, [22, 0, 85, 20], H, {"guard": "low", "effect": "knockdown",
+		"step": [3, 12, 80]})
 
 
 func _air_normals() -> void:

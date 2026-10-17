@@ -182,10 +182,10 @@ func test_mio_storm_multi_hit() -> void:
 
 
 func test_mio_long_pokes() -> void:
-	var sim := char_sim(MIO, DUMMY, 140)
+	var sim := char_sim(MIO, DUMMY, 175)
 	play(sim, "5HP", "", 15)
-	check(sim.fighters[1].health < DUMMY.max_health, "Mio 5HP reaches 140px")
-	sim = char_sim(KAGURA, DUMMY, 140)
+	check(sim.fighters[1].health < DUMMY.max_health, "Mio 5HP (lunging thrust) reaches 175px")
+	sim = char_sim(KAGURA, DUMMY, 175)
 	play(sim, "5HP", "", 15)
 	check_eq(sim.fighters[1].health, DUMMY.max_health, "Kagura 5HP does not")
 
@@ -211,6 +211,7 @@ func test_attack_boxes_come_from_animation_frames() -> void:
 						if not drawn.has(b):
 							drawn.append(b)
 				check(not drawn.is_empty(), "%s %s: active frames have drawn hitboxes" % [def.display_name, s.name])
+				drawn = Moveset._capped(drawn, s.reach_cap)
 				for b in h.boxes:
 					check(drawn.has(b), "%s %s: hitbox comes from the drawn frames" % [def.display_name, s.name])
 
@@ -228,6 +229,65 @@ func test_attack_animation_phases_line_up() -> void:
 	check_eq(shown.slice(5, 7), [2, 2], "active frames show the active pose")
 	check_eq(shown[7], 3, "recovery starts right after the active frames")
 	check_eq(shown[19], 5, "recovery reaches the last pose (12 ticks fit in 12 frames)")
+
+
+## 预备动作比发生帧短：按原速播到预备姿势，停在那里等出手；比 2 倍速还长：跳过开头，只播后面一段。
+func test_startup_holds_or_skips() -> void:
+	var s := StateDef.build("x", {"type": "S", "kind": "normal", "total": 20,
+		"hitboxes": [{"active": [6, 7], "boxes": [[0, 0, 10, 10]], "hit": {}}]})
+	var short := AnimData.from_meta({"frames": [["a", 1, {}, "s"], ["b", 1, {}, "s"], ["c", 2, {"hit": [[0, 0, 9, 9]]}, "a"],
+		["d", 4, {}, "r"]]})
+	var shown := []
+	for t in 5:
+		shown.append(short.index_at_time(AnimClock.attack_tick(s, short, t)))
+	check_eq(shown, [0, 1, 1, 1, 1], "short windup reaches the ready pose and holds it")
+	var long := AnimData.from_meta({"frames": [["a", 20, {}, "s"], ["b", 5, {}, "s"], ["c", 5, {}, "s"],
+		["d", 2, {"hit": [[0, 0, 9, 9]]}, "a"], ["e", 4, {}, "r"]]})
+	shown = []
+	for t in 5:
+		shown.append(long.index_at_time(AnimClock.attack_tick(s, long, t)))
+	check_eq(shown, [1, 1, 1, 2, 2], "a windup longer than 2x skips its beginning instead of fast-forwarding")
+
+
+## 超杀暂停期间预备动作照播（暂停帧数算进发生段），暂停结束后接着播。
+func test_super_freeze_plays_the_windup() -> void:
+	var s := StateDef.build("x", {"type": "S", "kind": "super", "total": 40, "events": [{"frame": 1, "freeze": 30}],
+		"hitboxes": [{"active": [6, 7], "boxes": [[0, 0, 10, 10]], "hit": {}}]})
+	check_eq(s.freeze_len, 30, "freeze before the first active frame counts")
+	var anim := AnimData.from_meta({"frames": [["a", 10, {}, "s"], ["b", 10, {}, "s"], ["c", 10, {}, "s"],
+		["d", 2, {"hit": [[0, 0, 9, 9]]}, "a"], ["e", 4, {}, "r"]]})
+	check_eq(anim.index_at_time(AnimClock.attack_tick(s, anim, 0, 0)), 0, "starts at the first pose")
+	check_eq(anim.index_at_time(AnimClock.attack_tick(s, anim, 0, 15)), 1, "halfway through the freeze")
+	check_eq(anim.index_at_time(AnimClock.attack_tick(s, anim, 4, 30)), 2, "after the freeze, last windup pose")
+	var sim := char_sim(KAGURA, DUMMY, 150)
+	var k := sim.fighters[0]
+	k.gauges[Gauges.SUPER] = Gauges.DEFS[Gauges.SUPER].max
+	play(sim, "2,3,6,2,3,6HK", "", 3)
+	check(sim.freeze > 0, "super freeze started")
+	var before := k.held
+	sim.step([0, 0])
+	check_eq(k.held, before + 1, "held counts frozen frames of the super")
+
+
+## 收招动画比收招帧短：放慢最多 1.5 倍，不会一下播完然后定住。
+func test_short_recovery_is_stretched() -> void:
+	var s := StateDef.build("x", {"type": "S", "kind": "normal", "total": 20,
+		"hitboxes": [{"active": [2, 2], "boxes": [[0, 0, 10, 10]], "hit": {}}]})
+	var anim := AnimData.from_meta({"frames": [["a", 1, {}, "s"], ["b", 1, {"hit": [[0, 0, 9, 9]]}, "a"],
+		["c", 4, {}, "r"], ["d", 4, {}, "r"]]})
+	# 收招 18 帧，动画 8 刻：放慢到 12 帧播完
+	check_eq(anim.index_at_time(AnimClock.attack_tick(s, anim, 2 + 5)), 2, "still on the first recovery pose")
+	check_eq(anim.index_at_time(AnimClock.attack_tick(s, anim, 2 + 7)), 3, "second recovery pose")
+
+
+## 踏步：step [第几帧, 到第几帧, 像素] 先快后慢地走完给定距离。
+func test_step_moves_forward() -> void:
+	var sim := char_sim(KAGURA, DUMMY, 400)
+	var k := sim.fighters[0]
+	var x0 := k.x
+	play(sim, "2HK", "", 30)
+	var moved := (k.x - x0) / SimConst.UNITS_PER_PX
+	check(moved >= 75 and moved <= 82, "Kagura 2HK slides about 80px (%d)" % moved)
 
 
 func test_hurtboxes_follow_the_pose() -> void:

@@ -27,20 +27,20 @@ func build() -> void:
 func _normals() -> void:
 	var heavy := with(H, {"damage": 1000, "hitstop": 12})
 	normal("5lp", "S", "LP", 5, 2, 8, 3, -1, [25, 140, 58, 20], L, {}, LIGHT_CHAIN)
-	normal("5mp", "S", "MP", 7, 3, 14, 3, -1, [28, 130, 80, 24], with(M, {"damage": 700}), {}, SPECIAL)
+	normal("5mp", "S", "MP", 7, 3, 14, 3, -1, [28, 130, 80, 24], with(M, {"damage": 700}), {"step": [3, 9, 30]}, SPECIAL)
 	normal("5hp", "S", "HP", 11, 4, 22, 2, -5, [28, 120, 100, 30], heavy,
-		{"counter_effect": "launch", "air_vy": 1100, "push": 450}, SPECIAL)
-	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L)
-	normal("5mk", "S", "MK", 9, 3, 16, 2, -3, [28, 55, 95, 26], with(M, {"damage": 750}))
+		{"counter_effect": "launch", "air_vy": 1100, "push": 450, "step": [4, 12, 40]}, SPECIAL)
+	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L, {"step": [3, 6, 20]})
+	normal("5mk", "S", "MK", 9, 3, 16, 2, -3, [28, 55, 95, 26], with(M, {"damage": 750}), {"step": [3, 10, 30]})
 	normal("5hk", "S", "HK", 13, 4, 22, 1, -6, [28, 95, 110, 34], with(heavy, {"damage": 1100}),
-		{"armor": {"frames": [5, 12], "hits": 1}})
+		{"armor": {"frames": [5, 12], "hits": 1}, "step": [5, 15, 50]})
 	normal("2lp", "C", "LP", 5, 2, 8, 3, 0, [25, 85, 52, 20], L, {}, LIGHT_CHAIN)
-	normal("2mp", "C", "MP", 7, 3, 13, 3, -1, [28, 85, 75, 22], with(M, {"damage": 700}), {}, SPECIAL)
+	normal("2mp", "C", "MP", 7, 3, 13, 3, -1, [28, 85, 75, 22], with(M, {"damage": 700}), {"step": [2, 8, 25]}, SPECIAL)
 	normal("2hp", "C", "HP", 10, 4, 24, 1, -9, [10, 115, 58, 105], heavy, {"juggle_limit": 1})
 	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [25, 0, 58, 22], L, {"guard": "low"})
-	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [28, 0, 90, 22], with(M, {"damage": 700}), {"guard": "low"}, SPECIAL)
+	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [28, 0, 90, 22], with(M, {"damage": 700}), {"guard": "low", "step": [2, 10, 30]}, SPECIAL)
 	normal("2hk", "C", "HK", 11, 3, 26, 0, -14, [28, 0, 105, 24], with(heavy, {"damage": 1100}),
-		{"guard": "low", "effect": "knockdown"})
+		{"guard": "low", "effect": "knockdown", "step": [2, 12, 40]})
 
 
 func _air_normals() -> void:

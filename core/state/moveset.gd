@@ -60,7 +60,7 @@ func apply_anim_boxes(lib: Dictionary) -> void:
 			for h: Dictionary in s.hitboxes:
 				var hits := _hits_between(s, anim, h.from, h.to)
 				if not hits.is_empty():
-					h.boxes = hits
+					h.boxes = _capped(hits, s.reach_cap)
 		s.reach = 0
 		for h: Dictionary in s.hitboxes:
 			for b: PackedInt32Array in h.boxes:
@@ -77,6 +77,18 @@ static func _hits_between(s: StateDef, anim: AnimData, from: int, to: int) -> Ar
 			continue
 		seen[i] = true
 		out.append_array(anim.hit[i])
+	return out
+
+
+## 攻击盒向前最远到 cap（单位，0 = 不限）：超出的部分截掉，整个在外面的盒子缩成贴着 cap 的窄条。
+static func _capped(boxes: Array, cap: int) -> Array:
+	if cap <= 0:
+		return boxes
+	var out := []
+	for b: PackedInt32Array in boxes:
+		var right := mini(b[0] + b[2], cap)
+		var left := mini(b[0], right - 1)
+		out.append(PackedInt32Array([left, b[1], right - left, b[3]]))
 	return out
 
 

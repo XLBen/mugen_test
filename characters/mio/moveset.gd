@@ -29,17 +29,18 @@ func build() -> void:
 
 func _normals() -> void:
 	normal("5lp", "S", "LP", 4, 2, 8, 3, -1, [22, 135, 62, 18], L, {}, LIGHT_CHAIN)
-	normal("5mp", "S", "MP", 7, 3, 14, 2, -2, [28, 128, 95, 22], M, {}, SPECIAL)
-	normal("5hp", "S", "HP", 10, 4, 22, 1, -6, [30, 120, 115, 26], H, {}, SPECIAL)
+	normal("5mp", "S", "MP", 7, 3, 14, 2, -2, [28, 128, 95, 22], M, {"step": [3, 9, 30]}, SPECIAL)
+	normal("5hp", "S", "HP", 10, 4, 22, 1, -6, [30, 120, 115, 26], H, {"step": [5, 12, 45], "reach_cap": 145}, SPECIAL)
 	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [20, 70, 70, 22], L)
-	normal("5mk", "S", "MK", 8, 3, 16, 1, -3, [25, 55, 100, 24], M, {}, SPECIAL)
+	normal("5mk", "S", "MK", 8, 3, 16, 1, -3, [25, 55, 100, 24], M, {"step": [3, 9, 20]}, SPECIAL)
 	normal("5hk", "S", "HK", 12, 4, 22, 1, -6, [20, 130, 90, 40], H, {"juggle_limit": 1})
 	normal("2lp", "C", "LP", 4, 2, 8, 3, -1, [22, 85, 55, 18], L, {}, LIGHT_CHAIN)
 	normal("2mp", "C", "MP", 6, 3, 14, 2, -2, [25, 85, 80, 20], M, {}, SPECIAL)
 	normal("2hp", "C", "HP", 9, 5, 22, 1, -8, [0, 110, 70, 100], H, {"juggle_limit": 1})
 	normal("2lk", "C", "LK", 5, 2, 9, 1, -2, [22, 0, 60, 20], L, {"guard": "low"})
-	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [25, 0, 105, 20], M, {"guard": "low"}, SPECIAL)
-	normal("2hk", "C", "HK", 10, 3, 26, 0, -14, [25, 0, 110, 20], H, {"guard": "low", "effect": "knockdown"})
+	normal("2mk", "C", "MK", 9, 3, 17, 1, -5, [25, 0, 105, 20], M, {"guard": "low", "step": [4, 11, 15]}, SPECIAL)
+	normal("2hk", "C", "HK", 10, 3, 26, 0, -14, [25, 0, 110, 20], H, {"guard": "low", "effect": "knockdown",
+		"step": [4, 13, 45]})
 
 
 func _air_normals() -> void:

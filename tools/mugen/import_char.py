@@ -10,6 +10,7 @@
 映射文件（见 tools/mugen/maps/*.json）把本工程的动画名对应到 MUGEN 动作号：
     "idle": 0                              一个动作，按原时长播放
     "crouch": [10, 11]                     多个动作首尾相接
+    "5hp": [[210, 0, 2], 220]              [动作号, 第一帧, 最后一帧] 截取一段（-1 = 最后一帧）：拼上别的动作的预备动作、去掉多余的收尾
     "jump": {"frames": [[41, 0], [41, -1], [44, 0]]}   手动挑帧（-1 = 最后一帧）
     "hit_stand_hi_h": {"actions": [5002, 5007], "recover": 5007}   从 5007 起是受击恢复段
     "hit_air": {"actions": [5030, 5035, 5050], "fall": 5050}       从 5050 起是下落段
@@ -233,12 +234,13 @@ def pick_frames(actions: dict, spec) -> tuple[list, bool]:
 	max_time = opts.get("max_time", 0)
 	frames = []
 	tag = ""
-	for n in numbers:
+	for entry in numbers:
+		n, part = _slice(actions, entry)
 		if n == opts.get("recover"):
 			tag = "r"
 		if n == opts.get("fall"):
 			tag = "f"
-		for f in actions[n].frames:
+		for f in part:
 			dur = f.time if f.time > 0 else (max_time or 60)
 			frames.append((f, min(dur, max_time) if max_time else dur, tag))
 	attack = any(f.clsn1 for f, _, _ in frames)
@@ -274,15 +276,24 @@ def convert_box(box, scale):
 LOOPED = ("idle", "walk_f", "walk_b")
 
 
+def _slice(actions: dict, entry) -> tuple:
+	"""动作项 → (动作号, 帧列表)。entry 是动作号，或 [动作号, 第一帧, 最后一帧]（-1 = 最后一帧，用来截取一段）。"""
+	if isinstance(entry, list):
+		n, first, last = entry
+		frames = actions[n].frames
+		return n, frames[first:(last + 1 if last >= 0 else len(frames) + last + 1)]
+	return entry, actions[entry].frames
+
+
 def _numbers(spec) -> list:
 	"""映射项用到的全部动作号。"""
 	if isinstance(spec, int):
 		return [spec]
 	if isinstance(spec, list):
-		return spec
+		return [e[0] if isinstance(e, list) else e for e in spec]
 	if "frames" in spec:
 		return [n for n, _ in spec["frames"]]
-	return list(spec["actions"])
+	return [e[0] if isinstance(e, list) else e for e in spec["actions"]]
 
 
 def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:

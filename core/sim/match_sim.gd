@@ -97,6 +97,9 @@ func step(inputs: Array[int]) -> void:
 		fighters[i].record_input(frame, InputBits.clean_socd(inputs[i]) if accept_input else 0)
 	if freeze > 0:
 		freeze -= 1
+		for f in fighters:
+			if f.held < f.sd().freeze_len:
+				f.held += 1
 		return
 
 	for f in fighters:

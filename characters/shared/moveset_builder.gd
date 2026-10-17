@@ -61,6 +61,8 @@ static func combo_applies(c: Dictionary, def: FighterDef) -> bool:
 
 
 ## 地面普攻。cancel：接触后可以取消到的目标（kind 名或状态名）。
+## extra 里除了攻击属性还可以写状态属性：armor 霸体；step [第几帧, 到第几帧, 像素] 出招时向前踏步；
+## reach_cap 像素：导入人物的攻击框向前最远到这里。
 func normal(state_name: String, type: String, button: String, startup: int, active: int, recovery: int,
 		on_hit: int, on_block: int, box: Array, base: Dictionary, extra := {}, cancel := []) -> void:
 	var total := startup + active + recovery - 1
@@ -74,10 +76,13 @@ func normal(state_name: String, type: String, button: String, startup: int, acti
 		"hurtboxes": [{"frames": [startup, total], "boxes": [limb(box)]}],
 		"cancel": cancel,
 	}
-	for key in ["armor"]:
+	for key in ["armor", "reach_cap"]:
 		if extra.has(key):
 			state[key] = extra[key]
 			hit.erase(key)
+	if extra.has("step"):
+		state.merge(step(extra.step[0], extra.step[1], extra.step[2]))
+		hit.erase("step")
 	states[state_name] = state
 	frame_table[state_name] = {"on_hit": on_hit, "on_block": on_block,
 		"knockdown": hit.get("effect", "normal") != "normal"}
@@ -126,6 +131,14 @@ func dashes(forward_speed: int, forward_frames: int, forward_total: int,
 func dash_commands() -> void:
 	command("66", "move", {"motion": "66", "state": "dash_f"})
 	command("44", "move", {"motion": "44", "state": "dash_b"})
+
+
+## 出招时向前踏步：第 from 帧起步，到第 to 帧停下，一共走 px 像素，先快后慢（线性减速，像原作的地面摩擦）。
+## 返回要并进状态的 events / friction。
+static func step(from: int, to: int, px: int) -> Dictionary:
+	var n := to - from + 1
+	var v0 := 2 * px * SimConst.UNITS_PER_PX / (n + 1)
+	return {"friction": v0 / n, "events": [{"frame": from, "vx": v0}, {"frame": to + 1, "vx": 0}]}
 
 
 ## 出招时伸出的手脚也是受击区域（比攻击判定略短），这样才有"拆招"。

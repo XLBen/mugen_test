@@ -211,6 +211,16 @@ class AirTests(unittest.TestCase):
 		frames, _ = import_char.pick_frames(acts, {"actions": [0], "max_time": 3})
 		self.assertTrue(all(d <= 3 for _, d, _ in frames), "durations capped (also -1 = infinite)")
 
+	def test_slices_join_windup_and_trim(self):
+		acts = air.parse(AIR_TEXT)
+		frames, attack = import_char.pick_frames(acts, [[0, 0, 0], [200, 1, -1]])
+		self.assertTrue(attack)
+		self.assertEqual(len(frames), 1 + len(acts[200].frames) - 1)
+		self.assertEqual([p for _, _, p in frames], ["s", "a", "r"], "the borrowed windup becomes startup")
+		self.assertEqual(import_char._numbers({"actions": [[0, 0, 0], 200]}), [0, 200])
+		frames, _ = import_char.pick_frames(acts, [[200, 0, -2]])
+		self.assertEqual(len(frames), len(acts[200].frames) - 1, "-2 drops the last frame")
+
 	def test_convert_box(self):
 		self.assertEqual(import_char.convert_box((-10, -80, 10, 0), 1.5), [-15, 0, 30, 120])
 
