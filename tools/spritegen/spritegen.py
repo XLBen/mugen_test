@@ -240,6 +240,15 @@ def draw_arm(sk, front, outfit, depth, ch):
 	hand = Layer()
 	hand.circle(v_add(wr, v_mul(limb_dir(farm_deg), 2)), b["hand_r"])
 	parts.append(shade(hand, ramp(outfit.get("gloves", outfit["skin"]), depth), shadow_k=1, highlight=False))
+	if front and ch.get("weapon") == "ribbon" and sk.pose.get("ribbon", 0) > 1:
+		rib = Layer()
+		d = limb_dir(farm_deg)
+		n = perp(d)
+		start = v_add(wr, v_mul(d, 2))
+		length = sk.pose["ribbon"]
+		pts = [v_add(v_add(start, v_mul(d, length * k / 4)), v_mul(n, math.sin(k * 1.4) * 2)) for k in range(5)]
+		rib.chain(pts, 3.5, 2.2)
+		parts.insert(0, shade(rib, ramp(outfit.get("ribbon", (200, 40, 60))), shadow_k=1))
 	if front and ch.get("weapon") == "knife":
 		blade = Layer()
 		d = limb_dir(farm_deg + sk.pose.get("knife", 70))
@@ -586,6 +595,7 @@ FX = {
 
 
 def generate(char_id, out_root=ROOT / "characters"):
+	from boxes import frame_boxes  # boxes 依赖本模块的 Skeleton，延迟导入避免循环
 	ch = CHARACTERS[char_id]
 	sprite_dir = out_root / char_id / "sprites"
 	anims_meta = {}
@@ -596,10 +606,11 @@ def generate(char_id, out_root=ROOT / "characters"):
 			old.unlink()
 		for anim_name, anim in anims_for(char_id, ch).items():
 			frames = []
-			for i, (pose, duration) in enumerate(anim["frames"](ch)):
+			poses = anim["frames"](ch)
+			for i, (pose, duration) in enumerate(poses):
 				name = f"{anim_name}_{i:02d}"
 				render(ch, outfit, pose).save(pal_dir / f"{name}.png")
-				frames.append([name, duration])
+				frames.append([name, duration, frame_boxes(ch, pose, anim_name, i, len(poses))])
 			anims_meta[anim_name] = {"loop": anim["loop"], "frames": frames}
 		for fx_name, (fn, count, duration, anchor) in FX.get(char_id, {}).items():
 			frames = []
@@ -619,6 +630,10 @@ def generate(char_id, out_root=ROOT / "characters"):
 	# 帧列表压成一行，便于阅读 diff
 	import re
 	text = re.sub(r"\[\s+\"([^\"]+)\",\s+(\d+)\s+\]", r'["\1", \2]', text)
+	# 每帧 [名字, 时长, {hurt, hit}] 压成一行
+	text = re.sub(r"\[\s+\"([^\"]+)\",\s+(\d+),\s+(\{.*?\n\t+\})\s+\]",
+		lambda m: '["%s", %s, %s]' % (m.group(1), m.group(2), json.dumps(json.loads(m.group(3)), separators=(",", ":"))),
+		text, flags=re.S)
 	(sprite_dir / "anims.json").write_text(text + "\n")
 	return sprite_dir
 

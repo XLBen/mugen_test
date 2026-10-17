@@ -145,9 +145,13 @@ func push_right() -> int:
 ## 当前帧的世界受击盒：按状态类型的身体盒 + 招式额外受击盒（伸出的手脚）。
 func hurtboxes() -> Array:
 	var s := sd()
-	var body: Array = def.body_hurtbox(s.type)
+	var local: Array
+	if s.anim_data != null:
+		local = s.anim_data.hurt[AnimClock.frame(s, s.anim_data, state_frame, vy)]
+	if local.is_empty():
+		local = def.body_hurtbox(s.type) + s.extra_hurtboxes_at(state_frame)
 	var out := []
-	for b: PackedInt32Array in body + s.extra_hurtboxes_at(state_frame):
+	for b: PackedInt32Array in local:
 		out.append(Box.to_world(x, y, facing, b))
 	return out
 

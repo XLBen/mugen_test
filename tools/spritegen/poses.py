@@ -13,7 +13,7 @@ BASE = dict(
 	dx=0, dy=0, torso=6, head=-4,
 	thigh_f=14, shin_f=-2, thigh_b=-16, shin_b=-12,
 	uarm_f=30, farm_f=120, uarm_b=15, farm_b=105,
-	grounded=True, flow=0.0, knife=70,
+	grounded=True, flow=0.0, knife=70, ribbon=0,
 )
 
 ANGLES = [k for k, v in BASE.items() if isinstance(v, (int, float)) and not isinstance(v, bool)]
@@ -126,28 +126,29 @@ KICK_STAND = dict(thigh_b=-4, shin_b=-6)
 
 NORMALS = {
 	"5lp": lambda ch: stand_attack(ch, dict(uarm_f=40, farm_f=150, torso=8),
-		dict(uarm_f=86, farm_f=90, torso=12, knife=80)),
+		dict(uarm_f=86, farm_f=90, torso=12, knife=80, ribbon=8)),
 	"5mp": lambda ch: stand_attack(ch, dict(uarm_f=20, farm_f=140, torso=4, uarm_b=10),
-		dict(uarm_f=84, farm_f=86, torso=16, uarm_b=-35, farm_b=60, thigh_f=25, knife=80)),
+		dict(uarm_f=84, farm_f=86, torso=16, uarm_b=-35, farm_b=60, thigh_f=25, knife=80, ribbon=24)),
 	"5hp": lambda ch: stand_attack(ch, dict(uarm_f=-25, farm_f=60, torso=-6, thigh_f=8),
-		dict(uarm_f=82, farm_f=84, torso=24, uarm_b=-40, farm_b=40, thigh_f=36, shin_f=2, thigh_b=-32, knife=80)),
+		dict(uarm_f=82, farm_f=84, torso=24, uarm_b=-40, farm_b=40, thigh_f=36, shin_f=2, thigh_b=-32, knife=80,
+			ribbon=36)),
 	"5lk": lambda ch: stand_attack(ch, dict(KICK_STAND, thigh_f=45, shin_f=-10, torso=0),
 		dict(KICK_STAND, thigh_f=62, shin_f=78, torso=-6)),
 	"5mk": lambda ch: stand_attack(ch, dict(KICK_STAND, thigh_f=60, shin_f=0, torso=-4),
 		dict(KICK_STAND, thigh_f=84, shin_f=92, torso=-14, uarm_b=-20)),
 	"5hk": lambda ch: stand_attack(ch, dict(KICK_STAND, thigh_f=70, shin_f=10, torso=-10),
 		dict(KICK_STAND, thigh_f=112, shin_f=118, torso=-28, uarm_f=10, farm_f=60, uarm_b=-40, farm_b=0)),
-	"2lp": lambda ch: crouch_attack(ch, dict(uarm_f=40, farm_f=140), dict(uarm_f=86, farm_f=90, knife=80)),
-	"2mp": lambda ch: crouch_attack(ch, dict(uarm_f=20, farm_f=130), dict(uarm_f=80, farm_f=84, torso=30, knife=80)),
+	"2lp": lambda ch: crouch_attack(ch, dict(uarm_f=40, farm_f=140), dict(uarm_f=86, farm_f=90, knife=80, ribbon=8)),
+	"2mp": lambda ch: crouch_attack(ch, dict(uarm_f=20, farm_f=130), dict(uarm_f=80, farm_f=84, torso=30, knife=80, ribbon=22)),
 	"2hp": lambda ch: attack(dict(crouch_pose(ch), uarm_f=10, farm_f=40),
-		pose(ch, torso=4, thigh_f=30, shin_f=-10, thigh_b=10, shin_b=-30, uarm_f=170, farm_f=176, uarm_b=-20)),
+		pose(ch, torso=8, thigh_f=30, shin_f=-10, thigh_b=10, shin_b=-30, uarm_f=138, farm_f=162, uarm_b=-20)),
 	"2lk": lambda ch: crouch_attack(ch, dict(thigh_f=70, shin_f=20), dict(thigh_f=80, shin_f=94, torso=12)),
 	"2mk": lambda ch: crouch_attack(ch, dict(thigh_f=72, shin_f=30), dict(thigh_f=86, shin_f=96, torso=30)),
 	"2hk": lambda ch: crouch_attack(ch, dict(thigh_f=60, shin_f=20, torso=30),
 		dict(thigh_f=90, shin_f=93, torso=42, thigh_b=60, shin_b=-80, uarm_b=60, farm_b=20)),
-	"j_lp": lambda ch: air_attack(ch, dict(uarm_f=40, farm_f=120), dict(uarm_f=72, farm_f=62)),
-	"j_mp": lambda ch: air_attack(ch, dict(uarm_f=20, farm_f=110), dict(uarm_f=80, farm_f=74, torso=16)),
-	"j_hp": lambda ch: air_attack(ch, dict(uarm_f=150, farm_f=170, torso=0), dict(uarm_f=62, farm_f=38, torso=24)),
+	"j_lp": lambda ch: air_attack(ch, dict(uarm_f=40, farm_f=120), dict(uarm_f=72, farm_f=62, ribbon=10)),
+	"j_mp": lambda ch: air_attack(ch, dict(uarm_f=20, farm_f=110), dict(uarm_f=80, farm_f=74, torso=16, ribbon=20)),
+	"j_hp": lambda ch: air_attack(ch, dict(uarm_f=150, farm_f=170, torso=0), dict(uarm_f=62, farm_f=38, torso=24, ribbon=22)),
 	"j_lk": lambda ch: air_attack(ch, dict(thigh_f=60, shin_f=-40), dict(thigh_f=72, shin_f=40)),
 	"j_mk": lambda ch: air_attack(ch, dict(thigh_f=60, shin_f=-40), dict(thigh_f=78, shin_f=66, torso=-4)),
 	"j_hk": lambda ch: air_attack(ch, dict(thigh_f=50, shin_f=-50, torso=0),
@@ -288,9 +289,24 @@ for _name in ("hit_stand", "hit_crouch", "block_stand", "block_crouch", "hit_air
 CHARACTER_MOVES = {"kagura": _kagura, "volk": _volk, "mio": _mio}
 
 
+def _with_overrides(frames, ov):
+	"""把角色的姿势修正叠加到攻击动画：持续帧完全采用，出手 / 收势帧采用一半。"""
+	out = []
+	for i, (p, d) in enumerate(frames):
+		weight = 1.0 if i == 2 else (0.5 if i in (1, 3) else 0.0)
+		q = dict(p)
+		for k, v in ov.items():
+			q[k] = p[k] + (v - p[k]) * weight
+		out.append((q, d))
+	return out
+
+
 def anims_for(char_id, ch):
-	"""某个角色要生成的全部动画：共用 + 专属。"""
+	"""某个角色要生成的全部动画：共用 + 专属；共用攻击动画可按角色 pose_overrides 修正。"""
 	out = dict(ANIMS)
+	for name, ov in ch.get("pose_overrides", {}).items():
+		base = out[name]["frames"]
+		out[name] = dict(loop=False, frames=lambda _ch, b=base, o=ov: _with_overrides(b(_ch), o))
 	moves = CHARACTER_MOVES.get(char_id)
 	if moves:
 		for name, frames in moves(ch).items():

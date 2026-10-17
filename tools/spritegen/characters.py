@@ -26,6 +26,12 @@ CHARACTERS = {
 		weapon="knife",
 		eyes=(210, 40, 50),
 		stance=dict(uarm_f=22, farm_f=78, knife=75),
+		# 短刀近身：拳类攻击手臂弯曲，用刀弧而不是伸直手臂（距离比 Mio 短）
+		pose_overrides={
+			"5mp": dict(uarm_f=70, farm_f=110, knife=40),
+			"5hp": dict(uarm_f=60, farm_f=118, torso=14, knife=30),
+			"2mp": dict(uarm_f=70, farm_f=108, knife=40),
+		},
 		palettes=[
 			dict(skin=(252, 224, 206), hair=(232, 232, 242), top=(238, 236, 240), sleeve=(238, 236, 240),
 				collar=(200, 40, 52), sash=(200, 40, 52), skirt=(178, 32, 48),
@@ -44,6 +50,8 @@ CHARACTERS = {
 		scarf=True,
 		eyes=(214, 176, 60),
 		stance=dict(torso=10, uarm_f=40, farm_f=128, uarm_b=25, farm_b=115),
+		# 个子高：上勾拳要更靠前、更低，才能打到站着的对手
+		pose_overrides={"2hp": dict(uarm_f=112, farm_f=140, torso=16)},
 		palettes=[
 			dict(skin=(236, 206, 186), hair=(44, 48, 66), top=(54, 54, 64), sleeve=(54, 54, 64), coat=(54, 54, 64),
 				collar=(196, 196, 206), scarf=(176, 30, 42), legs=(38, 38, 48), shoes=(30, 26, 26),
@@ -59,6 +67,7 @@ CHARACTERS = {
 		body=dict(FEMALE, sleeve_flare=2.5),
 		hair="twintails",
 		skirt="long",
+		weapon="ribbon",
 		eyes=(90, 140, 220),
 		stance=dict(torso=4, uarm_f=35, farm_f=110),
 		palettes=[

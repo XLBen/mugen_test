@@ -111,37 +111,14 @@ func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
 	draw_line(Vector2(feet.x - shadow_w, 2), Vector2(feet.x + shadow_w, 2), Color(0, 0, 0, 0.45), 4.0)
 
 
-## 逻辑状态 → 动画帧。显示只依赖逻辑数据，回放/回滚时画面自然一致。
-## 攻击动画按阶段选帧（发生 / 持续 / 收招），与具体帧数解耦。
+## 逻辑状态 → 动画帧：与仿真取判定盒用同一个 AnimClock，画面和判定逐帧一致。
 func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
 	var s := f.sd()
 	var anim := s.anim
-	if anim == "jump":
-		return sprites.frame_index("jump", 0 if f.vy > 600 else (2 if f.vy < -600 else 1))
 	if not sprites.has(anim):
 		anim = {"C": "crouch", "A": "jump", "L": "crouch"}.get(s.type, "idle")
-		if anim == "jump":
-			return sprites.frame_index("jump", 1)
-	var phase := s.phase_at(f.state_frame)
-	if phase != StateDef.Phase.NONE and s.anim == anim:
-		return sprites.frame_index(anim, _attack_frame(f, s, phase, sprites.frame_count(anim)))
-	if anim == "idle":
-		return sprites.frame_at(anim, sim.frame)
-	return sprites.frame_at(anim, f.state_frame)
-
-
-## 攻击动画选帧：3 帧 = 发生/持续/收招；5 帧 = 蓄力、出手、持续、收势、复原，按阶段内进度切换。
-func _attack_frame(f: Fighter, s: StateDef, phase: int, count: int) -> int:
-	if count < 5:
-		return phase - 1
-	match phase:
-		StateDef.Phase.STARTUP:
-			return 0 if f.state_frame * 2 < s.first_active else 1
-		StateDef.Phase.ACTIVE:
-			return 2
-	var into := f.state_frame - s.last_active - 1
-	var length := s.total - s.last_active - 1 if s.total > 0 else 12
-	return 3 if into * 2 < length else 4
+		return sprites.frame_index(anim, 1 if anim == "jump" else 0)
+	return sprites.frame_index(anim, AnimClock.frame(s, sprites.data(anim), f.state_frame, f.vy))
 
 
 func _draw_projectile(p: Projectile) -> void:

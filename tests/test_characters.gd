@@ -188,3 +188,32 @@ func test_mio_long_pokes() -> void:
 	sim = char_sim(KAGURA, DUMMY, 140)
 	play(sim, "5HP", "", 15)
 	check_eq(sim.fighters[1].health, DUMMY.max_health, "Kagura 5HP does not")
+
+
+# ---------------------------------------------------------------- 画面与判定同源
+
+func test_attack_boxes_come_from_animation_frames() -> void:
+	for def: FighterDef in [KAGURA, VOLK, MIO]:
+		var m := Moveset.for_def(def)
+		for s in m.states:
+			if s.hitboxes.is_empty() or s.anim_data == null:
+				continue
+			var idx := AnimClock.frame(s, s.anim_data, s.hitboxes[0].from, 0)
+			var drawn: Array = s.anim_data.hit[idx]
+			check(not drawn.is_empty(), "%s %s: active frame has a drawn hitbox" % [def.display_name, s.name])
+			check(s.hitboxes[0].boxes == drawn, "%s %s: hitbox equals the drawn one" % [def.display_name, s.name])
+
+
+func test_hurtboxes_follow_the_pose() -> void:
+	var sim := char_sim(KAGURA, DUMMY, 400)
+	var k := sim.fighters[0]
+	var standing := k.hurtboxes()
+	k.set_state("knockdown")
+	var lying := k.hurtboxes()
+	var top_standing := 0
+	var top_lying := 0
+	for b: PackedInt32Array in standing:
+		top_standing = maxi(top_standing, b[3])
+	for b: PackedInt32Array in lying:
+		top_lying = maxi(top_lying, b[3])
+	check(top_lying < top_standing / 2, "lying hurtboxes are low (%d vs %d)" % [top_lying, top_standing])

@@ -29,6 +29,7 @@ var events: Array = [] ## [{frame, vx?, vy?, spawn?}]
 var first_active := -1
 var last_active := -1
 var reach := 0 ## 攻击判定最远能伸到身前多远（单位），近距离防御用
+var anim_data: AnimData ## 动画逐帧判定盒（有则受击盒按动画帧取）
 var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}

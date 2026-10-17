@@ -5,6 +5,7 @@ extends RefCounted
 
 var anchor := Vector2.ZERO
 var scale := 1
+var _data := {} ## name -> AnimData（时序，与仿真共用选帧规则）
 var _anims := {} ## name -> { loop: bool, anchor: Vector2, textures: Array[Texture2D], ends: Array[int] }
 
 
@@ -29,8 +30,13 @@ static func load_from(dir: String, palette: int) -> SpriteSet:
 		var anchor := sprites.anchor
 		if anim.has("anchor"):
 			anchor = Vector2(anim.anchor[0], anim.anchor[1])
+		sprites._data[anim_name] = AnimData.from_meta(anim)
 		sprites._anims[anim_name] = {"loop": anim.loop, "anchor": anchor, "textures": textures, "ends": ends}
 	return sprites
+
+
+func data(anim_name: String) -> AnimData:
+	return _data[anim_name]
 
 
 func has(anim_name: String) -> bool:
