@@ -45,11 +45,15 @@
 | Mio | 远程 | 体力 9500、后退快、普攻最长 | 236P 纸符 · 空中 236P 落符（斜下）· 214P 封印（设置物）· 623K 缎带旋 · 236236P 纸吹雪（多段） |
 | dummy | 参考 | 标准 | 236P 波动 · 623P 升龙 · 214K 突进踢 · 5MP>HP（白模，测试基准） |
 
+## 导入月姬格斗（MUGEN）人物
+可以把 MUGEN 人物的精灵和逐帧判定盒导入本地使用（素材不入库），见 [docs/mugen-import.md](docs/mugen-import.md)。
+
 ## 测试
 ```bash
 godot --headless --path . -s res://tests/run_all.gd
 ```
 `tests/test_*.gd` 中所有 `test_` 开头的方法都会被执行；可加 `-- combat` 只跑文件名包含 combat 的测试。
+MUGEN 导入器的测试：`python3 -m unittest discover -s tools/mugen -p "test_*.py"`
 
 ## 目录
 - `core/` 纯逻辑仿真（不依赖场景树）

@@ -13,6 +13,8 @@ const ROSTER: Array[FighterDef] = [
 	preload("res://characters/dummy/dummy.tres"),
 ]
 
+## 实际可选角色 = 内置 ROSTER + 本地导入的 MUGEN 人物（local_assets/mugen/*/fighter.tres，不入库）
+var roster: Array[FighterDef] = []
 var sim: MatchSim
 var paused := false
 var step_once := false
@@ -34,7 +36,9 @@ var logs := [InputLog.new(), InputLog.new()]
 func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
 	LocalInput.register_actions()
-	sim = MatchSim.new(STAGE, ROSTER[picks[0]], ROSTER[picks[1]])
+	roster = ROSTER.duplicate()
+	roster.append_array(local_fighters())
+	sim = MatchSim.new(STAGE, roster[picks[0]], roster[picks[1]])
 	sim.training = true
 	sim.reset()
 	view.sim = sim
@@ -130,10 +134,26 @@ func _unhandled_input(event: InputEvent) -> void:
 			dummy.toggle_record()
 
 
+static func local_fighters() -> Array[FighterDef]:
+	var out: Array[FighterDef] = []
+	var base := "res://local_assets/mugen"
+	if not DirAccess.dir_exists_absolute(base):
+		return out
+	var dirs := DirAccess.get_directories_at(base)
+	dirs.sort()
+	for d in dirs:
+		var path := base.path_join(d).path_join("fighter.tres")
+		if not d.begins_with("_") and ResourceLoader.exists(path):
+			var def: FighterDef = load(path)
+			if def != null:
+				out.append(def)
+	return out
+
+
 ## 换角色后重置对局（角色数据不同，旧状态不再有效）。
 func _cycle_character(player: int) -> void:
-	picks[player] = (picks[player] + 1) % ROSTER.size()
-	sim.fighters[player].set_def(ROSTER[picks[player]])
+	picks[player] = (picks[player] + 1) % roster.size()
+	sim.fighters[player].set_def(roster[picks[player]])
 	sim.reset()
 	saved_state = {}
 	view.load_sprites()

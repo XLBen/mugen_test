@@ -2,3 +2,6 @@
 .godot/
 /android/
 .DS_Store
+
+# 本地导入的第三方素材（MUGEN 人物等），只在本机使用，不提交
+local_assets/

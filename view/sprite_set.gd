@@ -4,7 +4,7 @@ extends RefCounted
 ## 选帧完全由逻辑帧号决定（逻辑驱动显示），不使用 AnimationPlayer。
 
 var anchor := Vector2.ZERO
-var scale := 1
+var scale := 1.0 ## 显示放大倍数（生成器为整数 2，MUGEN 导入的人物可能是小数）
 var _data := {} ## name -> AnimData（时序，与仿真共用选帧规则）
 var _anims := {} ## name -> { loop: bool, anchor: Vector2, textures: Array[Texture2D], ends: Array[int] }
 
@@ -16,7 +16,7 @@ static func load_from(dir: String, palette: int) -> SpriteSet:
 	var meta: Dictionary = JSON.parse_string(meta_text)
 	var sprites := SpriteSet.new()
 	sprites.anchor = Vector2(meta.anchor[0], meta.anchor[1])
-	sprites.scale = int(meta.scale)
+	sprites.scale = float(meta.scale)
 	var pal_dir := dir.path_join("pal%d" % clampi(palette, 0, int(meta.palettes) - 1))
 	for anim_name: String in meta.anims:
 		var anim: Dictionary = meta.anims[anim_name]

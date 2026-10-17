@@ -44,7 +44,7 @@ func _process(_delta: float) -> bool:
 func _setup() -> void:
 	_scene.paused = true
 	_scene.hud.visible = false
-	var def: FighterDef = _scene.ROSTER[_roster]
+	var def: FighterDef = _scene.roster[_roster]
 	_scene.sim.fighters[0].set_def(def)
 	_scene.sim.reset()
 	_scene.view.load_sprites()
