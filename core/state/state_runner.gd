@@ -32,7 +32,7 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 		var s := f.sd()
 		if CommonStates.try_upgrade(f, sim):
 			pass
-		elif f.contact != 0 and s.can_cancel(f.state_frame) and CommonStates.try_cancel(f, sim):
+		elif (f.contact != 0 or s.cancel_free) and s.can_cancel(f.state_frame) and CommonStates.try_cancel(f, sim):
 			pass
 		elif s.total > 0 and f.state_frame >= s.total:
 			f.set_state(s.next)
@@ -59,6 +59,16 @@ static func _events(f: Fighter, sim: MatchSim) -> void:
 			sim.freeze = e.freeze
 			sim.emit("super", f.x, f.y + 12000, {"level": e.get("level", 1), "critical": e.get("critical", false),
 				"target": f.index, "dir": f.facing})
+		if e.has("face"):
+			# 转向对手（穿过对手后的派生招）
+			var t := sim.opponent(f)
+			if t.x != f.x:
+				f.facing = 1 if t.x > f.x else -1
+		if e.has("teleport"):
+			# 瞬移到对手附近：正数 = 对手身后多少像素，负数 = 对手面前
+			var o := sim.opponent(f)
+			var edge := sim.stage.half_width - f.def.push_half_width
+			f.x = clampi(o.x + e.teleport * SimConst.UNITS_PER_PX * f.facing, -edge, edge)
 		if e.has("fx"):
 			sim.emit(e.fx, f.x, f.y + f.push_height() / 2, {"target": f.index, "dir": f.facing})
 		if e.has("spawn"):

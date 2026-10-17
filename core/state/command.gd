@@ -20,6 +20,7 @@ var where := "ground" ## ground / air / cancel（只能从取消窗口里出，�
 var stance := "any" ## any / stand / crouch（地面普攻按是否按下区分）/ forward / back（按键那一帧按着前 / 后，且没按下）
 var state := "" ## 目标状态名
 var cond := "" ## 额外条件：no_projectile 等
+var after: Array = [] ## 派生招：只能从这些状态取消出来（空 = 不限）
 
 
 static func build(d: Dictionary) -> Command:
@@ -39,6 +40,7 @@ static func build(d: Dictionary) -> Command:
 	c.where = d.get("where", c.where)
 	c.stance = d.get("stance", c.stance)
 	c.cond = d.get("cond", c.cond)
+	c.after = d.get("after", [])
 	return c
 
 

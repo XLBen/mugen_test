@@ -242,6 +242,21 @@
 		},
 		"wakeup_back": 5121,
 		"super3_k": 3100,
-		"super2_k": 2200
+		"super2_k": 2200,
+		"fang": 1150,
+		"fang_od": 2100,
+		"flurry": 1350,
+		"flurry_od": 2300,
+		"step_slash": 2010,
+		"parry": {
+			"actions": [
+				[
+					750,
+					1,
+					4
+				]
+			],
+			"loop": true
+		}
 	}
 }

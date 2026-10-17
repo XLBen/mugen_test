@@ -367,3 +367,20 @@ func test_dp_strengths_differ() -> void:
 	sim = char_sim(KAGURA, DUMMY, 400)
 	play(sim, "6,2,3HK", "", 20)
 	check(sim.fighters[0].y > low, "heavy DP rises higher")
+
+
+func test_kagura_step_follow_up_turns_around() -> void:
+	var sim := char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "2,1,4LP,5x6,5LP", "", 20)
+	check_eq(sim.fighters[0].facing, -1, "follow-up faces the opponent after passing through")
+	check(sim.fighters[1].health < DUMMY.max_health, "shadow slash hits from behind")
+	sim = char_sim(KAGURA, DUMMY, _gap(KAGURA))
+	play(sim, "2LK,5x4,2LP", "", 20)
+	check(sim.fighters[0].state_name() != "step_slash", "the follow-up only comes out of the step")
+
+
+func test_kagura_new_specials() -> void:
+	for script: String in ["2,3,6LP", "4,2,1LK", "2,3,6LP+MP", "4,2,1LK+MK"]:
+		var sim := char_sim(KAGURA, DUMMY, _gap(KAGURA))
+		play(sim, script, "", 40)
+		check(sim.fighters[1].health < DUMMY.max_health, "%s hits" % script)

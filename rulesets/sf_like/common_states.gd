@@ -233,6 +233,8 @@ static func try_cancel(f: Fighter, sim: MatchSim) -> bool:
 		var c := commands[idx]
 		if c.where != "cancel" and c.where != ("air" if air else "ground"):
 			continue
+		if not c.after.is_empty() and not s.name in c.after:
+			continue
 		var target: StateDef = f.moveset.states[f.moveset.id(c.state)]
 		if not s.cancel_allows(target):
 			continue

@@ -10,6 +10,10 @@ extends MovesetBuilder
 ##   623K  月轮       对空翻踢，L / M / H 无敌 4（只防打击）/ 5 / 7 帧，越重越高越痛
 ##   空中 214K  坠星  斜下俯冲踢，上段
 ##   236KK / 623KK   OD 版本
+##   236P  蛇咬       突刺上挑，L / M / H 越来越远，H 命中浮空；236PP 两段（上挑 + 下劈）
+##   421K  千刃乱舞   原地连斩五段，连段收尾；421KK 七段，版边贴墙
+##   214P 中按 P  影斩  影步的派生上挑（穿过对手后自动转身），浮空；214PP 无敌更长
+##   空中 214KK  OD 坠星，更快更痛
 ##   236236K 千刃     SA1，突进五连斩
 ##   214214K 月华     SA2，无敌上升多段（对空）
 ##   236236P 千刃·极   SA3（体力 25% 以下为 Critical Art），更长的突进连斩
@@ -23,6 +27,7 @@ func build() -> void:
 	_normals()
 	_air_normals()
 	_specials()
+	_more_specials()
 	_super()
 	throw(58, 1200, 5)
 	dashes(1150, 9, 16, 950, 11, 20, 7)
@@ -172,6 +177,104 @@ func _super() -> void:
 	super_art("super3_k", 3, "236236", "P", sa3)
 
 
+## SF6 式扩充：蛇咬、千刃乱舞、影步派生、OD 影步 / 坠星、目标连段 5HP > HK。
+func _more_specials() -> void:
+	# 蛇咬：236P。前冲突刺上挑；L 快而短，H 远且命中浮空（可以追 623K）
+	var fang := {"l": [8, 650, 16, 900, -3], "m": [10, 850, 18, 1000, -5], "h": [12, 1050, 20, 1100, -7]}
+	for k in ["h", "m", "l"]:
+		var v: Array = fang[k]
+		var total: int = v[0] + 3 + v[2] - 1
+		var hit := {"damage": v[3], "hitstop": 10, "hitstun": 20, "blockstun": v[4] + total - v[0], "push": 600,
+			"block_push": 700, "strength": 2}
+		if k == "h":
+			hit.merge({"effect": "launch", "air_vx": 200, "air_vy": 1300, "juggle_limit": 2})
+		states["fang_" + k] = {
+			"type": "S", "kind": "special", "total": total, "anim": "fang", "anim_fallback": ["2hp"], "friction": 70,
+			"reach_cap": 120,
+			"events": [{"frame": 2, "vx": v[1]}, {"frame": v[0] + 2, "vx": 0}],
+			"hitboxes": [{"active": [v[0], v[0] + 2], "boxes": [[10, 100, 65, 70]], "hit": hit}],
+			"cancel": ["super"],
+		}
+		command("236" + k.to_upper() + "P", "special", {"motion": "236", "buttons": k.to_upper() + "P", "state": "fang_" + k})
+	# OD 蛇咬：236PP。1~8 帧打击无敌，上挑浮空 + 下劈击倒
+	states["fang_od"] = {
+		"type": "S", "kind": "special", "total": 9 + 12 + 18, "anim": "fang_od", "anim_fallback": ["fang", "2hp"],
+		"cost": {"drive": 20000}, "friction": 60, "invuln": [{"frames": [1, 8], "throw": false}],
+		"events": [{"frame": 2, "vx": 1100}, {"frame": 11, "vx": 0}],
+		"hitboxes": [
+			{"active": [9, 10], "boxes": [[10, 100, 65, 80]],
+				"hit": {"damage": 600, "hitstop": 8, "effect": "launch", "air_vx": 80, "air_vy": 1100, "juggle_limit": 5,
+					"blockstun": 22, "push": 200, "block_push": 300, "strength": 1}},
+			{"active": [16, 18], "boxes": [[10, 40, 75, 110]],
+				"hit": {"damage": 700, "hitstop": 12, "effect": "knockdown", "air_vx": 500, "air_vy": 600, "juggle_limit": 5,
+					"blockstun": 16, "push": 700, "block_push": 800, "strength": 2}},
+		],
+		"cancel": ["super"],
+	}
+	command("236PP", "od", {"motion": "236", "buttons": "PP", "state": "fang_od"})
+
+	# 千刃乱舞：421K。原地快速连斩，五段 + 最后一刀击倒
+	var flurry := func(n: int, each: int, last: int, extra: Dictionary) -> Dictionary:
+		var hits := []
+		for i in n:
+			hits.append({"active": [7 + i * 3, 7 + i * 3], "boxes": [[10, 60, 95, 90]],
+				"hit": {"damage": each, "hitstop": 5, "hitstun": 22, "blockstun": 18, "push": 0, "block_push": 40,
+					"juggle_limit": 10, "strength": 1}})
+		var last_hit := {"damage": last, "hitstop": 12, "effect": "knockdown", "air_vx": 450, "air_vy": 700,
+			"blockstun": 14, "push": 800, "block_push": 900, "juggle_limit": 10, "strength": 2}
+		last_hit.merge(extra, true)
+		hits.append({"active": [7 + n * 3 + 2, 7 + n * 3 + 3], "boxes": [[10, 60, 85, 100]], "hit": last_hit})
+		# 边砍边小步前进，被击退的对手不会漏刀
+		return {"type": "S", "kind": "special", "total": 7 + n * 3 + 3 + 24, "hitboxes": hits, "cancel": ["super"],
+			"reach_cap": 130,
+			"friction": 20, "events": [{"frame": 5, "vx": 260}, {"frame": 7 + n * 3 + 3, "vx": 0}]}
+	var flurry_k: Dictionary = flurry.call(5, 160, 450, {})
+	flurry_k.anim = "flurry"
+	flurry_k.anim_fallback = ["super_k"]
+	states["flurry"] = flurry_k
+	command("421K", "special", {"motion": "421", "buttons": "K", "state": "flurry"})
+	var flurry_od: Dictionary = flurry.call(7, 150, 500, {"wall": "splat"})
+	flurry_od.anim = "flurry_od"
+	flurry_od.anim_fallback = ["flurry", "super_k"]
+	flurry_od.cost = {"drive": 20000}
+	flurry_od.invuln = [{"frames": [1, 6], "throw": false}]
+	states["flurry_od"] = flurry_od
+	command("421KK", "od", {"motion": "421", "buttons": "KK", "state": "flurry_od"})
+
+	# 影斩：影步第 4~16 帧按 P 派生，转向对手上挑浮空
+	states["step"].cancel = ["step_slash"]
+	states["step"].cancel_from = 4
+	states["step"].cancel_until = 16
+	states["step"].cancel_free = true
+	states["step_slash"] = {
+		"type": "S", "kind": "special", "total": 6 + 3 + 20 - 1, "anim": "step_slash", "anim_fallback": ["2hp"],
+		"events": [{"frame": 1, "face": true}],
+		"hitboxes": [{"active": [6, 8], "boxes": [[5, 90, 65, 100]],
+			"hit": {"damage": 800, "hitstop": 10, "effect": "launch", "air_vx": 150, "air_vy": 1250, "juggle_limit": 2,
+				"blockstun": 14, "push": 500, "block_push": 600, "strength": 2}}],
+	}
+	command("214P>P", "special", {"buttons": "P", "where": "cancel", "state": "step_slash", "after": ["step", "step_od"]})
+	var step_od: Dictionary = states["step"].duplicate(true)
+	step_od.cost = {"drive": 20000}
+	step_od.invuln = [{"frames": [1, 16]}]
+	step_od.events = [{"frame": 2, "vx": 1800}, {"frame": 12, "vx": 0}]
+	states["step_od"] = step_od # 派生窗口和普通影步相同
+	command("214PP", "od", {"motion": "214", "buttons": "PP", "state": "step_od"})
+
+	# OD 坠星：空中 214KK，更快更痛
+	var dive_od: Dictionary = states["dive"].duplicate(true)
+	dive_od.cost = {"drive": 20000}
+	dive_od.events = [{"frame": 3, "vx": 1000, "vy": -1450}]
+	dive_od.hitboxes[0].hit.damage = 1000
+	dive_od.hitboxes[0].hit.hitstun = 22
+	states["dive_od"] = dive_od
+	command("j214KK", "od", {"motion": "214", "buttons": "KK", "where": "air", "state": "dive_od"})
+
+	# 目标连段：5HP > HK，把对手踢上天，可以必杀取消追打
+	target_combo("tc_hp_hk", "5hp", "HK", "5hk", 9, 3, 20, 0, -6, [22, 95, 85, 28], H,
+		{"damage": 600, "effect": "launch", "air_vx": 200, "air_vy": 1250, "juggle_limit": 1}, SPECIAL)
+
+
 ## 突进连斩超杀：windows 每段的持续帧，each 每段伤害，last 最后一击（浮空）的持续帧与伤害，end 最后一击结束帧。
 func _slashes(windows: Array, each: int, last_window: Array, last: int, end: int) -> Dictionary:
 	var hits := []
@@ -209,5 +312,14 @@ func _combos() -> void:
 		[["5MP", 8], ["5HP", 10], ["2,3,6LK+MK", 0]], {"hits": 4})
 	combo("目标连段（脚）", "5LK > MK xx 236LK", ["5lk", "tc_lk_mk", "slash_l"],
 		[["5LK", 6], ["5MK", 8], ["2,3,6LK", 0]], {"hits": 3})
+	combo("千刃乱舞", "5MP > HP xx 421K", ["5mp", "tc_mp_hp", "flurry"],
+		[["5MP", 8], ["5HP", 10], ["4,2,1HK", 0]], {"hits": 8})
+	combo("蛇咬确认", "2LK > 2LP > 5LP xx 236LP", ["2lk", "2lp", "5lp", "fang_l"],
+		[["2LK", 7], ["2LP", 7], ["5LP", 6], ["2,3,6LP", 0]], {"hits": 4})
+	combo("浮空追打", "5HP > HK xx 623HK", ["5hp", "tc_hp_hk", "rising_h"],
+		[["5HP", 12], ["5HK", 12], ["6,2,3HK", 0]], {"hits": 3})
+	combo("OD 千刃", "5MP > HP xx 421KK", ["5mp", "tc_mp_hp", "flurry_od"],
+		[["5MP", 8], ["5HP", 10], ["4,2,1LK+MK", 0]], {"hits": 10})
+	combo("OD 蛇咬", "2MK xx 236PP", ["2mk", "fang_od"], [["2MK", 10], ["2,3,6LP+MP", 0]], {"hits": 3})
 	combo("3 格收尾", "5MP > HP xx 236MK xx 236236P", ["5mp", "tc_mp_hp", "slash_m", "super3_k"],
 		[["5MP", 8], ["5HP", 10], ["2,3,6MK", 22], ["2,3,6,2,3,6HP", 0]], {"hits": 11, "meter": true})

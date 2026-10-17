@@ -254,6 +254,16 @@
 			"loop": true
 		},
 		"wakeup_back": 5121,
-		"super2_v": 2100
+		"super2_v": 2100,
+		"parry": {
+			"actions": [
+				[
+					750,
+					1,
+					6
+				]
+			],
+			"loop": true
+		}
 	}
 }

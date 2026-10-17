@@ -37,6 +37,8 @@ var anim_alts: Array = [] ## 每个变体实际使用的 AnimData（按变体值
 var tail_ok := false ## 可行动状态：进入时可以继续播上一个招式剩下的动画（尾巴）
 var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
+var cancel_from := -1 ## 取消窗口第一帧（-1 = 从头开始）
+var cancel_free := false ## 不需要接触对手也能取消（派生招：影步中按 P 等）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}
 var armor: Dictionary = {} ## 霸体 {from, to, hits}：期间吸收 hits 次打击（超杀与投可以破）
 var untechable := false ## 投技：被投方不能拆（指令投）
@@ -96,6 +98,8 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	s.cancel_targets = d.get("cancel", [])
 	if not s.cancel_targets.is_empty():
 		s.cancel_until = d.get("cancel_until", s.last_active + 1 + 3) - 1
+		s.cancel_from = d.get("cancel_from", 0) - 1
+		s.cancel_free = d.get("cancel_free", false)
 	s.punishable = d.get("punishable", false)
 	s.punishable_from = d.get("punishable_from", 0) - 1
 	s.throw_protect = d.get("throw_protect", 0)
@@ -172,7 +176,7 @@ func pushes_at(frame: int) -> bool:
 
 
 func can_cancel(frame: int) -> bool:
-	return frame <= cancel_until and not cancel_targets.is_empty()
+	return frame >= cancel_from and frame <= cancel_until and not cancel_targets.is_empty()
 
 
 func cancel_allows(target: StateDef) -> bool:
