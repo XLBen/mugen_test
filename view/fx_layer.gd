@@ -3,7 +3,8 @@ extends Node2D
 ## 打击反馈（纯表现）：命中/防御火花、火星粒子、受击闪光、震屏、落地扬尘、超杀闪光。
 ## 由仿真的 events 驱动，特效的年龄按仿真帧计算（暂停时特效也停住，顿帧中照常播放）。
 ## 火花用着色器（view/shaders/hit_spark.gdshader）画在子节点 Sparks 上（加色混合）；
-## 受击闪光用剪影着色器画在子节点 Flashes 上；扬尘用普通混合画在本节点上。
+## 受击闪光用剪影着色器画在子节点 Flashes 上；OD 招式的金身和金色残影画在子节点 OdGold 上；
+## 扬尘用普通混合画在本节点上。
 
 const DUST_LIFE := 16
 const FLASH_LIFE := 4
@@ -22,6 +23,7 @@ var _flashes: Array[Dictionary] = [] ## 受击剪影 {target, born, color}
 var _prev_state: Array[int] = [-1, -1]
 var _sparks: Sparks
 var _flash_layer: Flashes
+var _od: OdGold
 
 
 func _ready() -> void:
@@ -32,6 +34,10 @@ func _ready() -> void:
 	_flash_layer.fx = self
 	add_child(_flash_layer)
 	move_child(_flash_layer, 0) # 剪影在火花下面
+	_od = OdGold.new()
+	_od.fx = self
+	add_child(_od)
+	move_child(_od, 0) # 金身在最下面（紧贴角色本体）
 
 
 ## 每推进一帧仿真后调用一次。
@@ -49,12 +55,14 @@ func consume(events: Array[Dictionary]) -> void:
 				_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 34, "size": 220.0, "pal": Pal.FLASH,
 					"seed": _seed(e)})
 	_spawn_dust()
+	_od.record()
 	shake = maxf(shake * 0.82 - 0.1, 0.0)
 	_fx = _fx.filter(func(fx: Dictionary) -> bool: return sim.frame - fx.born < fx.get("life", DUST_LIFE) + PART_LIFE)
 	_flashes = _flashes.filter(func(f: Dictionary) -> bool: return sim.frame - f.born < FLASH_LIFE)
 	queue_redraw()
 	_sparks.queue_redraw()
 	_flash_layer.queue_redraw()
+	_od.queue_redraw()
 
 
 func _add_spark(e: Dictionary, pos: Vector2) -> void:
@@ -136,6 +144,10 @@ func _spawn_dust() -> void:
 		var f := sim.fighters[i]
 		if f.state != _prev_state[i] and f.state_frame == 0:
 			var n := f.state_name()
+			if f.sd().is_od():
+				# OD 发动：角色身上一圈金色像素爆闪
+				_fx.append({"kind": "flash", "pos": Vector2(SimConst.px(f.x), -SimConst.px(f.y + f.def.stand_height / 2)),
+					"born": sim.frame, "life": 18, "size": 110.0, "pal": Pal.SUPER, "seed": fposmod(sim.frame * 0.37, 1.0)})
 			if n in ["landing", "landing_long", "dive_land", "land_recover", "knockdown", "dash_f", "dash_b"]:
 				_fx.append({"kind": "dust", "pos": Vector2(SimConst.px(f.x), 0), "born": sim.frame,
 					"big": n == "knockdown", "life": DUST_LIFE})
@@ -231,3 +243,60 @@ class Flashes extends Node2D:
 			var c: Color = f.color
 			c.a *= 1.0 - age / float(FLASH_LIFE)
 			view.draw_fighter_sprite(self, fx.sim.fighters[f.target], c)
+
+
+
+## OD 金身：OD 招式期间把角色画成金色（着色器做像素风调色板映射 + 描边 + 扫光），身后拖几道棋盘格抖动的金色残影。
+## 残影存的是前几个仿真帧的贴图和位置，所以暂停时也停在原地。
+class OdGold extends Node2D:
+	const SHADER := preload("res://view/shaders/od_gold.gdshader")
+	const GHOSTS := [[6, 0.3], [4, 0.45], [2, 0.6]] ## [几帧前, 透明度]
+	const KEEP := 8
+
+	var fx: FxLayer
+	var _history: Array = [[], []] ## 每名角色 [[仿真帧, pose], ...]
+
+	func _ready() -> void:
+		var mat := ShaderMaterial.new()
+		mat.shader = SHADER
+		material = mat
+
+	func record() -> void:
+		var view := fx.get_parent() as MatchView
+		if view == null:
+			return
+		var frame := fx.sim.frame
+		for i in fx.sim.fighters.size():
+			var f := fx.sim.fighters[i]
+			var list: Array = _history[i]
+			if f.sd().is_od():
+				var pose := view.sprite_pose(f)
+				if not pose.is_empty():
+					list.append([frame, pose])
+			while not list.is_empty() and frame - list[0][0] > KEEP:
+				list.pop_front()
+
+	func _draw() -> void:
+		if fx == null or fx.sim == null:
+			return
+		var view := fx.get_parent() as MatchView
+		if view == null:
+			return
+		var frame := fx.sim.frame
+		var phase := (frame % 32) / 32.0
+		for i in fx.sim.fighters.size():
+			for g: Array in GHOSTS:
+				var pose := _pose_at(i, frame - g[0])
+				if not pose.is_empty():
+					MatchView.draw_pose(self, pose, Color(phase, 1.0, 1.0, g[1]))
+			var f := fx.sim.fighters[i]
+			if f.sd().is_od():
+				var now := view.sprite_pose(f)
+				if not now.is_empty():
+					MatchView.draw_pose(self, now, Color(phase, 1.0, 0.0, 1.0))
+
+	func _pose_at(i: int, frame: int) -> Dictionary:
+		for e: Array in _history[i]:
+			if e[0] == frame:
+				return e[1]
+		return {}

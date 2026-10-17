@@ -35,6 +35,7 @@ func _ready() -> void:
 	_add("super", _riser(0.55))
 	_add("ko", _hit(0.9, 0.35, 1.0))
 	_add("land", _thud(0.08, 0.35))
+	_add("od", _chime(0.32))
 	for i in VOICES:
 		var player := AudioStreamPlayer.new()
 		add_child(player)
@@ -62,6 +63,8 @@ func _watch_moves(sim: MatchSim) -> void:
 		var started := f.state != _prev_state[i] or f.state_frame < _prev_frame[i]
 		if started and f.state_frame <= 1:
 			var s := f.sd()
+			if s.is_od():
+				_play("od", -4.0)
 			if s.is_attack() and s.kind != "throw":
 				var strength := 0
 				for h: Dictionary in s.hitboxes:
@@ -179,6 +182,23 @@ func _riser(length: float) -> AudioStreamWAV:
 		out[i] = (lp * 0.6 + shimmer) * sin(x * PI) * 0.9
 	_reverb(out, 0.041, 0.3)
 	return _to_wav(out, 0.01)
+
+
+## OD 发动：8-bit 方波上行琶音（复古游戏机的"叮叮叮"）。
+func _chime(length: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var notes := [659.25, 987.77, 1318.5, 1975.5] ## E5 B5 E6 B6
+	var phase := 0.0
+	for i in n:
+		var x := float(i) / n
+		var note: float = notes[mini(int(x * 6.0), notes.size() - 1)]
+		phase = fmod(phase + note / RATE, 1.0)
+		var square := 1.0 if phase < 0.25 else -1.0 ## 25% 占空比方波
+		var step_env := 1.0 - fmod(x * 6.0, 1.0) * 0.5
+		out[i] = square * step_env * pow(1.0 - x, 1.5) * 0.35
+	return _to_wav(out, 0.002)
 
 
 ## 落地 / 冲刺的脚步闷响。

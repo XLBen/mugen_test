@@ -110,18 +110,29 @@ func _draw_sprite(f: Fighter, sprites: SpriteSet) -> void:
 	draw_fighter_sprite(self, f)
 
 
-## 把角色当前帧画到 canvas 上（受击闪光层也用它画同一位置的剪影）。
+## 把角色当前帧画到 canvas 上（受击闪光、OD 金身也用它画同一位置的剪影）。
 func draw_fighter_sprite(canvas: CanvasItem, f: Fighter, modulate := Color.WHITE) -> void:
+	var pose := sprite_pose(f)
+	if not pose.is_empty():
+		draw_pose(canvas, pose, modulate)
+
+
+## 角色当前帧的贴图和位置 {tex, feet, scale, anchor}（没有精灵时为空）；OD 残影会把它存下来过几帧再画。
+func sprite_pose(f: Fighter) -> Dictionary:
 	var sprites: SpriteSet = _sprites[f.index]
 	if sprites == null or not show_sprites:
-		return
-	var tex := _sprite_frame(f, sprites)
+		return {}
 	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y)).round()
 	# 顿帧中的被打方左右抖动（打击感）
 	if f.hitstop > 0 and f.sd().kind == "hurt":
 		feet.x += 3.0 if sim.frame % 2 == 0 else -3.0
-	canvas.draw_set_transform(feet, 0.0, Vector2(sprites.scale * f.facing, sprites.scale))
-	canvas.draw_texture(tex, -sprites.anchor, modulate)
+	return {"tex": _sprite_frame(f, sprites), "feet": feet, "scale": Vector2(sprites.scale * f.facing, sprites.scale),
+		"anchor": sprites.anchor}
+
+
+static func draw_pose(canvas: CanvasItem, pose: Dictionary, modulate := Color.WHITE) -> void:
+	canvas.draw_set_transform(pose.feet, 0.0, pose.scale)
+	canvas.draw_texture(pose.tex, -pose.anchor, modulate)
 	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -137,13 +148,18 @@ func _sprite_frame(f: Fighter, sprites: SpriteSet) -> Texture2D:
 
 func _draw_projectile(p: Projectile) -> void:
 	var sprites: SpriteSet = _sprites[p.owner]
-	var fx := "fx_" + sim.projectile_def(p).anim
+	var pd := sim.projectile_def(p)
+	var fx := "fx_" + pd.anim
+	if sprites != null and not sprites.has(fx) and pd.anim_fallback != "":
+		fx = "fx_" + pd.anim_fallback
 	if show_sprites and sprites != null and sprites.has(fx):
 		var center := Vector2(SimConst.px(p.x), -SimConst.px(p.y))
 		draw_set_transform(center, 0.0, Vector2(sprites.scale * p.facing, sprites.scale))
 		# 未启动的设置物 / 多段间隔中的道具画得半透明
 		var alpha := 1.0 if sim.projectile_live(p) else 0.45
-		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx), Color(1, 1, 1, alpha))
+		# OD 版放出的道具染成金色
+		var tint := Color(1.0, 0.82, 0.32, alpha) if pd.name.ends_with("_od") else Color(1, 1, 1, alpha)
+		draw_texture(sprites.frame_at(fx, p.age), -sprites.anchor_of(fx), tint)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var r := _rect(sim.projectile_box(p))
