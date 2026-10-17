@@ -14,6 +14,9 @@
     "hit_stand_hi_h": {"actions": [5002, 5007], "recover": 5007}   从 5007 起是受击恢复段
     "hit_air": {"actions": [5030, 5035, 5050], "fall": 5050}       从 5050 起是下落段
     "idle": {"actions": [0], "max_time": 8}                        每帧最长 8（有的待机第一帧停很久）
+    "charm": {"actions": [1200], "active": [3, 3]}                 没有 Clsn1 的出手帧（扔道具），与道具出现的帧对齐
+    "fx_charm": {"actions": [300], "loop": true}                   道具 / 特效：独立画布，道具位置对准图案中心
+                                                                   （"anchor": "bottom" 对准底边，"axis" 用 MUGEN 原点）
 另外可写 "scale": 2 固定显示倍数（低分辨率 320x240 人物用整数倍更清晰），否则按 target_height 计算。
 带 Clsn1（攻击判定）的动作保留全部帧并标出 发生 / 持续 / 收招 段，游戏里按招式表的帧数逐段对齐播放
 （持续帧一定显示带攻击盒的帧，收招太长时剩下的部分在待机里作为"尾巴"播完）；每帧受击盒取 Clsn2。
@@ -239,9 +242,11 @@ def pick_frames(actions: dict, spec) -> tuple[list, bool]:
 			dur = f.time if f.time > 0 else (max_time or 60)
 			frames.append((f, min(dur, max_time) if max_time else dur, tag))
 	attack = any(f.clsn1 for f, _, _ in frames)
-	if attack:
+	if attack or "active" in opts:
+		# "active": [第一帧, 最后一帧] 手动指定出手帧（扔道具、开枪这类动作没有 Clsn1，但要和道具出现的帧对齐）
 		hits = [i for i, (f, _, _) in enumerate(frames) if f.clsn1]
-		first, last = hits[0], hits[-1]
+		first, last = opts["active"] if "active" in opts else (hits[0], hits[-1])
+		attack = True
 		frames = [(f, dur, "s" if i < first else ("a" if i <= last else "r")) for i, (f, dur, _) in enumerate(frames)]
 	return frames, attack
 
@@ -299,15 +304,30 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 			loop = spec.get("loop", name in LOOPED) if isinstance(spec, dict) else name in LOOPED
 			anims[name] = {"frames": frames, "attack": attack, "loop": loop}
 
-	# 2. 统一画布（所有帧的外接矩形），锚点 = 脚底
-	left = top = 10 ** 9
-	right = bottom = -10 ** 9
-	for a in anims.values():
-		for f, _, _ in a["frames"]:
-			l, t, w, h = frame_rect(sprite_for(sff, f), f)
-			left, top, right, bottom = min(left, l), min(top, t), max(right, l + w), max(bottom, t + h)
-	canvas = (right - left, bottom - top)
-	anchor = (-left, -top)
+	# 2. 统一画布（角色动作所有帧的外接矩形），锚点 = 脚底；
+	#    道具 / 特效动画（fx_ 开头）各用自己的画布，锚点 = 道具位置（MUGEN 的 axis），免得把角色画布撑得很大
+	def bounds(names):
+		left = top = 10 ** 9
+		right = bottom = -10 ** 9
+		for n in names:
+			for f, _, _ in anims[n]["frames"]:
+				l, t, w, h = frame_rect(sprite_for(sff, f), f)
+				left, top, right, bottom = min(left, l), min(top, t), max(right, l + w), max(bottom, t + h)
+		return (right - left, bottom - top), (-left, -top)
+
+	canvas, anchor = bounds([n for n in anims if not n.startswith("fx_")])
+	own = {}
+	for n in anims:
+		if n.startswith("fx_"):
+			size, axis = bounds([n])
+			# 道具的位置对准图案中心（MUGEN 的 axis 常常不在图案上）；地面设置物写 "anchor": "bottom" 对准底边中点
+			mode = mapping["anims"][n].get("anchor", "center") if isinstance(mapping["anims"][n], dict) else "center"
+			show = axis
+			if mode == "center":
+				show = (size[0] // 2, size[1] // 2)
+			elif mode == "bottom":
+				show = (size[0] // 2, size[1])
+			own[n] = (size, axis, show) # 画布大小、画进画布时的原点、显示时对准道具位置的锚点
 
 	# 3. 缩放：让站立高度接近目标高度
 	stand = sprite_for(sff, anims["idle"]["frames"][0][0]) if "idle" in anims else None
@@ -325,6 +345,7 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 		for old in pal_dir.glob("*.png"):
 			old.unlink()
 		for name, a in anims.items():
+			cv_size, cv_anchor, _ = own.get(name, (canvas, anchor, anchor))
 			frames_meta = []
 			for k, (f, dur, phase) in enumerate(a["frames"]):
 				spr = sprite_for(sff, f)
@@ -334,8 +355,8 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 				if "V" in f.flip:
 					img = img.transpose(Image.FLIP_TOP_BOTTOM)
 				l, t, _, _ = frame_rect(spr, f)
-				cv = Image.new("RGBA", canvas, (0, 0, 0, 0))
-				cv.alpha_composite(img, (l + anchor[0], t + anchor[1]))
+				cv = Image.new("RGBA", cv_size, (0, 0, 0, 0))
+				cv.alpha_composite(img, (l + cv_anchor[0], t + cv_anchor[1]))
 				file = f"{name}_{k:02d}"
 				cv.save(pal_dir / f"{file}.png")
 				boxes = {"hurt": [convert_box(b, scale) for b in f.clsn2]}
@@ -346,6 +367,8 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 					entry.append(phase)
 				frames_meta.append(entry)
 			meta_anims[name] = {"loop": a["loop"], "frames": frames_meta}
+			if name in own:
+				meta_anims[name]["anchor"] = list(own[name][2])
 	meta = {"canvas": list(canvas), "anchor": list(anchor), "scale": scale, "palettes": len(palettes),
 		"anims": meta_anims, "source": {"char": char_dir.name, "author": d.get("info", {}).get("author", "")}}
 	(sprite_dir / "anims.json").write_text(json.dumps(meta, ensure_ascii=False, indent="\t") + "\n", encoding="utf-8")

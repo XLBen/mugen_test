@@ -6,7 +6,8 @@
 	"_notes": [
 		"动作号已对照 Ciel / Eleicia（作者 SUMI，2003） 的 .cmd/.cns/.air 核实（import_char.py moves / sheet）。",
 		"其他作者的版本编号可能不同，导入前先运行 list / moves / sheet 确认。",
-		"月姬格斗只有 A/B/C 三键，踢腿与部分招式借用外形相近的动作。"
+		"月姬格斗只有 A/B/C 三键，踢腿与部分招式借用外形相近的动作。",
+		"飞行道具：黑键 300（水平）/ 350（斜下），214P 设置物用黑键纹章 301，超杀开枪 3002 + 能量弹 3081 前几帧（后几帧是整屏大爆炸，比判定大太多）。"
 	],
 	"anims": {
 		"idle": 0,
@@ -182,10 +183,68 @@
 		"j_lk": 610,
 		"j_mk": 610,
 		"j_hk": 620,
-		"charm": 1200,
+		"charm": {
+			"actions": [
+				1200
+			],
+			"active": [
+				3,
+				3
+			]
+		},
 		"air_charm": 621,
-		"seal": 1000,
+		"seal": {
+			"actions": [
+				1201
+			],
+			"active": [
+				8,
+				8
+			]
+		},
 		"spin": 421,
-		"storm": 3000
+		"storm": {
+			"actions": [
+				3002
+			],
+			"max_time": 8
+		},
+		"fx_charm": {
+			"actions": [
+				300
+			],
+			"loop": true
+		},
+		"fx_air_charm": {
+			"actions": [
+				350
+			],
+			"loop": true
+		},
+		"fx_seal": {
+			"actions": [
+				301
+			],
+			"loop": true,
+			"anchor": "bottom"
+		},
+		"fx_storm": {
+			"frames": [
+				[
+					3081,
+					0
+				],
+				[
+					3081,
+					1
+				],
+				[
+					3081,
+					2
+				]
+			],
+			"dur": 3,
+			"loop": true
+		}
 	}
 }

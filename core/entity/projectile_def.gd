@@ -9,6 +9,7 @@ var hit: HitDef
 var hits := 1
 var lifetime := 180
 var anim := "fireball"
+var anim_fallback := "" ## 角色没有 fx_<anim> 时改用的动画（如落符没有专用图时用纸符的图）
 var group := "fireball" ## 同组道具同屏只能有一个（指令条件 limit:<group>）
 var speed_y := 0 ## 垂直速度（正 = 向上），空中斜向道具用
 var arm := 0 ## 生成后多少帧才开始有攻击判定（设置物）
@@ -25,6 +26,7 @@ static func build(p_name: String, d: Dictionary) -> ProjectileDef:
 	p.hits = d.get("hits", p.hits)
 	p.lifetime = d.get("lifetime", p.lifetime)
 	p.anim = d.get("anim", p.anim)
+	p.anim_fallback = d.get("anim_fallback", "")
 	p.group = d.get("group", p.group)
 	p.speed_y = d.get("speed_y", 0)
 	p.arm = d.get("arm", 0)

@@ -82,7 +82,8 @@ func _charms() -> void:
 	}
 	command("j236P", "special", {"motion": "236", "buttons": "P", "where": "air", "state": "air_charm",
 		"cond": "limit:fireball"})
-	projectiles["air_charm"] = {"speed": 520, "speed_y": -480, "box": [-18, -22, 36, 44], "anim": "charm",
+	projectiles["air_charm"] = {"speed": 520, "speed_y": -480, "box": [-18, -22, 36, 44], "anim": "air_charm",
+		"anim_fallback": "charm",
 		"hit": with(hit, {"guard": "high"})}
 
 
