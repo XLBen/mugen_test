@@ -253,6 +253,7 @@
 			],
 			"loop": true
 		},
-		"wakeup_back": 5121
+		"wakeup_back": 5121,
+		"super2_v": 2100
 	}
 }

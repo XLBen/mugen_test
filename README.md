@@ -4,6 +4,7 @@
 逻辑层确定性、整数运算、可存读档（为回滚联网预留），规则差异做成可替换模块。第一套参考规则是街霸风 6 键。
 
 设计分析见 [docs/fighting-core-analysis.md](docs/fighting-core-analysis.md)，进度记录见 [docs/progress.md](docs/progress.md)。
+对照 SF6 的差距与修改见 [docs/sf6-gap-review.md](docs/sf6-gap-review.md)。
 
 ## 占位角色
 三个原创角色（Kagura / Volk / Mio）的像素精灵由 `tools/spritegen/` 程序化生成（Python + Pillow），

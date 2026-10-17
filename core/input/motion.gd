@@ -17,13 +17,19 @@ const PRESETS := {
 	"214214": [["2", "1", "4", "2", "1", "4"]],
 	"66": [["6", "124578", "6"]],
 	"44": [["4", "235689", "4"]],
+	# 蓄力：先按住 [方向] 至少 CHARGE_FRAMES 帧，松开后 CHARGE_RELEASE 帧内输入后一个方向（蓄力角色用）
+	"[4]6": [["147", "369"]],
+	"[2]8": [["123", "789"]],
 }
+const CHARGE_FRAMES := 40 ## 蓄力时间（未核实，SF6 多数蓄力招约 40 帧）
+const CHARGE_RELEASE := 10 ## 蓄力方向松开后还能输入后续方向的帧数
 
 var patterns: Array = [] ## Array[Array[int]]，每步是允许的小键盘方向的位掩码
 var max_gap := 8 ## 相邻两步之间允许的最大帧数
 var final_gap := 4 ## 最后一个方向到结束帧（按键帧）之间允许的最大帧数
 var window := 11 ## 整个指令必须在多少帧内完成（SF6：1/4 圈 11 帧，半圈 12 帧，一圈 32 帧）
 var fresh_end := false ## 无按键指令（冲刺）：最后一步必须是刚刚输入的
+var charge := 0 ## >0：蓄力指令，第一步要连续按住这么多帧
 
 
 static func preset(motion_name: String) -> Motion:
@@ -49,6 +55,8 @@ static func preset(motion_name: String) -> Motion:
 			m.max_gap = 12
 		"236236", "214214":
 			m.window = 24
+	if motion_name.begins_with("["):
+		m.charge = CHARGE_FRAMES
 	return m
 
 
@@ -57,10 +65,32 @@ func matches(f: Fighter, end_frame: int) -> bool:
 		var last: Array = patterns[0]
 		if last[-1] & (1 << f.numpad_at(end_frame - 1)):
 			return false
+	if charge > 0:
+		return _match_charge(patterns[0], f, end_frame)
 	for pattern: Array in patterns:
 		if _match(pattern, f, end_frame):
 			return true
 	return false
+
+
+## 蓄力指令：结束帧前 final_gap 帧内出现后一个方向，且在它之前 CHARGE_RELEASE 帧内，蓄力方向已经连续按住了 charge 帧。
+func _match_charge(pattern: Array, f: Fighter, end_frame: int) -> bool:
+	var hold: int = pattern[0]
+	var release: int = pattern[1]
+	for t in range(end_frame, end_frame - final_gap - 1, -1):
+		if not release & (1 << f.numpad_at(t)):
+			continue
+		for r in range(t - 1, t - 1 - CHARGE_RELEASE, -1):
+			if _held(f, r, hold) >= charge:
+				return true
+	return false
+
+
+func _held(f: Fighter, until: int, mask: int) -> int:
+	var n := 0
+	while n < charge and mask & (1 << f.numpad_at(until - n)):
+		n += 1
+	return n
 
 
 func _match(pattern: Array, f: Fighter, end_frame: int) -> bool:

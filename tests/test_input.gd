@@ -86,3 +86,14 @@ func test_one_fireball_at_a_time() -> void:
 	check_eq(sim.projectiles.size(), 1, "fireball spawned")
 	play(sim, "2,3,6LP")
 	check(sim.fighters[0].state_name() != "fireball_l", "second fireball blocked while first is alive")
+
+
+## 蓄力指令（引擎支持，目前的角色没有用到）：按住后 40 帧再按前。
+func test_charge_motion() -> void:
+	var m := Motion.preset("[4]6")
+	var cases := [["4x45,6", true, "charged long enough"], ["4x20,6", false, "not charged long enough"],
+		["4x45,5x15,6", false, "released too long before forward"], ["1x45,3", true, "diagonals count"]]
+	for c: Array in cases:
+		var sim := adjacent_sim(400)
+		play(sim, c[0])
+		check_eq(m.matches(sim.fighters[0], sim.frame), c[1], c[2])

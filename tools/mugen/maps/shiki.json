@@ -240,6 +240,8 @@
 			],
 			"loop": true
 		},
-		"wakeup_back": 5121
+		"wakeup_back": 5121,
+		"super3_k": 3100,
+		"super2_k": 2200
 	}
 }
