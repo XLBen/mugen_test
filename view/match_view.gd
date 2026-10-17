@@ -75,7 +75,9 @@ func _draw() -> void:
 
 func _draw_stage() -> void:
 	var half := SimConst.px(sim.stage.half_width)
-	draw_rect(Rect2(-half, 0, half * 2, 200), Color(0.16, 0.16, 0.2))
+	# 天空背景（窗口清屏色是黑色，用作等比缩放时的黑边）
+	draw_rect(Rect2(-half - 800, -1600, half * 2 + 1600, 1600), Color(0.3, 0.3, 0.32))
+	draw_rect(Rect2(-half - 800, 0, half * 2 + 1600, 400), Color(0.16, 0.16, 0.2))
 	var x := -half
 	while x <= half:
 		draw_line(Vector2(x, -720), Vector2(x, 0), GRID_COLOR, 1.0)

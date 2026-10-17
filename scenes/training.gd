@@ -4,6 +4,7 @@ extends Node2D
 ## F7 精灵/白模  F8 切换 P1 角色  F9 切换 P2 角色
 ## F10 训练/对战模式  F11 资源常满（训练）  F12 显示/隐藏调试信息
 ## 训练模式：1 假人模式  2 自动防御  3 录制/回放  Shift+F6 版边重置
+## Alt+Enter 全屏 / 窗口；窗口任意大小都按 16:9 等比缩放（多余部分黑边）
 
 const STAGE: StageDef = preload("res://stages/training_stage.tres")
 const ROSTER: Array[FighterDef] = [
@@ -36,6 +37,7 @@ var logs := [InputLog.new(), InputLog.new()]
 
 func _ready() -> void:
 	Engine.physics_ticks_per_second = SimConst.FPS
+	_fit_window_to_screen()
 	LocalInput.register_actions()
 	roster = local_fighters()
 	if roster.is_empty():
@@ -97,6 +99,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
 		return
+	if key.keycode == KEY_ENTER and key.alt_pressed:
+		_toggle_fullscreen()
+		return
 	match key.keycode:
 		KEY_F1:
 			view.show_boxes = not view.show_boxes
@@ -135,6 +140,29 @@ func _unhandled_input(event: InputEvent) -> void:
 			dummy.guard = (dummy.guard + 1) % TrainingDummy.Guard.size()
 		KEY_3:
 			dummy.toggle_record()
+
+
+## 启动时把窗口放大到屏幕可用区域内最大的 16:9 尺寸并居中。
+func _fit_window_to_screen() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+		return
+	var screen := DisplayServer.window_get_current_screen()
+	var usable := DisplayServer.screen_get_usable_rect(screen)
+	var base := Vector2(ProjectSettings.get_setting("display/window/size/viewport_width"),
+		ProjectSettings.get_setting("display/window/size/viewport_height"))
+	var k := minf(usable.size.x * 0.92 / base.x, usable.size.y * 0.92 / base.y)
+	var size := Vector2i((base * k).round())
+	DisplayServer.window_set_size(size)
+	DisplayServer.window_set_position(usable.position + (usable.size - size) / 2)
+
+
+func _toggle_fullscreen() -> void:
+	var full := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN)
+	if full:
+		_fit_window_to_screen.call_deferred()
 
 
 static func local_fighters() -> Array[FighterDef]:
