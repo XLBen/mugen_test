@@ -5,7 +5,8 @@ class_name CommonStates
 const HURT_FRICTION := 60
 const THROW_TECH_WINDOW := 7 ## 被抓后多少帧内可以拆投
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
-const PROXIMITY_GUARD := 26000 ## 近距离防御的触发距离（单位）
+const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
+const PROXIMITY_PROJECTILE := 18000 ## 道具距离多近时触发近距离防御
 const SPECIAL_METER := 20 ## 出必杀技（无论是否命中）获得的超杀槽
 const FORWARD_DRIVE := 20 ## 前走每帧额外回复的 Drive
 const UPGRADE_WINDOW := 3 ## 同时按宽容：出招后几帧内补按的键可以升级成更高优先级的指令（OD、投）
@@ -198,14 +199,17 @@ static func try_cancel(f: Fighter, sim: MatchSim) -> bool:
 	return false
 
 
-## 对手正在出招（含飞行道具接近）时，按后会进入防御姿势而不是后退。
+## 近距离防御：对手出招且其攻击判定可能够得着自己（判定长度 + 余量）时，按后进入防御姿势而不是后退；
+## 飞行道具接近时同理。投技不触发（投不能防）。
 static func _threatened(f: Fighter, sim: MatchSim) -> bool:
 	var opp := sim.opponent(f)
 	var s := opp.sd()
-	if s.is_attack() and opp.state_frame <= s.last_active and absi(opp.x - f.x) < PROXIMITY_GUARD:
-		return true
+	var dist := absi(opp.x - f.x)
+	if s.is_attack() and s.reach > 0 and opp.state_frame <= s.last_active:
+		if dist < s.reach + f.def.push_half_width + PROXIMITY_MARGIN:
+			return true
 	for p in sim.projectiles:
-		if p.owner != f.index and absi(p.x - f.x) < PROXIMITY_GUARD:
+		if p.owner != f.index and absi(p.x - f.x) < PROXIMITY_PROJECTILE and signi(f.x - p.x) == signi(p.vx):
 			return true
 	return false
 

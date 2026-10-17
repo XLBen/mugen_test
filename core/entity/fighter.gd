@@ -119,12 +119,19 @@ func is_airborne() -> bool:
 
 func push_height() -> int:
 	match sd().type:
-		"C", "L":
+		"C":
 			return def.crouch_height
+		"L":
+			return def.down_height
 		"A":
 			return def.air_height
 		_:
 			return def.stand_height
+
+
+## 推挤盒底边离脚底的高度（空中抬高，方便越身）。
+func push_bottom() -> int:
+	return y + (def.air_push_offset if sd().type == "A" else 0)
 
 
 func push_left() -> int:
@@ -146,7 +153,8 @@ func hurtboxes() -> Array:
 
 
 func pushbox_world() -> PackedInt32Array:
-	return PackedInt32Array([push_left(), y, push_right(), y + push_height()])
+	var b := push_bottom()
+	return PackedInt32Array([push_left(), b, push_right(), b + push_height()])
 
 
 # ---------------------------------------------------------------- 输入

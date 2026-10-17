@@ -39,7 +39,9 @@ static func resolve(a: Fighter, b: Fighter, wall_left: int, wall_right: int) -> 
 
 
 static func _overlap_y(a: Fighter, b: Fighter) -> bool:
-	return a.y < b.y + b.push_height() and b.y < a.y + a.push_height()
+	var ab := a.push_bottom()
+	var bb := b.push_bottom()
+	return ab < bb + b.push_height() and bb < ab + a.push_height()
 
 
 ## 判断谁在左边。中心完全重合时按朝向决定（面朝右的在左），仍相同则保持参数顺序。

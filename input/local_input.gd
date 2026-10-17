@@ -24,6 +24,9 @@ const PAD_BUTTONS := [
 
 const STICK_DEADZONE := 0.5
 
+## 两次仿真帧之间按下过的按键（即使已经松开）。快速点按不会因为恰好没有在采样那一刻按住而丢失。
+static var _latched: Array[int] = [0, 0]
+
 
 static func action_name(player: int, i: int) -> String:
 	return "p%d_%s" % [player + 1, ACTIONS[i]]
@@ -46,8 +49,19 @@ static func register_actions() -> void:
 			InputMap.action_add_event(action, pad)
 
 
+## 由场景的 _input 转发输入事件；只锁存按键，方向仍按当前按住状态读取（避免方向互相叠加）。
+static func latch(event: InputEvent) -> void:
+	if not event.is_pressed() or event.is_echo():
+		return
+	for player in 2:
+		for i in range(4, ACTIONS.size()):
+			if event.is_action_pressed(action_name(player, i)):
+				_latched[player] |= BITS[i]
+
+
 static func read(player: int) -> int:
-	var bits := 0
+	var bits := _latched[player]
+	_latched[player] = 0
 	for i in ACTIONS.size():
 		if Input.is_action_pressed(action_name(player, i)):
 			bits |= BITS[i]

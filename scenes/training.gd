@@ -77,6 +77,10 @@ func _combo_text(victim: Fighter) -> String:
 	return "\n".join(lines)
 
 
+func _input(event: InputEvent) -> void:
+	LocalInput.latch(event)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:

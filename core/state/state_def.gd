@@ -28,6 +28,7 @@ var invuln: Array = [] ## [{from, to, strike, throw}]
 var events: Array = [] ## [{frame, vx?, vy?, spawn?}]
 var first_active := -1
 var last_active := -1
+var reach := 0 ## 攻击判定最远能伸到身前多远（单位），近距离防御用
 var cancel_targets: Array = [] ## 接触对手后可以取消成哪些招：kind 名（special/super）或状态名
 var cancel_until := -1 ## 取消窗口最后一帧（默认持续帧结束后 3 帧）
 var cost: Dictionary = {} ## 进入此状态消耗的资源 {gauge_name: amount}
@@ -63,6 +64,8 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 		hd.source = s.kind
 		var entry := {"from": h.active[0] - 1, "to": h.active[1] - 1, "boxes": _boxes(h.boxes), "hit": hd}
 		s.hitboxes.append(entry)
+		for b: PackedInt32Array in entry.boxes:
+			s.reach = maxi(s.reach, b[0] + b[2])
 		s.first_active = entry.from if s.first_active < 0 else mini(s.first_active, entry.from)
 		s.last_active = maxi(s.last_active, entry.to)
 	if d.has("throw"):

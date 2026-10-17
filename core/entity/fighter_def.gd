@@ -15,17 +15,20 @@ extends Resource
 
 @export_group("Jump")
 @export var prejump_frames := 4
-@export var jump_velocity := 1900
-@export var jump_forward_speed := 420
-@export var jump_back_speed := 380
-@export var gravity := 85
+@export var jump_velocity := 2000
+@export var jump_forward_speed := 450
+@export var jump_back_speed := 400
+@export var gravity := 100
 @export var landing_frames := 3
 
 @export_group("Pushbox")
 @export var push_half_width := 3500
-@export var stand_height := 20000
-@export var crouch_height := 13000
-@export var air_height := 15000
+@export var stand_height := 15000
+@export var crouch_height := 11000
+@export var air_height := 9000
+## 空中推挤盒离脚底的高度：跳到足够高时可以从对手头上越过（越身）
+@export var air_push_offset := 5000
+@export var down_height := 3000
 
 @export_group("Hurtbox (px: x, y, w, h)")
 @export var stand_hurtbox := PackedInt32Array([-30, 0, 60, 185])
