@@ -275,6 +275,9 @@
 		"dash_b": [
 			105,
 			106
-		]
+		],
+		"crouch_up": 12,
+		"turn": 5,
+		"turn_crouch": 6
 	}
 }

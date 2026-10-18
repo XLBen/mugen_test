@@ -5,6 +5,9 @@ extends RefCounted
 
 const HISTORY := 64 ## 输入历史长度（帧）
 
+const CROUCH_UP_FRAMES := 6 ## 蹲 → 站的过渡最多几帧
+const TURN_FRAMES := 4 ## 转身过渡最多几帧
+
 var def: FighterDef
 var moveset: Moveset
 var index := 0 ## 玩家索引（0 = P1），不属于可变状态
@@ -25,6 +28,7 @@ var tail_var := 0 ## 那个状态当时的变体
 var tail_from := 0 ## 从动画的哪个时刻开始
 var tail_ticks := 0 ## 剩余动画时长
 var tail_len := 0 ## 用几帧播完（0 = 没有尾巴）
+var tail_at := 0 ## 尾巴从当前状态的第几帧开始（转身这类在状态中途开始的过渡动画）
 var held := 0 ## 当前状态里已经过的超杀暂停帧数（暂停期间动画照播，见 AnimClock.attack_tick）
 var health := 0
 var stun := 0 ## 当前受击/防御硬直的长度
@@ -127,13 +131,33 @@ func set_state(state_name_: String) -> void:
 		tail_ticks = tail[1]
 		tail_len = tail[2]
 	state_frame = 0
+	tail_at = 0
 	held = 0
 	fresh = 1
+	# 从蹲回到站：没有别的尾巴时播一段起身过渡
+	if tail_len == 0 and valid and moveset.states[old_state].type == "C" and moveset.states[old_state].ctrl \
+			and sd().name == "stand":
+		play_transition("crouch_up", CROUCH_UP_FRAMES)
 	hit_mask = 0
 	push_transfer = 0
 	contact = 0
 	cmd_index = -1
 	armor_used = 0
+
+
+## 过渡动画（起身、转身）：借尾巴机制在当前状态里播一段指定动画，只影响画面和受击盒；没有这套动画就不播。
+func play_transition(anim_state: String, max_frames: int) -> void:
+	if not moveset.index.has(anim_state):
+		return
+	var s: StateDef = moveset.states[moveset.id(anim_state)]
+	if s.anim_data == null:
+		return
+	tail_state = moveset.id(anim_state)
+	tail_var = 0
+	tail_from = 0
+	tail_ticks = s.anim_data.length()
+	tail_len = mini(max_frames, tail_ticks)
+	tail_at = state_frame
 
 
 func reset_combo() -> void:
@@ -221,7 +245,7 @@ func numpad_at(frame: int) -> int:
 # ---------------------------------------------------------------- 存档
 
 const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh", "jump_dir", "hit_var",
-	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "held", "health",
+	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "tail_at", "held", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
 	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
 	"cmd_index", "upgrade_until", "armor_used", "wall_fx", "wall_used", "down_frames", "hard_kd", "pp_scale"]

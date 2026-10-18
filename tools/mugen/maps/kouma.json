@@ -281,6 +281,9 @@
 		"air_dive": 1102,
 		"hammer_od": 2200,
 		"dash_f": 100,
-		"dash_b": 105
+		"dash_b": 105,
+		"crouch_up": 12,
+		"turn": 5,
+		"turn_crouch": 6
 	}
 }

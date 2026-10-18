@@ -67,7 +67,7 @@ static func candidates(s: StateDef, v: int) -> PackedStringArray:
 
 
 static func has_tail(f: Fighter) -> bool:
-	return f.tail_len > 0 and f.state_frame < f.tail_len and f.sd().tail_ok
+	return f.tail_len > 0 and f.state_frame >= f.tail_at and f.state_frame - f.tail_at < f.tail_len and f.sd().tail_ok
 
 
 ## 当前显示的是哪个状态的动画（尾巴期间是上一个状态的）。
@@ -96,7 +96,7 @@ static func index(f: Fighter, anim: AnimData) -> int:
 	if anim.count() == 0:
 		return 0
 	if has_tail(f):
-		return anim.index_at_time(f.tail_from + f.state_frame * f.tail_ticks / f.tail_len)
+		return anim.index_at_time(f.tail_from + (f.state_frame - f.tail_at) * f.tail_ticks / f.tail_len)
 	return frame(f, f.sd(), anim)
 
 

@@ -65,6 +65,10 @@ static func states() -> Dictionary:
 			"anim_fallback": ["hit_stand_lo_l", "hit_stand"]},
 		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}],
 			"throw_protect": WAKEUP_THROW_PROTECT},
+		# 只用来播过渡动画（Fighter.play_transition），不会真的进入
+		"crouch_up": {"type": "S", "anim": "crouch_up"},
+		"turn": {"type": "S", "anim": "turn"},
+		"turn_crouch": {"type": "C", "anim": "turn_crouch"},
 		"ko": {"type": "L", "kind": "hurt", "anim": "knockdown", "invuln": [{"frames": [1, 99999]}]},
 		"thrown": {"type": "S", "kind": "hurt", "physics": "none", "logic": "thrown", "anim": "hit_stand",
 			"invuln": [{"frames": [1, 99999], "strike": true, "throw": true}]},
@@ -128,10 +132,15 @@ static func run(logic: String, f: Fighter, sim: MatchSim) -> void:
 ## 地面可行动状态：先查出招表，再处理移动 / 近距离防御。
 static func _ground(f: Fighter, sim: MatchSim) -> void:
 	var opp := sim.opponent(f)
+	var face := f.facing
 	if opp.x > f.x:
-		f.facing = 1
+		face = 1
 	elif opp.x < f.x:
-		f.facing = -1
+		face = -1
+	if face != f.facing:
+		f.facing = face
+		if f.sd().name in ["stand", "crouch"]:
+			f.play_transition("turn_crouch" if f.sd().type == "C" else "turn", Fighter.TURN_FRAMES)
 	if try_commands(f, sim, "ground"):
 		return
 	var numpad := f.numpad_at(sim.frame)
