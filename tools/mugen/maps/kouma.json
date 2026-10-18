@@ -285,6 +285,14 @@
 		"crouch_up": 12,
 		"turn": 5,
 		"turn_crouch": 6,
-		"drive_impact": 2000
+		"drive_impact": 2000,
+		"guard_stand": [
+			120,
+			130
+		],
+		"guard_crouch": [
+			121,
+			131
+		]
 	}
 }
