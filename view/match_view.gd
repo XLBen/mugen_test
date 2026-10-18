@@ -187,9 +187,10 @@ func sprite_pose(f: Fighter) -> Dictionary:
 	if sprites == null or not show_sprites:
 		return {}
 	var feet := Vector2(SimConst.px(f.x), -SimConst.px(f.y)).round()
-	# 顿帧中的被打方左右抖动（打击感）
+	# 顿帧中的被打方左右抖动（打击感）：重击抖得更狠，随顿帧结束逐渐收住
 	if f.hitstop > 0 and f.sd().kind == "hurt":
-		feet.x += 3.0 if sim.frame % 2 == 0 else -3.0
+		var amp := clampf(roundf(f.hitstop / 3.0), 1.0, 4.0)
+		feet.x += amp if sim.frame % 2 == 0 else -amp
 	return {"tex": _sprite_frame(f, sprites), "feet": feet, "scale": Vector2(sprites.scale * f.facing, sprites.scale),
 		"anchor": sprites.anchor}
 

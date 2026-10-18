@@ -22,6 +22,8 @@ var _prev_state: Array[int] = [-1, -1]
 var _prev_frame: Array[int] = [0, 0]
 var _prev_projectiles := 0
 var _prev_round := -1
+var _swing_at: Array[int] = [-1, -1] ## 这一招的挥空声在第几帧响（-1 = 已经响过 / 不是攻击）
+const SWING_LEAD := 2
 
 
 func _ready() -> void:
@@ -99,20 +101,25 @@ func _watch_round(sim: MatchSim) -> void:
 func _watch_moves(sim: MatchSim) -> void:
 	for i in sim.fighters.size():
 		var f := sim.fighters[i]
+		var s := f.sd()
 		var started := f.state != _prev_state[i] or f.state_frame < _prev_frame[i]
 		if started and f.state_frame <= 1:
-			var s := f.sd()
+			_swing_at[i] = -1
 			if s.is_od():
 				_play("od", -4.0)
-			if s.is_attack() and s.kind != "throw":
-				var strength := 0
-				for h: Dictionary in s.hitboxes:
-					strength = maxi(strength, (h.hit as HitDef).strength)
-				_play("whoosh%d" % strength, -6.0)
+			if s.is_attack() and s.kind != "throw" and not s.hitboxes.is_empty():
+				# 挥空声在出手前 SWING_LEAD 帧响（慢招不会一按就"呼"）
+				_swing_at[i] = maxi(s.first_active - SWING_LEAD, 0)
 			elif s.name in ["landing", "dash_f", "dash_b"]:
 				_play("land", -8.0)
 			elif s.name == "knockdown":
 				_play("down", -3.0)
+		if _swing_at[i] >= 0 and f.state_frame >= _swing_at[i] and f.hitstop == 0:
+			var strength := 0
+			for h: Dictionary in s.hitboxes:
+				strength = maxi(strength, (h.hit as HitDef).strength)
+			_play("whoosh%d" % strength, -6.0)
+			_swing_at[i] = -1
 		_prev_state[i] = f.state
 		_prev_frame[i] = f.state_frame
 	# 新放出的飞行道具：飞刀破空声
