@@ -53,6 +53,11 @@ func consume(events: Array[Dictionary]) -> void:
 		match e.type:
 			"hit", "block", "armor", "clash":
 				_add_spark(e, pos)
+			"tech":
+				shake = maxf(shake, 3.0)
+				_fx.append({"kind": "spark", "pos": pos, "born": sim.frame, "life": 14, "size": 90.0, "pal": Pal.CLASH,
+					"mode": Mode.BURST, "power": 0.5, "dir": e.get("dir", 1), "seed": _seed(e),
+					"parts": _particles(_seed(e), 3, false)})
 			"super":
 				_fx.append({"kind": "flash", "pos": pos, "born": sim.frame, "life": 26, "size": 150.0, "pal": Pal.SUPER,
 					"seed": _seed(e)})

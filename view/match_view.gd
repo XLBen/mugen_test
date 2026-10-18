@@ -16,6 +16,7 @@ const FIREBALL_COLORS := [Color(0.5, 0.8, 1.0), Color(1.0, 0.6, 0.3)]
 const TRAIL_SPEED_PX := 8.0 ## 每帧移动超过这么多像素的道具画拖影
 const TRAIL_ALPHA := [0.5, 0.3, 0.15]
 const BURNOUT_TINT := Color(0.72, 0.72, 0.78) ## Burnout 中角色发灰
+const VANISH_FADE := 3.0
 
 ## 摄像机中心相对地面的高度（像素），让地面落在屏幕下方
 const CAMERA_HEIGHT_PX := 260.0
@@ -70,6 +71,18 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
+## 瞬移这类招式的隐身：隐身帧内完全看不见，前后各 VANISH_FADE 帧淡出 / 淡入。
+static func vanish_alpha(f: Fighter) -> float:
+	var v := f.sd().vanish
+	if v.is_empty():
+		return 1.0
+	var t := f.state_frame
+	if t >= v[0] and t <= v[1]:
+		return 0.0
+	var d := mini(absi(t - v[0]), absi(t - v[1]))
+	return clampf(float(d) / VANISH_FADE, 0.0, 1.0)
+
+
 ## 镜头缩放：超杀暂停中按等级推近；否则两人越近越拉近一点（最多 ZOOM_NEAR）。
 static func zoom_for(distance_px: float, focus: int, level := 1) -> float:
 	if focus >= 0:
@@ -103,7 +116,10 @@ func _draw() -> void:
 	for i in [1 - _top, _top]:
 		var sprites: SpriteSet = _sprites[i]
 		if show_sprites and sprites != null:
-			draw_fighter_sprite(self, sim.fighters[i], BURNOUT_TINT if sim.fighters[i].burnout != 0 else Color.WHITE)
+			var c := BURNOUT_TINT if sim.fighters[i].burnout != 0 else Color.WHITE
+			c.a = vanish_alpha(sim.fighters[i])
+			if c.a > 0.0:
+				draw_fighter_sprite(self, sim.fighters[i], c)
 		else:
 			_draw_whitebox(sim.fighters[i], P_COLORS[i])
 	for p in sim.projectiles:
@@ -149,6 +165,8 @@ func _draw_whitebox(f: Fighter, color: Color) -> void:
 
 ## 脚下的椭圆影子：离地越高越小越淡。
 func _draw_shadow(f: Fighter) -> void:
+	if vanish_alpha(f) <= 0.0:
+		return
 	var lift := clampf(SimConst.px(f.y) / 300.0, 0.0, 0.6)
 	var r := SimConst.px(f.def.push_half_width) * 1.5 * (1.0 - lift)
 	draw_set_transform(Vector2(roundf(SimConst.px(f.x)), 2.0), 0.0, Vector2(1.0, 0.22))

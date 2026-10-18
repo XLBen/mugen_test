@@ -322,6 +322,7 @@ static func _thrown(f: Fighter, sim: MatchSim) -> void:
 			break
 	if fresh:
 		var opp := sim.opponent(f)
+		Combat.emit_tech(sim, f, opp)
 		f.set_state("throw_tech")
 		opp.set_state("throw_tech")
 		f.consumed = sim.frame

@@ -9,6 +9,7 @@ display_name = "Kagura"
 sprite_dir = "res://characters/kagura/sprites"
 moveset = ExtResource("2_moves")
 max_health = 10000
+hit_style = "blade"
 walk_forward_speed = 520
 walk_back_speed = 400
 prejump_frames = 3

@@ -9,6 +9,7 @@ display_name = "Mio"
 sprite_dir = "res://characters/mio/sprites"
 moveset = ExtResource("2_moves")
 max_health = 10000
+hit_style = "blade"
 walk_forward_speed = 400
 walk_back_speed = 380
 prejump_frames = 4

@@ -66,12 +66,13 @@ static func resolve(sim: MatchSim) -> void:
 
 	# 投技：双方同时投 → 拆投；投方本帧被打 → 投失效
 	if throws.size() == 2:
+		emit_tech(sim, fighters[0], fighters[1])
 		for t: Array in throws:
 			t[0].set_state("throw_tech")
 	elif throws.size() == 1:
 		var t: Array = throws[0]
 		if not struck.has(t[0]):
-			_start_throw(t[0], t[1])
+			_start_throw(sim, t[0], t[1])
 
 	# 先做全部防御 / 打康判定，再统一应用（相打）
 	var decisions := []
@@ -128,9 +129,16 @@ static func throwable(f: Fighter) -> bool:
 	return not s.is_invuln(f.state_frame, true)
 
 
-static func _start_throw(atk: Fighter, dfn: Fighter) -> void:
+## 拆投：两人中间一团火花 + 金属声。
+static func emit_tech(sim: MatchSim, a: Fighter, b: Fighter) -> void:
+	sim.emit("tech", (a.x + b.x) / 2, maxi(a.push_height(), b.push_height()) * 2 / 3,
+		{"strength": 1, "counter": 0, "dir": a.facing, "super": false})
+
+
+static func _start_throw(sim: MatchSim, atk: Fighter, dfn: Fighter) -> void:
 	# 被抓时自己的投正在发生中（晚几帧按了投）也算拆投
 	if dfn.sd().kind == "throw" and dfn.state_frame < dfn.sd().first_active and not atk.sd().untechable:
+		emit_tech(sim, atk, dfn)
 		atk.set_state("throw_tech")
 		dfn.set_state("throw_tech")
 		return

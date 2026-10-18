@@ -188,14 +188,14 @@ func _more_specials() -> void:
 	for k in ["h", "m", "l"]:
 		states["teleport_" + k] = {
 			"type": "S", "kind": "special", "total": 34, "anim": "teleport", "anim_fallback": ["crouch"],
-			"invuln": [{"frames": [4, 16]}], "no_push": [4, 16], "punishable_from": 26,
+			"invuln": [{"frames": [4, 16]}], "no_push": [4, 16], "punishable_from": 26, "vanish": [7, 12],
 			"events": [{"frame": 12, "teleport": tele[k]}, {"frame": 13, "face": true}],
 		}
 		command("214" + k.to_upper() + "K", "special", {"motion": "214", "buttons": k.to_upper() + "K",
 			"state": "teleport_" + k})
 	states["teleport_od"] = {
 		"type": "S", "kind": "special", "total": 26, "anim": "teleport", "anim_fallback": ["crouch"],
-		"cost": {"drive": 20000}, "invuln": [{"frames": [1, 14]}], "no_push": [1, 14],
+		"cost": {"drive": 20000}, "invuln": [{"frames": [1, 14]}], "no_push": [1, 14], "vanish": [4, 8],
 		"events": [{"frame": 8, "teleport": 85}, {"frame": 9, "face": true}],
 	}
 	command("214KK", "od", {"motion": "214", "buttons": "KK", "state": "teleport_od"})

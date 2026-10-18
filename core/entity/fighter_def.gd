@@ -8,6 +8,8 @@ extends Resource
 ## 招式数据脚本（提供 data() -> Dictionary）
 @export var moveset: Script = preload("res://characters/shared/standard_moveset.gd")
 @export var max_health := 10000
+## 打击声音的质感（纯表现）：fist 拳脚 / blade 刀刃（命中时再叠一层"唰"的斩击声）
+@export_enum("fist", "blade") var hit_style := "fist"
 
 @export_group("Walk")
 @export var walk_forward_speed := 450

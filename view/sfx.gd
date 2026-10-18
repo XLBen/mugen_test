@@ -34,6 +34,9 @@ func _ready() -> void:
 		_add("whoosh0", _whoosh(0.10, 900.0 * p, 2600.0 * p, 0.28))
 		_add("whoosh1", _whoosh(0.15, 650.0 * p, 2000.0 * p, 0.34))
 		_add("whoosh2", _whoosh(0.22, 420.0 * p, 1500.0 * p, 0.42))
+		_add("slash0", _slash(0.10, 1.0 * p))
+		_add("slash1", _slash(0.14, 0.85 * p))
+		_add("slash2", _slash(0.20, 0.7 * p))
 	_add("counter", _crack(0.16))
 	_add("armor", _metal(0.30, [180.0, 271.0, 397.0], 0.8))
 	_add("clash", _metal(0.30, [1760.0, 2490.0, 3720.0], 0.7))
@@ -60,11 +63,17 @@ func consume(events: Array[Dictionary], sim: MatchSim = null) -> void:
 		match e.type:
 			"hit":
 				var strength: int = e.get("strength", 0)
-				_play("hit%d" % strength, (3.0 if e.get("super", false) else 0.0))
+				var blade := sim != null and e.has("target") and sim.fighters[1 - e.target].def.hit_style == "blade"
+				# 刀刃角色：打肉声压低一点，叠上斩击的"唰"
+				_play("hit%d" % strength, (3.0 if e.get("super", false) else 0.0) - (3.0 if blade else 0.0))
+				if blade:
+					_play("slash%d" % mini(strength, 2), -1.0)
 				if e.get("counter", 0):
 					_play("counter", -2.0)
 			"block", "armor", "clash", "super", "ko", "parry":
 				_play(e.type)
+			"tech":
+				_play("clash", -2.0)
 			"perfect_parry":
 				_play("parry", 2.0)
 				_play("counter", -1.0)
@@ -218,6 +227,24 @@ func _blade(length: float) -> AudioStreamWAV:
 		var click := rng.randf_range(-1.0, 1.0) * maxf(0.0, 1.0 - t / 0.003)
 		out[i] = tanh((scrape + ring * 0.45 + click) * 1.3) * 0.8
 	return _to_wav(out, 0.0005)
+
+
+## 斩击声：很短的高频噪声从高往低快速扫过（刀刃划开），尾巴带一点金属余韵。pitch 越小越重。
+func _slash(length: float, pitch: float) -> AudioStreamWAV:
+	var n := int(RATE * length)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(pitch * 1000.0)
+	var bp := _Svf.new(7000.0 * pitch, 2.5)
+	for i in n:
+		var t := float(i) / RATE
+		var x := float(i) / n
+		bp.set_freq((7500.0 - 5000.0 * x) * pitch)
+		var swish := bp.process(rng.randf_range(-1.0, 1.0)) * exp(-t * 22.0) * 1.6
+		var ring := sin(TAU * 3600.0 * pitch * t) * exp(-t * 40.0) * 0.25
+		out[i] = tanh((swish + ring) * 1.2) * 0.75
+	return _to_wav(out, 0.0008)
 
 
 ## 打康的"啪"：宽频噪声爆音 + 高通的脆响 + 很短的低频，像结实地打在身上。
