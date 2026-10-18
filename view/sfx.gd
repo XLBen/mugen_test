@@ -72,7 +72,10 @@ func consume(events: Array[Dictionary], sim: MatchSim = null) -> void:
 					_play("slash%d" % mini(strength, 2), -1.0)
 				if e.get("counter", 0):
 					_play("counter", -2.0)
-			"block", "armor", "clash", "super", "ko", "parry":
+			"block", "armor":
+				# 防住重击比防住轻击响
+				_play(e.type, [-4.0, -1.0, 2.0][clampi(e.get("strength", 1), 0, 2)])
+			"clash", "super", "ko", "parry":
 				_play(e.type)
 			"tech":
 				_play("clash", -2.0)
