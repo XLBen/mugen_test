@@ -8,12 +8,13 @@ const THROW_TECH_PREBUFFER := 4 ## 被抓前几帧内按下的拆投也算（预
 const WAKEUP_THROW_PROTECT := 1 ## 起身后的投无敌帧数（未核实）
 const BACK_RISE_WINDOW := 10 ## 软倒地时，躺地最后几帧里按过后方向就后滚起身
 const WALL_SPLAT_FRAMES := 45 ## 贴墙多久后滑落（期间可以追打）
-## Drive Parry（MP+MK 按住）：开招架 0.5 格，按住每帧再扣；最短 PARRY_MIN 帧，松开后收招 PARRY_END 帧可被确反（数值未核实）
+## Drive Parry（MP+MK 按住）：开招架 0.5 格，按住每帧再扣；点一下至少招架 PARRY_MIN 帧，松开后收招 PARRY_END 帧可被确反
+## （SF6 第 2 季：点招架持续 12 帧 + 收招 33 帧，共 45 帧；按住时每帧的消耗量未核实）
 const PARRY_COST := 5000
 const PARRY_DRAIN := 40
 const PARRY_MIN := 12
 const PARRY_MAX := 240
-const PARRY_END := 10
+const PARRY_END := 33
 const DIZZY_FRAMES := 120 ## 眩晕（Burnout 时被 Drive Impact 打到墙上）持续帧数
 const THROW_PROTECT := 3 ## 硬直结束后的投无敌帧数
 const PROXIMITY_MARGIN := 6000 ## 近距离防御：对手攻击判定长度之外再多算的距离
