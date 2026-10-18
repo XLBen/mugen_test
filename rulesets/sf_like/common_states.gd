@@ -54,7 +54,7 @@ static func states() -> Dictionary:
 		"land_recover": {"type": "S", "kind": "hurt", "total": 6, "anim": "land"},
 		"knockdown": {"type": "L", "kind": "hurt", "logic": "down", "anim": "knockdown", "invuln": [{"frames": [1, 99999]}]},
 		"wakeup_back": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup_back", "anim_fallback": ["wakeup"],
-			"invuln": [{"frames": [1, 18]}], "throw_protect": WAKEUP_THROW_PROTECT,
+			"invuln": [{"frames": [1, 18]}], "throw_protect": WAKEUP_THROW_PROTECT, "reversal": true,
 			"events": [{"frame": 1, "vx": -700}, {"frame": 13, "vx": 0}]},
 		"crumple": {"type": "S", "kind": "hurt", "logic": "crumple", "friction": HURT_FRICTION, "anim": "crumple",
 			"anim_fallback": ["hit_stand_hi_h", "hit_stand"]},
@@ -66,7 +66,7 @@ static func states() -> Dictionary:
 		"dizzy": {"type": "S", "kind": "hurt", "logic": "dizzy", "friction": HURT_FRICTION, "anim": "dizzy",
 			"anim_fallback": ["hit_stand_lo_l", "hit_stand"]},
 		"wakeup": {"type": "S", "kind": "hurt", "total": 18, "anim": "wakeup", "invuln": [{"frames": [1, 18]}],
-			"throw_protect": WAKEUP_THROW_PROTECT},
+			"throw_protect": WAKEUP_THROW_PROTECT, "reversal": true},
 		# 只用来播过渡动画（Fighter.play_transition），不会真的进入
 		"crouch_up": {"type": "S", "anim": "crouch_up"},
 		"turn": {"type": "S", "anim": "turn"},
@@ -191,11 +191,10 @@ static func try_commands(f: Fighter, sim: MatchSim, where: String, specials_only
 			continue
 		if not _usable(f, sim, c, target):
 			continue
-		var press := c.check(f, sim.frame)
+		var press := c.check(f, sim.frame, Command.LONG_BUFFER if f.reversal_buffer != 0 else Command.BUFFER)
 		if press < 0:
 			continue
-		if c.buttons != 0:
-			f.consumed = press
+		f.consumed = press
 		_enter_move(f, sim, target, idx)
 		if where == "air":
 			f.air_used = 1

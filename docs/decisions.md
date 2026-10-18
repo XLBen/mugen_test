@@ -47,6 +47,7 @@
 | 40 | 蓄力指令 | 引擎支持 `[4]6` / `[2]8`：蓄力方向（含斜向）连续按住 40 帧，松开后 10 帧内输入后续方向；目前没有角色使用 | 2026-10-17；蓄力时间未核实 |
 | 41 | 招式扩充（SF6 标准） | 每人 7–9 个必杀（大部分有 OD 版）、2–3 个目标连段、1–2 个指令普攻、空中必杀；Kagura 新增 236P 蛇咬、421K 千刃乱舞、影步派生影斩、OD 影步 / 坠星；Volk 新增 236P 公牛直拳、214K 地裂扫（下段）、22P 铁山靠、空中 236K 落锤、OD 铁锤；Mio 新增 214K 幻影步（瞬移）、236K 滑步斩（下段）、22P 天之黑键（对空道具）、空中 214P 散射、OD 封印、4HP 对空。引擎：派生招（`cancel_free` + 指令 `after`，不用命中也能取消）、瞬移 / 转向事件、22 指令；导入人物尽量映射到月姬格斗原作的同类招式 | 2026-10-17 |
 | 42 | 重攻击确反崩溃 | Kagura 5HP、Volk 5HK、Mio 5HP 确反（Punish Counter）命中时对手崩溃，可接完整连段（SF6 式） | 2026-10-18 手感打磨 |
+| 43 | 输入缓冲 | 任何招式可提前 4 帧按（连当前帧共 5 帧窗口，原来是 4 帧）；冲刺和起身反击可提前 7 帧（共 8 帧）；取消仍是 5 帧 + 顿帧 | 已核对：[SRK SF6 Game Data](https://srk.shib.live/w/Street_Fighter_6/Game_Data)（2026-10-18） |
 
 参考：[SRK SF6 Offense](https://srk.shib.live/w/Street_Fighter_6/Offense)、
 [SRK SF6 Game Data](https://srk.shib.live/w/Street_Fighter_6/Game_Data)、

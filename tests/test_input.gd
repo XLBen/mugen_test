@@ -75,8 +75,8 @@ func test_button_buffer() -> void:
 	check_eq(sim.fighters[0].state_name(), "5lp", "buffered press comes out on first free frame")
 	sim = _far_sim()
 	play(sim, "5HP")
-	play(sim, "5x%d,5LP" % (total - 8))
-	play(sim, "5x8")
+	play(sim, "5x%d,5LP" % (total - 9))
+	play(sim, "5x9")
 	check(sim.fighters[0].state_name() != "5lp", "press too early is dropped")
 
 
@@ -97,3 +97,29 @@ func test_charge_motion() -> void:
 		var sim := adjacent_sim(400)
 		play(sim, c[0])
 		check_eq(m.matches(sim.fighters[0], sim.frame), c[1], c[2])
+
+
+## SF6 缓冲：提前 4 帧按的普攻在恢复的第一帧出来；冲刺和起身反击提前 7 帧也行。
+func test_sf6_buffer_windows() -> void:
+	var sim := _far_sim()
+	play(sim, "5HP")
+	var total: int = sim.fighters[0].sd().total
+	play(sim, "5x%d,5LP" % (total - 5))
+	play(sim, "5x6")
+	check_eq(sim.fighters[0].state_name(), "5lp", "4 frames early still comes out")
+	sim = _far_sim()
+	play(sim, "5HP")
+	play(sim, "5x%d,5LP" % (total - 6))
+	play(sim, "5x7")
+	check(sim.fighters[0].state_name() != "5lp", "5 frames early is too early")
+	sim = _far_sim()
+	play(sim, "5HP")
+	play(sim, "5x%d,6,5,6" % (total - 9))
+	play(sim, "5x8")
+	check_eq(sim.fighters[0].state_name(), "dash_f", "dash input during recovery comes out")
+	sim = _far_sim()
+	var p1 := sim.fighters[0]
+	p1.set_state("wakeup")
+	play(sim, "5x10,6,2,3HP", "", 0)
+	play(sim, "5x8")
+	check_eq(p1.state_name(), "dp", "reversal DP buffered 7 frames before wakeup ends")

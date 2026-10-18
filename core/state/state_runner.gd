@@ -37,6 +37,7 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 		elif s.total > 0 and f.state_frame >= s.total:
 			f.set_state(s.next)
 			f.throw_protect = maxi(f.throw_protect, s.throw_protect)
+			f.reversal_buffer = 1 if s.reversal else 0
 		elif s.logic != "":
 			CommonStates.run(s.logic, f, sim)
 		if f.fresh == 0:
@@ -45,6 +46,8 @@ static func update(f: Fighter, sim: MatchSim) -> void:
 
 	_events(f, sim)
 	_physics(f)
+	if f.fresh == 0 and f.state_frame > 0:
+		f.reversal_buffer = 0 # 起身反击的长缓冲只在恢复后的第一帧有效
 
 
 static func _events(f: Fighter, sim: MatchSim) -> void:

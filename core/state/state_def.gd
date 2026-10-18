@@ -46,6 +46,7 @@ var no_push: Array = [] ## [from, to]：这段帧数不参与推挤（可以穿�
 var punishable := false ## 整个状态都算收招（被打 = Punish Counter），如升龙落地硬直
 var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
 var throw_protect := 0 ## 按总帧数结束时给的投无敌帧数（起身）
+var reversal := false ## 按总帧数结束后的第一帧用长缓冲（起身反击）
 var freeze_len := 0 ## 发生前的超杀暂停总帧数（暂停期间出招动画继续播预备动作）
 var vanish: Array = [] ## [第一帧, 最后一帧]（从 0 起）：画面上隐身（瞬移），纯表现
 var glide_startup := false ## 发生段里就开始移动（突进招）：预备动作均匀拉长，而不是摆好姿势停住滑行
@@ -105,6 +106,7 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 	s.punishable = d.get("punishable", false)
 	s.punishable_from = d.get("punishable_from", 0) - 1
 	s.throw_protect = d.get("throw_protect", 0)
+	s.reversal = d.get("reversal", false)
 	s.cost = d.get("cost", {})
 	if d.has("armor"):
 		s.armor = {"from": d.armor.frames[0] - 1, "to": d.armor.frames[1] - 1, "hits": d.armor.get("hits", 1)}

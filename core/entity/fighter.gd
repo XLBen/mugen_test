@@ -56,6 +56,7 @@ var wall_used := 0 ## 本连段已经撞过墙
 var down_frames := HitDef.DOWN_FRAMES ## 这次倒地躺多久
 var hard_kd := 0 ## 这次倒地不能后滚
 var pp_scale := 0 ## 被完美招架后的反击：本连段伤害减半
+var reversal_buffer := 0 ## 起身后的第一帧：指令用长缓冲（起身反击）
 var history := PackedInt32Array() ## 输入历史，按 frame % HISTORY 存放
 var gauges := PackedInt32Array() ## 资源槽当前值（Gauges.DEFS 顺序）
 var gauge_delay := PackedInt32Array() ## 资源槽回复停顿剩余帧
@@ -248,7 +249,7 @@ const _FIELDS := ["x", "y", "vx", "vy", "facing", "state", "state_frame", "fresh
 	"tail_state", "tail_var", "tail_from", "tail_ticks", "tail_len", "tail_at", "held", "health",
 	"stun", "hitstop", "hit_mask", "air_used", "knockdown", "throw_protect", "push_transfer", "consumed",
 	"contact", "last_hitstop", "combo_hits", "combo_damage", "combo_light", "juggle", "counter_type", "counter_timer",
-	"cmd_index", "upgrade_until", "armor_used", "wall_fx", "wall_used", "down_frames", "hard_kd", "pp_scale"]
+	"cmd_index", "upgrade_until", "armor_used", "wall_fx", "wall_used", "down_frames", "hard_kd", "pp_scale", "reversal_buffer"]
 
 
 func save_state() -> Dictionary:

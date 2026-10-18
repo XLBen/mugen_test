@@ -9,7 +9,9 @@ const BUTTON_NAMES := {
 	"K": InputBits.B3 | InputBits.B4 | InputBits.B5,
 }
 
-const BUFFER := 4 ## 按键在多少帧内仍然有效（用于硬直结束、落地等一帧窗口）
+## 输入缓冲（SF6）：任何招式最多可以提前 4 帧按，连同当前帧共 5 帧窗口；冲刺和起身反击提前 7 帧（共 8 帧）
+const BUFFER := 5
+const LONG_BUFFER := 8
 
 var name := ""
 var motion: Motion
@@ -48,7 +50,15 @@ static func build(d: Dictionary) -> Command:
 ## 站 / 蹲普攻按"按键那一帧"有没有按下方向区分：缓冲中的 2LP 在顿帧后出招时，即使已经松开下也还是 2LP。
 func check(f: Fighter, frame: int, buffer := BUFFER) -> int:
 	if buttons == 0:
-		return frame if motion != null and motion.matches(f, frame) else -1
+		# 纯方向指令（冲刺）：最近 LONG_BUFFER 帧内完成的也算（硬直中输入的冲刺在恢复时出来）
+		if motion == null:
+			return -1
+		var t := frame
+		while t > frame - maxi(buffer, LONG_BUFFER) and t > f.consumed:
+			if motion.matches(f, t):
+				return t
+			t -= 1
+		return -1
 	var press := _press_frame(f, frame, buffer)
 	if press < 0:
 		return -1
