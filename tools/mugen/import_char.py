@@ -15,6 +15,7 @@
     "hit_stand_hi_h": {"actions": [5002, 5007], "recover": 5007}   从 5007 起是受击恢复段
     "hit_air": {"actions": [5030, 5035, 5050], "fall": 5050}       从 5050 起是下落段
     "idle": {"actions": [0], "max_time": 8}                        每帧最长 8（有的待机第一帧停很久）
+    "walk_f": {"actions": [20], "stride": 1.2}                     原作走路速度（.cns 的 walk.fwd，像素 / 帧）：按实际速度调整播放快慢，脚不打滑
     "charm": {"actions": [1200], "active": [3, 3]}                 没有 Clsn1 的出手帧（扔道具），与道具出现的帧对齐
     "fx_charm": {"actions": [300], "loop": true}                   道具 / 特效：独立画布，道具位置对准图案中心
                                                                    （"anchor": "bottom" 对准底边，"axis" 用 MUGEN 原点）
@@ -313,7 +314,8 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 		frames = [x for x in frames if sprite_for(sff, x[0]) is not None and sprite_for(sff, x[0]).image]
 		if frames:
 			loop = spec.get("loop", name in LOOPED) if isinstance(spec, dict) else name in LOOPED
-			anims[name] = {"frames": frames, "attack": attack, "loop": loop}
+			anims[name] = {"frames": frames, "attack": attack, "loop": loop,
+				"stride": spec.get("stride", 0) if isinstance(spec, dict) else 0}
 
 	# 2. 统一画布（角色动作所有帧的外接矩形），锚点 = 脚底；
 	#    道具 / 特效动画（fx_ 开头）各用自己的画布，锚点 = 道具位置（MUGEN 的 axis），免得把角色画布撑得很大
@@ -378,6 +380,8 @@ def cmd_import(char_dir: Path, map_path: Path, out_root: Path) -> Path:
 					entry.append(phase)
 				frames_meta.append(entry)
 			meta_anims[name] = {"loop": a["loop"], "frames": frames_meta}
+			if a["stride"]:
+				meta_anims[name]["stride"] = round(a["stride"] * scale, 3) # 原作移动速度（显示像素 / 帧）
 			if name in own:
 				meta_anims[name]["anchor"] = list(own[name][2])
 	meta = {"canvas": list(canvas), "anchor": list(anchor), "scale": scale, "palettes": len(palettes),

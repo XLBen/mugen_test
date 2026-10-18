@@ -9,6 +9,7 @@ enum Phase { NONE, STARTUP, ACTIVE, RECOVERY, FALL }
 const PHASE_CODES := {"": Phase.NONE, "s": Phase.STARTUP, "a": Phase.ACTIVE, "r": Phase.RECOVERY, "f": Phase.FALL}
 
 var loop := false
+var stride := 0 ## 原作里配这套动画的移动速度（单位 / 帧，0 = 不按速度播放）
 var ends: Array[int] = [] ## 每帧结束时的累计时长
 var hurt: Array = [] ## 每帧的受击盒 Array[PackedInt32Array]（可能为空 = 沿用默认身体盒）
 var hit: Array = [] ## 每帧的攻击盒（只有持续帧有）
@@ -35,6 +36,7 @@ static func load_library(dir: String) -> Dictionary:
 static func from_meta(m: Dictionary) -> AnimData:
 	var a := AnimData.new()
 	a.loop = m.get("loop", false)
+	a.stride = roundi(m.get("stride", 0.0) * SimConst.UNITS_PER_PX)
 	var t := 0
 	for f: Array in m.frames:
 		t += int(f[1])

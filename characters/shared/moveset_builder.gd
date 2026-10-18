@@ -224,9 +224,10 @@ func super_art(state_name: String, level: int, motion: String, buttons: String, 
 
 func dashes(forward_speed: int, forward_frames: int, forward_total: int,
 		back_speed: int, back_frames: int, back_total: int, back_invuln: int) -> void:
-	states["dash_f"] = {"type": "S", "total": forward_total, "anim": "walk_f",
+	states["dash_f"] = {"type": "S", "total": forward_total, "anim": "dash_f", "anim_fallback": ["walk_f"],
 		"events": [{"frame": 1, "vx": forward_speed}, {"frame": forward_frames + 1, "vx": 0}]}
-	states["dash_b"] = {"type": "S", "total": back_total, "anim": "walk_b", "punishable_from": back_invuln + 1,
+	states["dash_b"] = {"type": "S", "total": back_total, "anim": "dash_b", "anim_fallback": ["walk_b"],
+		"punishable_from": back_invuln + 1,
 		"invuln": [{"frames": [1, back_invuln], "strike": true, "throw": true}],
 		"events": [{"frame": 1, "vx": -back_speed}, {"frame": back_frames + 1, "vx": 0}]}
 

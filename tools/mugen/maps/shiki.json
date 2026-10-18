@@ -16,8 +16,18 @@
 			"max_time": 8,
 			"loop": true
 		},
-		"walk_f": 20,
-		"walk_b": 21,
+		"walk_f": {
+			"actions": [
+				20
+			],
+			"stride": 1.2
+		},
+		"walk_b": {
+			"actions": [
+				21
+			],
+			"stride": 0.8
+		},
 		"crouch": [
 			10,
 			11
@@ -257,6 +267,14 @@
 				]
 			],
 			"loop": true
-		}
+		},
+		"dash_f": [
+			100,
+			101
+		],
+		"dash_b": [
+			105,
+			106
+		]
 	}
 }

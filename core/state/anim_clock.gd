@@ -22,6 +22,7 @@ const JUMP_SUFFIX := ["_b", "", "_f"]
 const HIT_SUFFIX := ["_hi_l", "_hi_m", "_hi_h", "_lo_l", "_lo_m", "_lo_h"]
 const STRENGTH_SUFFIX := ["_l", "_m", "_h"]
 const HOLD_IMPACT := ["crumple", "dizzy"] ## 这些逻辑的状态借用受击动画时停在受击姿势
+const STRIDE_RATE := [50, 250] ## 按移动速度播放走路动画时的倍速范围（%）
 
 
 # ---------------------------------------------------------------- 选动画
@@ -112,6 +113,10 @@ static func frame(f: Fighter, s: StateDef, anim: AnimData) -> int:
 		return mini(0 if f.vy > UP_SPEED else (2 if f.vy < -UP_SPEED else 1), count - 1)
 	if s.first_active >= 0 and anim.has_phase(AnimData.Phase.ACTIVE):
 		return anim.index_at_time(attack_tick(s, anim, t, f.held))
+	if anim.stride > 0 and f.vx != 0:
+		# 走路：按实际移动速度和原作速度之比加快 / 放慢动画，脚步和位移对得上（不打滑）
+		var rate := clampi(absi(f.vx) * 100 / anim.stride, STRIDE_RATE[0], STRIDE_RATE[1])
+		return anim.index_at_time(t * rate / 100)
 	if s.logic == "down":
 		return anim.index_at_time(_budget_tick(t, anim.length(), f.down_frames))
 	if s.logic in HOLD_IMPACT and anim.has_phase(AnimData.Phase.RECOVERY):

@@ -11,8 +11,18 @@
 	],
 	"anims": {
 		"idle": 0,
-		"walk_f": 20,
-		"walk_b": 21,
+		"walk_f": {
+			"actions": [
+				20
+			],
+			"stride": 2.2
+		},
+		"walk_b": {
+			"actions": [
+				21
+			],
+			"stride": 1.8
+		},
 		"crouch": [
 			10,
 			11
@@ -313,6 +323,11 @@
 				6
 			]
 		},
-		"4hp": 225
+		"4hp": 225,
+		"dash_f": [
+			100,
+			101
+		],
+		"dash_b": 105
 	}
 }
