@@ -41,7 +41,8 @@ func build() -> void:
 func _normals() -> void:
 	normal("5lp", "S", "LP", 4, 2, 8, 3, -1, [22, 135, 62, 18], L, {}, LIGHT_CHAIN)
 	normal("5mp", "S", "MP", 7, 3, 14, 2, -2, [28, 128, 95, 22], M, {"step": [3, 9, 30]}, SPECIAL)
-	normal("5hp", "S", "HP", 10, 4, 22, 1, -6, [30, 120, 115, 26], H, {"step": [5, 12, 45], "reach_cap": 145}, SPECIAL)
+	normal("5hp", "S", "HP", 10, 4, 22, 1, -6, [30, 120, 115, 26], H, {"step": [5, 12, 45], "reach_cap": 145,
+		"punish_effect": "crumple"}, SPECIAL)
 	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [20, 70, 70, 22], L)
 	normal("5mk", "S", "MK", 8, 3, 16, 1, -3, [25, 55, 100, 24], M, {"step": [3, 9, 20]}, SPECIAL)
 	normal("5hk", "S", "HK", 12, 4, 22, 1, -6, [20, 130, 90, 40], H, {"juggle_limit": 1})

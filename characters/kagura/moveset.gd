@@ -39,7 +39,8 @@ func build() -> void:
 func _normals() -> void:
 	normal("5lp", "S", "LP", 4, 2, 6, 5, -1, [22, 135, 50, 18], L, {"step": [2, 5, 10]}, FROM_LIGHT)
 	normal("5mp", "S", "MP", 5, 2, 11, 5, 1, [22, 128, 62, 20], M, {"step": [1, 6, 25]}, FROM_MEDIUM)
-	normal("5hp", "S", "HP", 8, 3, 16, 3, -2, [22, 120, 75, 24], H, {"push": 450, "step": [3, 10, 30]}, SPECIAL)
+	normal("5hp", "S", "HP", 8, 3, 16, 3, -2, [22, 120, 75, 24], H, {"push": 450, "step": [3, 10, 30],
+		"punish_effect": "crumple"}, SPECIAL)
 	normal("5lk", "S", "LK", 4, 2, 8, 3, -1, [18, 70, 50, 22], L, {}, FROM_LIGHT)
 	normal("5mk", "S", "MK", 6, 3, 12, 3, -2, [22, 55, 70, 22], M, {}, FROM_MEDIUM)
 	normal("5hk", "S", "HK", 9, 3, 18, 2, -4, [22, 95, 85, 28], H, {"counter_effect": "launch", "air_vy": 1200,

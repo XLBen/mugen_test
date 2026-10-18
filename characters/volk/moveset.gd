@@ -43,7 +43,7 @@ func _normals() -> void:
 	normal("5lk", "S", "LK", 5, 3, 10, 2, -2, [22, 70, 62, 24], L, {"step": [3, 6, 20]}, LIGHT_CHAIN)
 	normal("5mk", "S", "MK", 9, 3, 16, 2, -3, [28, 55, 95, 26], with(M, {"damage": 750}), {"step": [3, 10, 30]})
 	normal("5hk", "S", "HK", 13, 4, 22, 1, -6, [28, 95, 110, 34], with(heavy, {"damage": 1100}),
-		{"armor": {"frames": [5, 12], "hits": 1}, "step": [5, 15, 50]})
+		{"armor": {"frames": [5, 12], "hits": 1}, "step": [5, 15, 50], "punish_effect": "crumple"})
 	normal("2lp", "C", "LP", 5, 2, 8, 3, 0, [25, 85, 52, 20], L, {}, LIGHT_CHAIN)
 	normal("2mp", "C", "MP", 7, 3, 13, 3, -1, [28, 85, 75, 22], with(M, {"damage": 700}), {"step": [2, 8, 25]}, SPECIAL)
 	normal("2hp", "C", "HP", 10, 4, 24, 1, -9, [10, 115, 58, 105], heavy, {"juggle_limit": 1})

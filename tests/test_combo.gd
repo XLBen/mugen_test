@@ -142,3 +142,12 @@ func test_combo_resets_after_recovery() -> void:
 	var sim := adjacent_sim()
 	play(sim, "5LP", "", 40)
 	check_eq(sim.fighters[1].combo_hits, 0, "combo counter resets once the victim can act")
+
+
+## SF6 式：重拳确反让对手崩溃，可以接完整连段。
+func test_heavy_punish_counter_crumples() -> void:
+	var sim := char_sim(KAGURA, DUMMY, 95)
+	sim.fighters[1].set_state("5hk")
+	sim.fighters[1].state_frame = sim.fighters[1].sd().last_active + 1
+	play(sim, "5HP", "", 12)
+	check_eq(sim.fighters[1].state_name(), "crumple", "punish counter 5HP crumples")
