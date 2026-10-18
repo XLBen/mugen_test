@@ -47,6 +47,7 @@ var punishable := false ## 整个状态都算收招（被打 = Punish Counter）
 var punishable_from := -1 ## 从第几帧起算收招（后撤步后段）
 var throw_protect := 0 ## 按总帧数结束时给的投无敌帧数（起身）
 var freeze_len := 0 ## 发生前的超杀暂停总帧数（暂停期间出招动画继续播预备动作）
+var glide_startup := false ## 发生段里就开始移动（突进招）：预备动作均匀拉长，而不是摆好姿势停住滑行
 var reach_cap := 0 ## >0：动画攻击盒向前最远到这里（单位），原作攻击框太长时收回到招式表的范围
 
 
@@ -118,6 +119,8 @@ static func build(state_name: String, d: Dictionary) -> StateDef:
 		s.events.append(ev)
 		if e.has("freeze") and (s.first_active < 0 or ev.frame < s.first_active):
 			s.freeze_len += e.freeze
+		if e.get("vx", 0) != 0 and ev.frame < s.first_active:
+			s.glide_startup = true
 	s.reach_cap = d.get("reach_cap", 0) * SimConst.UNITS_PER_PX
 	return s
 

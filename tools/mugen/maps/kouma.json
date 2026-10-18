@@ -284,6 +284,7 @@
 		"dash_b": 105,
 		"crouch_up": 12,
 		"turn": 5,
-		"turn_crouch": 6
+		"turn_crouch": 6,
+		"drive_impact": 2000
 	}
 }

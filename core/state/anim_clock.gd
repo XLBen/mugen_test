@@ -4,7 +4,8 @@ class_name AnimClock
 ## - 动画名：状态的基础动画 + 变体后缀（跳跃方向 _f/_b；受击的上下段 / 强度 _hi_l … _lo_h），没有这套就退回基础动画
 ## - jump：三帧的按垂直速度选 上升 / 顶点 / 下落；更多帧的是完整空中弧线，按 起跳速度 → 0 → 下落 的进度铺满
 ## - 攻击：动画的 发生 / 持续 / 收招 段分别对齐到招式的发生帧、持续帧、收招帧（持续帧必定显示有攻击盒的帧）；
-##   发生段按原速播到预备姿势后停住等出手（蓄势），比发生帧长时加速、最多 2 倍速，再长就只播后面一段；
+##   发生段按原速播到预备姿势后停住等出手（蓄势；发生段里就在移动的突进招改为均匀拉长），比发生帧长时加速、
+##   最多 2 倍速，再长就只播后面一段；
 ##   超杀暂停期间预备动作照播（暂停帧数算进发生段）；
 ##   收招段按原速播放，太长时才加速、太短时稍微放慢，播不完的部分在下一个可行动状态里作为"尾巴"继续播
 ## - 受击 / 防御：受击段从顿帧开始按原速播放并停住，恢复段放在硬直的最后几帧
@@ -142,6 +143,8 @@ static func attack_tick(s: StateDef, anim: AnimData, t: int, held := 0) -> int:
 		var span := maxi(s.first_active + s.freeze_len, 1)
 		var v := mini(t + held, span - 1)
 		if startup.y <= span:
+			if s.glide_startup:
+				return startup.x + v * startup.y / span # 突进中：预备动作均匀拉长，不摆着姿势滑行
 			return startup.x + mini(v, startup.y - 1) # 按原速播到预备姿势，停在那里等出手
 		var length := mini(startup.y, span * STARTUP_MAX_SPEED)
 		return startup.x + startup.y - length + v * length / span

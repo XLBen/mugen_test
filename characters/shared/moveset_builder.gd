@@ -140,7 +140,7 @@ func throw(range_px := 60, damage := 1200, startup := 5) -> void:
 	}
 	states["throw_hit"] = {
 		"type": "S", "kind": "throw", "total": 45, "anim": "throw_hit", "logic": "throwing",
-		"throw_release": 30, "throw_offset": 72,
+		"throw_release": 30, "throw_offset": 82,
 		"throw_hit": {"damage": damage, "hitstop": 6, "air_vx": 500, "air_vy": 700},
 	}
 	var back: Dictionary = states["throw"].duplicate(true)

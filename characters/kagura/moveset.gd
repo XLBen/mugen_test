@@ -57,7 +57,7 @@ func _normals() -> void:
 	target_combo("tc_lk_mk", "5lk", "MK", "5mk", 6, 3, 13, 3, -3, [22, 55, 70, 22], M, {"damage": 500}, SPECIAL)
 	# 6MP：中段（站着才能防），发生慢
 	command_normal("6mp", "6", "MP", 20, 2, 16, 2, -2, [20, 70, 65, 70], M, {"guard": "high", "damage": 600,
-		"step": [6, 18, 30]}, [], ["5mp"])
+		"step": [6, 18, 30], "reach_cap": 100}, [], ["5mp"])
 
 
 func _air_normals() -> void:
